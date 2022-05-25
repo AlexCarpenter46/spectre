@@ -392,6 +392,13 @@ using iJkk = Tensor<DataType, tmpl::integral_list<std::int32_t, 3, 2, 1, 1>,
                                SpatialIndex<SpatialDim, UpLo::Lo, Fr>,
                                SpatialIndex<SpatialDim, UpLo::Lo, Fr>>>;
 
+template <typename DataType, size_t SpatialDim, typename Fr = Frame::Inertial>
+using iAbb = Tensor<DataType, tmpl::integral_list<std::int32_t, 3, 2, 1, 1>,
+                    index_list<SpatialIndex<SpatialDim, UpLo::Lo, Fr>,
+                               SpacetimeIndex<SpatialDim, UpLo::Up, Fr>,
+                               SpacetimeIndex<SpatialDim, UpLo::Lo, Fr>,
+                               SpacetimeIndex<SpatialDim, UpLo::Lo, Fr>>>;
+
 }  // namespace tnsr
 
 template <typename DataType, size_t Dim, typename SourceFrame,

@@ -73,6 +73,17 @@ auto christoffel_second_kind(
     -> tnsr::Abb<DataType, SpatialDim, Frame, Index>;
 /// @}
 
+/// @{
+/*!
+ * \ingroup GeneralRelativityGroup
+ * \brief Computes the derivative of the Christoffel symbol of the second kind.
+ *
+ */
+template <size_t SpatialDim, typename Frame, IndexType Index, typename DataType>
+tnsr::iAbb<DataType, SpatialDim, Frame> deriv_christoffel_second_kind(
+    const tnsr::Abb<DataType, SpatialDim, Frame, Index>& chris_second_kind);
+/// @}
+
 namespace Tags {
 /// Compute item for spatial Christoffel symbols of the first kind
 /// \f$\Gamma_{ijk}\f$ computed from the first derivative of the
@@ -122,6 +133,26 @@ struct SpatialChristoffelSecondKindCompute
                                   SpatialIndex<SpatialDim, UpLo::Lo, Frame>>);
 
   using base = SpatialChristoffelSecondKind<SpatialDim, Frame, DataType>;
+};
+
+/// Computes the derivative of the spatial Christoffel symbols of the second
+/// kind.
+template <size_t SpatialDim, typename Frame, typename DataType>
+struct DerivSpatialChristoffelSecondKindCompute
+    : DerivSpatialChristoffelSecondKind<SpatialDim, Frame, DataType>,
+      db::ComputeTag {
+  using argument_tags =
+      tmpl::list<SpatialChristoffelSecondKind<SpatialDim, Frame, DataType>>;
+
+  using return_type = tnsr::iJkk<DataType, SpatialDim, Frame>;
+
+  static constexpr auto function =
+      static_cast<tnsr::iJkk<DataType, SpatialDim, Frame> (*)(
+          gsl::not_null<tnsr::iJkk<DataType, SpatialDim, Frame>*>,
+          const tnsr::Ijj<DataType, SpatialDim, Frame>&)>(
+          &deriv_christoffel_second_kind<SpatialDim, Frame, DataType>);
+
+  using base = DerivSpatialChristoffelSecondKind<SpatialDim, Frame, DataType>;
 };
 
 /// Compute item for the trace of the spatial Christoffel symbols

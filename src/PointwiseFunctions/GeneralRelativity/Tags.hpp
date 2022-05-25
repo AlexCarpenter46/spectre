@@ -94,6 +94,10 @@ struct SpatialChristoffelSecondKind : db::SimpleTag {
   using type = tnsr::Ijj<DataType, Dim, Frame>;
 };
 template <size_t Dim, typename Frame, typename DataType>
+struct DerivSpatialChristoffelSecondKind : db::SimpleTag {
+  using type = tnsr::iJkk<DataType, Dim, Frame>;
+};
+template <size_t Dim, typename Frame, typename DataType>
 struct SpacetimeNormalOneForm : db::SimpleTag {
   using type = tnsr::a<DataType, Dim, Frame>;
 };

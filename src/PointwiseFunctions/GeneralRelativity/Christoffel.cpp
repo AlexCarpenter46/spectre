@@ -75,6 +75,13 @@ auto christoffel_second_kind(
                           inverse_metric);
   return christoffel;
 }
+
+// template <size_t SpatialDim, typename Frame, IndexType Index, typename
+// DataType> tnsr::iAbb<DataType, SpatialDim, Frame>
+// deriv_christoffel_second_kind(
+//     const tnsr::Abb<DataType, SpatialDim, Frame, Index>& chris_second_kind) {
+//   return partial_derivative(chris_second_kind);
+// }
 }  // namespace gr
 
 #define DIM(data) BOOST_PP_TUPLE_ELEM(0, data)
@@ -107,6 +114,11 @@ auto christoffel_second_kind(
           d_metric,                                                          \
       const tnsr::AA<DTYPE(data), DIM(data), FRAME(data), INDEXTYPE(data)>&  \
           inverse_metric);
+   // template tnsr::iAbb<DTYPE(data), DIM(data), FRAME(data)>  \
+  // gr::deriv_christoffel_second_kind( \
+  //     const tnsr::Abb<DTYPE(data), DIM(data), FRAME(data), INDEXTYPE(data)>&
+   //     \
+  //         chris_second_kind);
 
 GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3), (double, DataVector),
                         (Frame::Grid, Frame::Inertial,
