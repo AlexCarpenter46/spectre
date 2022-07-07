@@ -3,19 +3,26 @@
 
 #pragma once
 
+#include <cmath>
 #include <cstddef>
+#include <limits>
 #include <unordered_set>
 #include <vector>
 
 #include "Domain/Block.hpp"
+#include "Domain/CreateInitialElement.hpp"
 #include "Domain/Creators/DomainCreator.hpp"
 #include "Domain/DiagnosticInfo.hpp"
 #include "Domain/Domain.hpp"
-#include "Domain/ElementDistribution.hpp"
+#include "Domain/MinimumGridSpacing.hpp"
 #include "Domain/OptionTags.hpp"
+#include "Domain/Structure/CreateInitialMesh.hpp"
 #include "Domain/Structure/ElementId.hpp"
 #include "Domain/Structure/InitialElementIds.hpp"
 #include "Domain/Tags.hpp"
+#include "Domain/WeightedElementDistribution.hpp"
+#include "Evolution/DiscontinuousGalerkin/Initialization/QuadratureTag.hpp"
+#include "NumericalAlgorithms/Spectral/LogicalCoordinates.hpp"
 #include "Parallel/Algorithms/AlgorithmArray.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Info.hpp"
@@ -23,6 +30,7 @@
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "Parallel/Phase.hpp"
 #include "Parallel/Printf.hpp"
+#include "Parallel/Tags/ResourceInfo.hpp"
 #include "Utilities/System/ParallelInfo.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TypeTraits/CreateHasStaticMemberVariable.hpp"
@@ -85,7 +93,6 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
   auto& local_cache = *Parallel::local_branch(global_cache);
   auto& dg_element_array =
       Parallel::get_parallel_component<DgElementArray>(local_cache);
-
   const auto& domain =
       Parallel::get<domain::Tags::Domain<volume_dim>>(local_cache);
   const auto& initial_refinement_levels =
@@ -93,6 +100,8 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
           initialization_items);
   const auto& initial_extents =
       get<domain::Tags::InitialExtents<volume_dim>>(initialization_items);
+  const auto& quadrature =
+      get<evolution::dg::Tags::Quadrature>(initialization_items);
 
   bool use_z_order_distribution = true;
   if constexpr (detail::has_use_z_order_distribution_v<Metavariables>) {
@@ -101,28 +110,95 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
 
   const size_t number_of_procs = Parallel::number_of_procs<size_t>(local_cache);
   const size_t number_of_nodes = Parallel::number_of_nodes<size_t>(local_cache);
-  const size_t num_of_procs_to_use = number_of_procs - procs_to_ignore.size();
-
-  const domain::BlockZCurveProcDistribution<volume_dim> element_distribution{
-      num_of_procs_to_use, initial_refinement_levels, procs_to_ignore};
 
   // Will be used to print domain diagnostic info
   std::vector<size_t> elements_per_core(number_of_procs, 0_st);
   std::vector<size_t> elements_per_node(number_of_nodes, 0_st);
   std::vector<size_t> grid_points_per_core(number_of_procs, 0_st);
   std::vector<size_t> grid_points_per_node(number_of_nodes, 0_st);
+  std::vector<double> cost_per_core(number_of_procs, 0_st);
+  std::vector<double> cost_per_node(number_of_nodes, 0_st);
 
-  size_t which_proc = 0;
-  for (const auto& block : domain.blocks()) {
-    const auto& initial_ref_levs = initial_refinement_levels[block.id()];
-    const size_t grid_points_per_element = alg::accumulate(
-        initial_extents[block.id()], 1_st, std::multiplies<size_t>());
+  if (use_z_order_distribution) {
+    std::vector<std::vector<double>> cost_by_element_by_block(
+        domain.blocks().size());
 
-    const std::vector<ElementId<volume_dim>> element_ids =
-        initial_element_ids(block.id(), initial_ref_levs);
+    for (size_t block_number = 0; block_number < domain.blocks().size();
+         block_number++) {
+      const auto& block = domain.blocks()[block_number];
+      const auto initial_ref_levs = initial_refinement_levels[block.id()];
+      const std::vector<ElementId<volume_dim>> element_ids =
+          initial_element_ids_in_z_score_order(block.id(), initial_ref_levs);
+      const size_t grid_points_per_element = alg::accumulate(
+          initial_extents[block.id()], 1_st, std::multiplies<size_t>());
 
-    if (use_z_order_distribution) {
+      cost_by_element_by_block[block_number].reserve(element_ids.size());
+
       for (const auto& element_id : element_ids) {
+        // TODO : move this out of here, probably best to put it in
+        // WeightedElementDistribution to keep all the logic handled there in
+        // one class.
+        Mesh<volume_dim> mesh = ::domain::Initialization::create_initial_mesh(
+            initial_extents, element_id, quadrature);
+        Element<volume_dim> element =
+            ::domain::Initialization::create_initial_element(
+                element_id, block, initial_refinement_levels);
+        ElementMap<volume_dim, Frame::Grid> element_map{
+            element_id,
+            block.is_time_dependent()
+                ? block.moving_mesh_logical_to_grid_map().get_clone()
+                : block.stationary_map().get_to_grid_frame()};
+
+        std::unique_ptr<::domain::CoordinateMapBase<
+            Frame::Grid, Frame::Inertial, volume_dim>>
+            grid_to_inertial_map;
+        if (block.is_time_dependent()) {
+          grid_to_inertial_map =
+              block.moving_mesh_grid_to_inertial_map().get_clone();
+        } else {
+          grid_to_inertial_map =
+              ::domain::make_coordinate_map_base<Frame::Grid, Frame::Inertial>(
+                  ::domain::CoordinateMaps::Identity<volume_dim>{});
+        }
+
+        tnsr::I<DataVector, volume_dim, Frame::ElementLogical> logical_coords{};
+        domain::Tags::LogicalCoordinates<volume_dim>::function(
+            make_not_null(&logical_coords), mesh);
+
+        tnsr::I<DataVector, volume_dim, Frame::Grid> grid_coords{};
+        domain::Tags::MappedCoordinates<
+            domain::Tags::ElementMap<volume_dim, Frame::Grid>,
+            domain::Tags::Coordinates<volume_dim, Frame::ElementLogical>>::
+            function(make_not_null(&grid_coords), element_map, logical_coords);
+
+        double minimum_grid_spacing =
+            std::numeric_limits<double>::signaling_NaN();
+        domain::Tags::MinimumGridSpacingCompute<volume_dim, Frame::Grid>::
+            function(make_not_null(&minimum_grid_spacing), mesh, grid_coords);
+
+        cost_by_element_by_block[block_number].emplace_back(
+            grid_points_per_element / sqrt(minimum_grid_spacing));
+      }
+    }
+
+    const size_t num_of_procs_to_use = number_of_procs - procs_to_ignore.size();
+    const domain::WeightedBlockZCurveProcDistribution<volume_dim>
+        element_distribution{num_of_procs_to_use, cost_by_element_by_block,
+                             procs_to_ignore};
+
+    std::vector<size_t> grid_points_by_element{};
+
+    for (size_t block_number = 0; block_number < domain.blocks().size();
+         block_number++) {
+      const auto& block = domain.blocks()[block_number];
+      const size_t grid_points_per_element = alg::accumulate(
+          initial_extents[block.id()], 1_st, std::multiplies<size_t>());
+      const auto initial_ref_levs = initial_refinement_levels[block.id()];
+      const std::vector<ElementId<volume_dim>> element_ids =
+          initial_element_ids_in_z_score_order(block.id(), initial_ref_levs);
+      for (size_t i = 0; i < element_ids.size(); i++) {
+        grid_points_by_element.push_back(grid_points_per_element);
+        const auto& element_id = element_ids[i];
         const size_t target_proc =
             element_distribution.get_proc_for_element(element_id);
         dg_element_array(element_id)
@@ -134,8 +210,18 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
         ++elements_per_node[target_node];
         grid_points_per_core[target_proc] += grid_points_per_element;
         grid_points_per_node[target_node] += grid_points_per_element;
+        cost_per_core[target_proc] += cost_by_element_by_block[block_number][i];
+        cost_per_node[target_node] += cost_by_element_by_block[block_number][i];
       }
-    } else {
+    }
+  } else {
+    size_t which_proc = 0;
+    for (const auto& block : domain.blocks()) {
+      const size_t grid_points_per_element = alg::accumulate(
+          initial_extents[block.id()], 1_st, std::multiplies<size_t>());
+      const auto initial_ref_levs = initial_refinement_levels[block.id()];
+      const std::vector<ElementId<volume_dim>> element_ids =
+          initial_element_ids(block.id(), initial_ref_levs);
       while (procs_to_ignore.find(which_proc) != procs_to_ignore.end()) {
         which_proc = which_proc + 1 == number_of_procs ? 0 : which_proc + 1;
       }
@@ -153,11 +239,18 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
       }
     }
   }
-
   dg_element_array.doneInserting();
 
-  Parallel::printf(
-      "\n%s\n", domain::diagnostic_info(domain, local_cache, elements_per_core,
-                                        elements_per_node, grid_points_per_core,
-                                        grid_points_per_node));
+  if (use_z_order_distribution) {
+    Parallel::printf(
+        "\n%s\n", domain::diagnostic_info(
+                      domain, local_cache, elements_per_core, elements_per_node,
+                      grid_points_per_core, grid_points_per_node, cost_per_core,
+                      cost_per_node));
+  } else {
+    Parallel::printf(
+        "\n%s\n", domain::diagnostic_info(
+                      domain, local_cache, elements_per_core, elements_per_node,
+                      grid_points_per_core, grid_points_per_node));
+  }
 }

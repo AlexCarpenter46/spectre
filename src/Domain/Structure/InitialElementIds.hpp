@@ -25,3 +25,8 @@ template <size_t VolumeDim>
 std::vector<ElementId<VolumeDim>> initial_element_ids(
     const std::vector<std::array<size_t, VolumeDim>>& initial_refinement_levels,
     size_t grid_index = 0);
+
+template <size_t VolumeDim>
+std::vector<ElementId<VolumeDim>> initial_element_ids_in_z_score_order(
+    size_t block_id, std::array<size_t, VolumeDim> initial_ref_levs,
+    size_t grid_index = 0);

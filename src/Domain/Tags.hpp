@@ -129,6 +129,11 @@ template <size_t Dim, typename Frame>
 struct Coordinates : db::SimpleTag {
   static std::string name() { return get_output(Frame{}) + "Coordinates"; }
   using type = tnsr::I<DataVector, Dim, Frame>;
+
+  // using option_tags = tmpl::list<domain::OptionTags::DomainCreator<Dim>>;
+  // static constexpr bool pass_metavariables = false;
+  // static type create_from_options(
+  //     const std::unique_ptr<::DomainCreator<Dim>>& domain_creator);
 };
 
 /// \ingroup DataBoxTagsGroup

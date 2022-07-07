@@ -12,6 +12,7 @@
 #include "Domain/Structure/ElementId.hpp"
 
 namespace domain {
+
 /*!
  * \brief Distribution strategy for assigning elements to CPUs using a
  * Morton ('Z-order') space-filling curve to determine placement within each
@@ -103,20 +104,25 @@ namespace domain {
  * with internal refinement
  */
 template <size_t Dim>
-struct BlockZCurveProcDistribution {
+struct WeightedBlockZCurveProcDistribution {
   /// The `number_of_procs_with_elements` argument represents how many procs
   /// will have elements. This is not necessarily equal to the total number of
   /// procs because some global procs may be ignored by the third argument
   /// `global_procs_to_ignore`
-  BlockZCurveProcDistribution(
+  WeightedBlockZCurveProcDistribution(
       size_t number_of_procs_with_elements,
-      const std::vector<std::array<size_t, Dim>>& refinements_by_block,
+      const std::vector<std::vector<double>>& cost_by_element_by_block,
       const std::unordered_set<size_t>& global_procs_to_ignore = {});
 
   /// Gets the suggested processor number for a particular element,
   /// determined by the greedy block assignment and Morton curve element
   /// assignment described in detail in the parent class documentation.
   size_t get_proc_for_element(const ElementId<Dim>& element_id) const;
+
+  std::vector<std::vector<std::pair<size_t, size_t>>>
+  block_element_distribution() const {
+    return block_element_distribution_;
+  }
 
  private:
   // in this nested data structure:

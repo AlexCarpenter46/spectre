@@ -25,7 +25,9 @@ std::string diagnostic_info(const Domain<Dim>& domain,
                             const std::vector<size_t>& elements_per_core,
                             const std::vector<size_t>& elements_per_node,
                             const std::vector<size_t>& grid_points_per_core,
-                            const std::vector<size_t>& grid_points_per_node) {
+                            const std::vector<size_t>& grid_points_per_node,
+                            const std::vector<double>& cost_per_core = {},
+                            const std::vector<double>& cost_per_node = {}) {
   const size_t total_number_of_elements =
       alg::accumulate(elements_per_node, 0_st);
   const size_t total_number_of_grid_points =
@@ -60,6 +62,12 @@ std::string diagnostic_info(const Domain<Dim>& domain,
              << ") does not match number of cores determined from "
                 "global cache ("
              << number_of_cores << ").");
+  ASSERT(number_of_cores == cost_per_core.size(),
+         "Number of cores determined from cost_per_core ("
+             << cost_per_core.size()
+             << ") does not match number of cores determined from "
+                "global cache ("
+             << number_of_cores << ").");
   ASSERT(number_of_nodes == elements_per_node.size(),
          "Number of nodes determined from elements_per_node ("
              << elements_per_node.size()
@@ -69,6 +77,12 @@ std::string diagnostic_info(const Domain<Dim>& domain,
   ASSERT(number_of_nodes == grid_points_per_node.size(),
          "Number of nodes determined from grid_points_per_node ("
              << grid_points_per_node.size()
+             << ") does not match number of nodes determined from "
+                "global cache ("
+             << number_of_nodes << ").");
+  ASSERT(number_of_nodes == cost_per_node.size(),
+         "Number of nodes determined from cost_per_node ("
+             << cost_per_node.size()
              << ") does not match number of nodes determined from "
                 "global cache ("
              << number_of_nodes << ").");
@@ -85,6 +99,8 @@ std::string diagnostic_info(const Domain<Dim>& domain,
      << "Elements per node: " << elements_per_node << "\n"
      << "Grid points per core: " << grid_points_per_core << "\n"
      << "Grid points per node: " << grid_points_per_node << "\n"
+     << "Cost per core: " << cost_per_core << "\n"
+     << "Cost per node: " << cost_per_node << "\n"
      << "-----------------------\n";
 
   return ss.str();

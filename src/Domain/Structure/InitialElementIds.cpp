@@ -7,6 +7,7 @@
 
 #include "Domain/Structure/ElementId.hpp"
 #include "Domain/Structure/SegmentId.hpp"
+#include "Domain/ZCurveIndex.hpp"
 #include "Utilities/ConstantExpressions.hpp"
 #include "Utilities/GenerateInstantiations.hpp"
 #include "Utilities/MakeArray.hpp"
@@ -79,6 +80,70 @@ std::vector<ElementId<VolumeDim>> initial_element_ids(
               std::back_inserter(element_ids));
   }
   return element_ids;
+}
+
+template <>
+std::vector<ElementId<1>> initial_element_ids_in_z_score_order<1>(
+    const size_t block_id, const std::array<size_t, 1> initial_ref_levs,
+    const size_t grid_index) {
+  std::vector<ElementId<1>> ids;
+  const size_t num_elements = two_to_the(initial_ref_levs[0]);
+  ids.reserve(num_elements);
+
+  for (size_t i = 0; i < num_elements; i++) {
+    std::array<size_t, 1> element_id_as_array =
+        domain::element_id_from_z_curve_index(i, initial_ref_levs);
+    SegmentId x_segment_id(initial_ref_levs[0], element_id_as_array[0]);
+    SegmentId y_segment_id(initial_ref_levs[1], element_id_as_array[1]);
+    ids.emplace_back(block_id, make_array<1>(x_segment_id), grid_index);
+  }
+
+  return ids;
+}
+
+template <>
+std::vector<ElementId<2>> initial_element_ids_in_z_score_order<2>(
+    const size_t block_id, const std::array<size_t, 2> initial_ref_levs,
+    const size_t grid_index) {
+  std::vector<ElementId<2>> ids;
+  const size_t num_elements =
+      two_to_the(initial_ref_levs[0]) * two_to_the(initial_ref_levs[1]);
+  ids.reserve(num_elements);
+
+  for (size_t i = 0; i < num_elements; i++) {
+    std::array<size_t, 2> element_id_as_array =
+        domain::element_id_from_z_curve_index(i, initial_ref_levs);
+    SegmentId x_segment_id(initial_ref_levs[0], element_id_as_array[0]);
+    SegmentId y_segment_id(initial_ref_levs[1], element_id_as_array[1]);
+    ids.emplace_back(block_id, make_array(x_segment_id, y_segment_id),
+                     grid_index);
+  }
+
+  return ids;
+}
+
+template <>
+std::vector<ElementId<3>> initial_element_ids_in_z_score_order<3>(
+    const size_t block_id, const std::array<size_t, 3> initial_ref_levs,
+    const size_t grid_index) {
+  std::vector<ElementId<3>> ids;
+  const size_t num_elements = two_to_the(initial_ref_levs[0]) *
+                              two_to_the(initial_ref_levs[1]) *
+                              two_to_the(initial_ref_levs[2]);
+  ids.reserve(num_elements);
+
+  for (size_t i = 0; i < num_elements; i++) {
+    std::array<size_t, 3> element_id_as_array =
+        domain::element_id_from_z_curve_index(i, initial_ref_levs);
+    SegmentId x_segment_id(initial_ref_levs[0], element_id_as_array[0]);
+    SegmentId y_segment_id(initial_ref_levs[1], element_id_as_array[1]);
+    SegmentId z_segment_id(initial_ref_levs[2], element_id_as_array[2]);
+    ids.emplace_back(block_id,
+                     make_array(x_segment_id, y_segment_id, z_segment_id),
+                     grid_index);
+  }
+
+  return ids;
 }
 
 #define GET_DIM(data) BOOST_PP_TUPLE_ELEM(0, data)
