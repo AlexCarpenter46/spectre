@@ -237,6 +237,14 @@ template <typename DataType>
 struct WeylMagneticScalar : db::SimpleTag {
   using type = Scalar<DataType>;
 };
+
+/*!
+ * \brief Simple tag for Psi4
+ */
+template <typename DataType>
+struct Psi4 : db::SimpleTag {
+  using type = Scalar<DataType>;
+};
 }  // namespace Tags
 
 /// GR Tags commonly needed for the evolution of hydro systems
