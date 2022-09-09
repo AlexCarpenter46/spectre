@@ -33,6 +33,54 @@
 #include "Utilities/StdArrayHelpers.hpp"
 #include "Utilities/TypeTraits/IsComplexOfFundamental.hpp"
 
+class ComplexDataVector;
+class ComplexModalVector;
+class DataVector;
+class ModalVector;
+
+namespace VectorImpl_detail {
+/// \brief Whether or not a given vector type is assignable to another
+///
+/// \details
+/// This is used to define which types can be assigned to one another. For
+/// example, you can assign a `ComplexDataVector` to a `DataVector`, but not
+/// vice versa.
+///
+/// To enable assignments between more types, modify a current template
+/// specialization or add a new one.
+///
+/// \tparam LhsDataType the type being assigned
+/// \tparam RhsDataType the type to convert to `LhsDataType`
+template <typename LhsDataType, typename RhsDataType>
+struct lhs_datatype_is_assignable_to_rhs_datatype_impl;
+
+/// No template specialization was matched, so LHS is not assignable to RHS
+template <typename LhsDataType, typename RhsDataType>
+struct lhs_datatype_is_assignable_to_rhs_datatype_impl : std::false_type {};
+/// Can assign a type to itself
+template <typename RhsDataType>
+struct lhs_datatype_is_assignable_to_rhs_datatype_impl<RhsDataType, RhsDataType>
+    : std::true_type {};
+/// Can assign a `ComplexDataVector` to a `DataVector`
+template <>
+struct lhs_datatype_is_assignable_to_rhs_datatype_impl<ComplexDataVector,
+                                                       DataVector>
+    : std::true_type {};
+/// Can assign a `ComplexModalVector` to a `ModalVector`
+template <>
+struct lhs_datatype_is_assignable_to_rhs_datatype_impl<ComplexModalVector,
+                                                       ModalVector>
+    : std::true_type {};
+}  // namespace VectorImpl_detail
+
+/// \ingroup TensorExpressionsGroup
+/// \brief Marks a class as being a `VectorImpl`
+///
+/// \details
+/// The empty base class provides a simple means for checking if a type is a
+/// `VectorImpl`
+struct MarkAsVectorImpl {};
+
 /*!
  * \ingroup DataStructuresGroup
  * \brief Base class template for various DataVector and related types
@@ -78,7 +126,8 @@ template <typename T, typename VectorType>
 class VectorImpl
     : public blaze::CustomVector<
           T, blaze::AlignmentFlag::unaligned, blaze::PaddingFlag::unpadded,
-          blaze::defaultTransposeFlag, blaze::GroupTag<0>, VectorType> {
+          blaze::defaultTransposeFlag, blaze::GroupTag<0>, VectorType>,
+      MarkAsVectorImpl {
  public:
   using value_type = T;
   using size_type = size_t;
@@ -174,7 +223,9 @@ class VectorImpl
   // clang-tidy: mark as explicit (we want conversion to VectorImpl type)
   template <
       typename VT, bool VF,
-      Requires<std::is_same_v<typename VT::ResultType, VectorType>> = nullptr>
+      Requires<
+          VectorImpl_detail::lhs_datatype_is_assignable_to_rhs_datatype_impl<
+              VectorType, typename VT::ResultType>::value> = nullptr>
   VectorImpl(const blaze::DenseVector<VT, VF>& expression);  // NOLINT
 
   template <typename VT, bool VF>
@@ -327,16 +378,18 @@ VectorImpl<T, VectorType>& VectorImpl<T, VectorType>::operator=(
 // explicit, but we want it to allow conversion.
 // clang-tidy: mark as explicit (we want conversion to VectorImpl)
 template <typename T, typename VectorType>
-template <typename VT, bool VF,
-          Requires<std::is_same_v<typename VT::ResultType, VectorType>>>
+template <
+    typename VT, bool VF,
+    Requires<VectorImpl_detail::lhs_datatype_is_assignable_to_rhs_datatype_impl<
+        VectorType, typename VT::ResultType>::value>>
 VectorImpl<T, VectorType>::VectorImpl(
     const blaze::DenseVector<VT, VF>& expression)  // NOLINT
     : owned_data_(cpp20::make_unique_for_overwrite<value_type[]>(
           (*expression).size())) {
-  static_assert(std::is_same_v<typename VT::ResultType, VectorType>,
-                "You are attempting to assign the result of an expression "
-                "that is not consistent with the VectorImpl type you are "
-                "assigning to.");
+  static_assert(
+      VectorImpl_detail::lhs_datatype_is_assignable_to_rhs_datatype_impl<
+          VectorType, typename VT::ResultType>::value,
+      "Cannot construct the VectorImpl type from the given expression type.");
   reset_pointer_vector((*expression).size());
   **this = expression;
 }
@@ -345,10 +398,10 @@ template <typename T, typename VectorType>
 template <typename VT, bool VF>
 VectorImpl<T, VectorType>& VectorImpl<T, VectorType>::operator=(
     const blaze::DenseVector<VT, VF>& expression) {
-  static_assert(std::is_same_v<typename VT::ResultType, VectorType>,
-                "You are attempting to assign the result of an expression "
-                "that is not consistent with the VectorImpl type you are "
-                "assigning to.");
+  static_assert(
+      VectorImpl_detail::lhs_datatype_is_assignable_to_rhs_datatype_impl<
+          VectorType, typename VT::ResultType>::value,
+      "Cannot assign to the VectorImpl type from the given expression type.");
   if (owning_ and (*expression).size() != size()) {
     owned_data_ =
         cpp20::make_unique_for_overwrite<value_type[]>((*expression).size());
