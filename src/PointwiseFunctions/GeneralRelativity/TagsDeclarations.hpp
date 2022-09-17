@@ -86,6 +86,8 @@ struct SpatialRicci;
 template <typename DataType = DataVector>
 struct SpatialRicciScalar;
 template <typename DataType = DataVector>
+struct Psi4;
+template <typename DataType = DataVector>
 struct EnergyDensity;
 template <typename DataType = DataVector>
 struct StressTrace;
