@@ -20,17 +20,19 @@
 #include "Utilities/MakeWithValue.hpp"
 
 namespace gr {
-template <size_t SpatialDim, typename Frame, typename DataType>
+template <typename ComplexDataType, size_t SpatialDim, typename Frame,
+          typename RealDataType>
 void psi_4(
-    const gsl::not_null<Scalar<DataType>*> psi_4_result,
-    const tnsr::ii<DataType, SpatialDim, Frame>& spatial_ricci,
-    const tnsr::ii<DataType, SpatialDim, Frame>& extrinsic_curvature,
-    const tnsr::ijj<DataType, SpatialDim, Frame>& cov_deriv_extrinsic_curvature,
-    const tnsr::ii<DataType, SpatialDim, Frame>& spatial_metric,
-    const tnsr::II<DataType, SpatialDim, Frame>& inverse_spatial_metric,
-    const tnsr::I<DataType, SpatialDim, Frame>& inertial_coords) {
+    const gsl::not_null<Scalar<ComplexDataType>*> psi_4_result,
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& spatial_ricci,
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& extrinsic_curvature,
+    const tnsr::ijj<RealDataType, SpatialDim, Frame>&
+        cov_deriv_extrinsic_curvature,
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& spatial_metric,
+    const tnsr::II<RealDataType, SpatialDim, Frame>& inverse_spatial_metric,
+    const tnsr::I<RealDataType, SpatialDim, Frame>& inertial_coords) {
   const auto magnitude_cartesian =
-      Scalar<DataType>(magnitude(inertial_coords, spatial_metric));
+      Scalar<RealDataType>(magnitude(inertial_coords, spatial_metric));
   const auto r_hat = tenex::evaluate<ti::j>(inertial_coords(ti::I) *
                                             spatial_metric(ti::i, ti::j) /
                                             magnitude_cartesian());
@@ -49,36 +51,46 @@ void psi_4(
       spatial_ricci, extrinsic_curvature, inverse_spatial_metric,
       cov_deriv_extrinsic_curvature, raised_r_hat, inverse_projection_tensor,
       projection_tensor, projection_up_lo, 1);
-  auto x_coord = make_with_value<tnsr::I<DataType, SpatialDim, Frame>>(
+  auto x_coord = make_with_value<tnsr::I<RealDataType, SpatialDim, Frame>>(
       get<0, 0>(inverse_spatial_metric), 0.0);
-  x_coord.get(0) += inertial_coords.get(0);
-  const auto magnitude_x = Scalar<DataType>(magnitude(x_coord, spatial_metric));
+  x_coord.get(0) = inertial_coords.get(0);
+  const auto magnitude_x =
+      Scalar<RealDataType>(magnitude(x_coord, spatial_metric));
   const auto x_hat = tenex::evaluate<ti::I>(x_coord(ti::I) / magnitude_x());
-  auto y_coord = make_with_value<tnsr::I<DataType, SpatialDim, Frame>>(
+  auto y_coord = make_with_value<tnsr::I<RealDataType, SpatialDim, Frame>>(
       get<0, 0>(inverse_spatial_metric), 0.0);
   y_coord.get(1) += inertial_coords.get(1);
-  const auto magnitude_y = Scalar<DataType>(magnitude(y_coord, spatial_metric));
-  const auto y_hat = tenex::evaluate<ti::I>(y_coord(ti::I) / magnitude_y());
+  const auto magnitude_y =
+      Scalar<RealDataType>(magnitude(y_coord, spatial_metric));
+  const std::complex<double> i = std::complex<double>(0.0, 1.0);
+  tnsr::I<ComplexDataType, SpatialDim, Frame> y_hat{};
+  // std::complex<double> + DataVector -> ComplexDataVector
+  tenex::evaluate<ti::I>(make_not_null(&y_hat),
+                         i * y_coord(ti::I) / magnitude_y());
+
+  // todo rad 2 stuff
+  const auto m_bar = tenex::evaluate<ti::I>((x_hat(ti::I) + y_hat(ti::I)));
 
   // making the real portion of psi4 only for now.
-  tenex::evaluate(psi_4_result, 0.5 * u8_plus(ti::i, ti::j) *
-                                    (y_hat(ti::I) * y_hat(ti::J) -
-                                     x_hat(ti::I) * x_hat(ti::J)));
+  tenex::evaluate(psi_4_result,
+                  0.5 * u8_plus(ti::i, ti::j) * m_bar(ti::I) * m_bar(ti::J));
 }
 
-template <size_t SpatialDim, typename Frame, typename DataType>
-Scalar<DataType> psi_4(
-    const tnsr::ii<DataType, SpatialDim, Frame>& spatial_ricci,
-    const tnsr::ii<DataType, SpatialDim, Frame>& extrinsic_curvature,
-    const tnsr::ijj<DataType, SpatialDim, Frame>& cov_deriv_extrinsic_curvature,
-    const tnsr::ii<DataType, SpatialDim, Frame>& spatial_metric,
-    const tnsr::II<DataType, SpatialDim, Frame>& inverse_spatial_metric,
+template <typename ComplexDataType, size_t SpatialDim, typename Frame,
+          typename RealDataType>
+Scalar<ComplexDataType> psi_4(
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& spatial_ricci,
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& extrinsic_curvature,
+    const tnsr::ijj<RealDataType, SpatialDim, Frame>&
+        cov_deriv_extrinsic_curvature,
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& spatial_metric,
+    const tnsr::II<RealDataType, SpatialDim, Frame>& inverse_spatial_metric,
     // const Scalar<DataType>& sqrt_det_spatial_metric,
-    const tnsr::I<DataType, SpatialDim, Frame>& inertial_coords) {
+    const tnsr::I<RealDataType, SpatialDim, Frame>& inertial_coords) {
   // const tnsr::ii<DataType, SpatialDim, Frame>& weyl_electric,
   // const tnsr::ii<DataType, SpatialDim, Frame>& weyl_magnetic) {
-  auto psi_4_result =
-      make_with_value<Scalar<DataType>>(get<0, 0>(inverse_spatial_metric), 0.0);
+  auto psi_4_result = make_with_value<Scalar<ComplexDataType>>(
+      get<0, 0>(inverse_spatial_metric), 0.0);
   psi_4(make_not_null(&psi_4_result), spatial_ricci, extrinsic_curvature,
         cov_deriv_extrinsic_curvature, spatial_metric, inverse_spatial_metric,
         inertial_coords);
@@ -87,36 +99,40 @@ Scalar<DataType> psi_4(
 }  // namespace gr
 
 #define DIM(data) BOOST_PP_TUPLE_ELEM(0, data)
-#define DTYPE(data) BOOST_PP_TUPLE_ELEM(1, data)
-#define FRAME(data) BOOST_PP_TUPLE_ELEM(2, data)
+#define RDTYPE(data) BOOST_PP_TUPLE_ELEM(1, data)
+#define CDTYPE(data) BOOST_PP_TUPLE_ELEM(2, data)
+#define FRAME(data) BOOST_PP_TUPLE_ELEM(3, data)
 
-#define INSTANTIATE(_, data)                                                \
-  template Scalar<DTYPE(data)> gr::psi_4(                                   \
-      const tnsr::ii<DTYPE(data), DIM(data), FRAME(data)>& spatial_ricci,   \
-      const tnsr::ii<DTYPE(data), DIM(data), FRAME(data)>&                  \
-          extrinsic_curvature,                                              \
-      const tnsr::ijj<DTYPE(data), DIM(data), FRAME(data)>&                 \
-          cov_deriv_extrinsic_curvature,                                    \
-      const tnsr::ii<DTYPE(data), DIM(data), FRAME(data)>& spatial_metric,  \
-      const tnsr::II<DTYPE(data), DIM(data), FRAME(data)>&                  \
-          inverse_spatial_metric,                                           \
-      const tnsr::I<DTYPE(data), DIM(data), FRAME(data)>& inertial_coords); \
-  template void gr::psi_4(                                                  \
-      const gsl::not_null<Scalar<DTYPE(data)>*> psi_4_result,               \
-      const tnsr::ii<DTYPE(data), DIM(data), FRAME(data)>& spatial_ricci,   \
-      const tnsr::ii<DTYPE(data), DIM(data), FRAME(data)>&                  \
-          extrinsic_curvature,                                              \
-      const tnsr::ijj<DTYPE(data), DIM(data), FRAME(data)>&                 \
-          cov_deriv_extrinsic_curvature,                                    \
-      const tnsr::ii<DTYPE(data), DIM(data), FRAME(data)>& spatial_metric,  \
-      const tnsr::II<DTYPE(data), DIM(data), FRAME(data)>&                  \
-          inverse_spatial_metric,                                           \
-      const tnsr::I<DTYPE(data), DIM(data), FRAME(data)>& inertial_coords);
+#define INSTANTIATE(_, data)                                                 \
+  template Scalar<CDTYPE(data)> gr::psi_4(                                   \
+      const tnsr::ii<RDTYPE(data), DIM(data), FRAME(data)>& spatial_ricci,   \
+      const tnsr::ii<RDTYPE(data), DIM(data), FRAME(data)>&                  \
+          extrinsic_curvature,                                               \
+      const tnsr::ijj<RDTYPE(data), DIM(data), FRAME(data)>&                 \
+          cov_deriv_extrinsic_curvature,                                     \
+      const tnsr::ii<RDTYPE(data), DIM(data), FRAME(data)>& spatial_metric,  \
+      const tnsr::II<RDTYPE(data), DIM(data), FRAME(data)>&                  \
+          inverse_spatial_metric,                                            \
+      const tnsr::I<RDTYPE(data), DIM(data), FRAME(data)>& inertial_coords); \
+  template void gr::psi_4(                                                   \
+      const gsl::not_null<Scalar<CDTYPE(data)>*> psi_4_result,               \
+      const tnsr::ii<RDTYPE(data), DIM(data), FRAME(data)>& spatial_ricci,   \
+      const tnsr::ii<RDTYPE(data), DIM(data), FRAME(data)>&                  \
+          extrinsic_curvature,                                               \
+      const tnsr::ijj<RDTYPE(data), DIM(data), FRAME(data)>&                 \
+          cov_deriv_extrinsic_curvature,                                     \
+      const tnsr::ii<RDTYPE(data), DIM(data), FRAME(data)>& spatial_metric,  \
+      const tnsr::II<RDTYPE(data), DIM(data), FRAME(data)>&                  \
+          inverse_spatial_metric,                                            \
+      const tnsr::I<RDTYPE(data), DIM(data), FRAME(data)>& inertial_coords);
 
-GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3), (double, DataVector),
-                        (Frame::Grid, Frame::Inertial))
+GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3), (double),
+                        (std::complex<double>), (Frame::Grid, Frame::Inertial))
+GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3), (DataVector),
+                        (ComplexDataVector), (Frame::Grid, Frame::Inertial))
 
 #undef DIM
-#undef DTYPE
+#undef RDTYPE
+#undef CDTYPE
 #undef FRAME
 #undef INSTANTIATE

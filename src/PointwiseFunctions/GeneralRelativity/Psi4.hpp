@@ -26,59 +26,63 @@ namespace gr {
  *
  *
  */
-template <size_t SpatialDim, typename Frame, typename DataType>
+template <typename ComplexDataType, size_t SpatialDim, typename Frame,
+          typename RealDataType>
 void psi_4(
-    const gsl::not_null<Scalar<DataType>*> psi_4_result,
-    const tnsr::ii<DataType, SpatialDim, Frame>& spatial_ricci,
-    const tnsr::ii<DataType, SpatialDim, Frame>& extrinsic_curvature,
-    const tnsr::ijj<DataType, SpatialDim, Frame>& cov_deriv_extrinsic_curvature,
-    const tnsr::ii<DataType, SpatialDim, Frame>& spatial_metric,
-    const tnsr::II<DataType, SpatialDim, Frame>& inverse_spatial_metric,
-    // const Scalar<DataType>& sqrt_det_spatial_metric,
-    const tnsr::I<DataType, SpatialDim, Frame>& inertial_coords);
+    const gsl::not_null<Scalar<ComplexDataType>*> psi_4_result,
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& spatial_ricci,
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& extrinsic_curvature,
+    const tnsr::ijj<RealDataType, SpatialDim, Frame>&
+        cov_deriv_extrinsic_curvature,
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& spatial_metric,
+    const tnsr::II<RealDataType, SpatialDim, Frame>& inverse_spatial_metric,
+    const tnsr::I<RealDataType, SpatialDim, Frame>& inertial_coords);
 // const tnsr::ii<DataType, SpatialDim, Frame>& weyl_electric,
 // const tnsr::ii<DataType, SpatialDim, Frame>& weyl_magnetic) {
 
-template <size_t SpatialDim, typename Frame, typename DataType>
-Scalar<DataType> psi_4(
-    const tnsr::ii<DataType, SpatialDim, Frame>& spatial_ricci,
-    const tnsr::ii<DataType, SpatialDim, Frame>& extrinsic_curvature,
-    const tnsr::ijj<DataType, SpatialDim, Frame>& cov_deriv_extrinsic_curvature,
-    const tnsr::ii<DataType, SpatialDim, Frame>& spatial_metric,
-    const tnsr::II<DataType, SpatialDim, Frame>& inverse_spatial_metric,
+template <typename ComplexDataType, size_t SpatialDim, typename Frame,
+          typename RealDataType>
+Scalar<ComplexDataType> psi_4(
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& spatial_ricci,
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& extrinsic_curvature,
+    const tnsr::ijj<RealDataType, SpatialDim, Frame>&
+        cov_deriv_extrinsic_curvature,
+    const tnsr::ii<RealDataType, SpatialDim, Frame>& spatial_metric,
+    const tnsr::II<RealDataType, SpatialDim, Frame>& inverse_spatial_metric,
     // const Scalar<DataType>& sqrt_det_spatial_metric,
-    const tnsr::I<DataType, SpatialDim, Frame>& inertial_coords);
+    const tnsr::I<RealDataType, SpatialDim, Frame>& inertial_coords);
 // const tnsr::ii<DataType, SpatialDim, Frame>& weyl_electric,
 // const tnsr::ii<DataType, SpatialDim, Frame>& weyl_magnetic) {
 /// @}
 
 namespace Tags {
+/// Computes the Newman Penrose quantity Psi4 using the
+/// characteristic field U_{ij}^8+ and m_bar = (x^i + iy^i) / sqrt(2)
 ///
-///
-///
-///
-template <size_t SpatialDim, typename Frame, typename DataType>
-struct Psi4Compute : Psi4<DataType>, db::ComputeTag {
-  using argument_tags =
-      tmpl::list<gr::Tags::SpatialRicci<SpatialDim, Frame, DataType>,
-                 gr::Tags::ExtrinsicCurvature<SpatialDim, Frame, DataType>,
-                 ::Tags::deriv<gr::Tags::ExtrinsicCurvature<3, Frame, DataType>,
-                               tmpl::size_t<3>, Frame>,
-                 gr::Tags::SpatialMetric<SpatialDim, Frame, DataType>,
-                 gr::Tags::InverseSpatialMetric<SpatialDim, Frame, DataType>,
-                 domain::Tags::Coordinates<SpatialDim, Frame>>;
+/// Can be retrieved using `gr::Tags::Psi4`
+template <typename ComplexDataType, size_t SpatialDim, typename Frame,
+          typename RealDataType>
+struct Psi4Compute : Psi4<ComplexDataType>, db::ComputeTag {
+  using argument_tags = tmpl::list<
+      gr::Tags::SpatialRicci<SpatialDim, Frame, RealDataType>,
+      gr::Tags::ExtrinsicCurvature<SpatialDim, Frame, RealDataType>,
+      ::Tags::deriv<gr::Tags::ExtrinsicCurvature<3, Frame, RealDataType>,
+                    tmpl::size_t<3>, Frame>,
+      gr::Tags::SpatialMetric<SpatialDim, Frame, RealDataType>,
+      gr::Tags::InverseSpatialMetric<SpatialDim, Frame, RealDataType>,
+      domain::Tags::Coordinates<SpatialDim, Frame>>;
 
-  using return_type = Scalar<DataType>;
+  using return_type = Scalar<ComplexDataType>;
   static constexpr auto function =
-      static_cast<void (*)(gsl::not_null<Scalar<DataType>*>,
-                           const tnsr::ii<DataType, SpatialDim, Frame>&,
-                           const tnsr::ii<DataType, SpatialDim, Frame>&,
-                           const tnsr::ijj<DataType, SpatialDim, Frame>&,
-                           const tnsr::ii<DataType, SpatialDim, Frame>&,
-                           const tnsr::II<DataType, SpatialDim, Frame>&,
-                           const tnsr::I<DataType, SpatialDim, Frame>&)>(
-          &psi_4<SpatialDim, Frame, DataType>);
-  using base = Psi4<DataType>;
+      static_cast<void (*)(gsl::not_null<Scalar<ComplexDataType>*>,
+                           const tnsr::ii<RealDataType, SpatialDim, Frame>&,
+                           const tnsr::ii<RealDataType, SpatialDim, Frame>&,
+                           const tnsr::ijj<RealDataType, SpatialDim, Frame>&,
+                           const tnsr::ii<RealDataType, SpatialDim, Frame>&,
+                           const tnsr::II<RealDataType, SpatialDim, Frame>&,
+                           const tnsr::I<RealDataType, SpatialDim, Frame>&)>(
+          &psi_4<ComplexDataType, SpatialDim, Frame, RealDataType>);
+  using base = Psi4<ComplexDataType>;
 };
 }  // namespace Tags
 }  // namespace gr
