@@ -85,8 +85,10 @@ template <size_t Dim, typename Frame = Frame::Inertial,
 struct SpatialRicci;
 template <typename DataType = DataVector>
 struct SpatialRicciScalar;
-template <typename DataType = DataVector>
+template <typename DataType = ComplexDataVector>
 struct Psi4;
+template <typename DataType = DataVector>
+struct Psi4Abs;
 template <typename DataType = DataVector>
 struct EnergyDensity;
 template <typename DataType = DataVector>

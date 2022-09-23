@@ -113,6 +113,7 @@
 #include "PointwiseFunctions/GeneralRelativity/DetAndInverseSpatialMetric.hpp"
 #include "PointwiseFunctions/GeneralRelativity/GeneralizedHarmonic/ConstraintGammas.hpp"
 #include "PointwiseFunctions/GeneralRelativity/IndexManipulation.hpp"
+#include "PointwiseFunctions/GeneralRelativity/Psi4Abs.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Ricci.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Tags.hpp"
 #include "Time/Actions/AdvanceTime.hpp"
@@ -290,7 +291,14 @@ struct EvolutionMetavars {
                   GeneralizedHarmonic::Tags::FourIndexConstraint<
                       3, ::Frame::Inertial>>,
               GeneralizedHarmonic::Tags::ConstraintEnergyCompute<
-                  3, ::Frame::Inertial>>,
+                  3, ::Frame::Inertial>,
+              GeneralizedHarmonic::Tags::ExtrinsicCurvatureCompute<
+                  3, ::Frame::Inertial>,
+              ::Tags::DerivTensorCompute<
+                  gr::Tags::ExtrinsicCurvature<3, ::Frame::Inertial>,
+                  ::domain::Tags::InverseJacobian<
+                      volume_dim, Frame::ElementLogical, Frame::Inertial>>,
+              gr::Tags::Psi4AbsCompute<3, Frame::Inertial, DataVector>>,
           tmpl::list<>>>;
   using non_tensor_compute_tags =
       tmpl::list<::Events::Tags::ObserverMeshCompute<volume_dim>>;
