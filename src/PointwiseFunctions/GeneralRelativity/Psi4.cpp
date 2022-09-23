@@ -4,6 +4,7 @@
 #include "PointwiseFunctions/GeneralRelativity/Psi4.hpp"
 
 #include <cstddef>
+#include <iostream>
 
 #include "DataStructures/LeviCivitaIterator.hpp"
 #include "DataStructures/Tensor/EagerMath/Magnitude.hpp"
@@ -53,20 +54,26 @@ void psi_4(
       projection_tensor, projection_up_lo, 1);
   auto x_coord = make_with_value<tnsr::I<RealDataType, SpatialDim, Frame>>(
       get<0, 0>(inverse_spatial_metric), 0.0);
-  x_coord.get(0) = inertial_coords.get(0);
+  x_coord.get(0) = 1.0;
   const auto magnitude_x =
       Scalar<RealDataType>(magnitude(x_coord, spatial_metric));
+  // std::cout << "magnitude x: " << magnitude_x << std::endl;
+  // std::cout << "x_coords: " << x_coord << std::endl;
   const auto x_hat = tenex::evaluate<ti::I>(x_coord(ti::I) / magnitude_x());
+  // const auto x_hat = tenex::evaluate<ti::I>(x_coord(ti::I));
   auto y_coord = make_with_value<tnsr::I<RealDataType, SpatialDim, Frame>>(
       get<0, 0>(inverse_spatial_metric), 0.0);
-  y_coord.get(1) += inertial_coords.get(1);
+  y_coord.get(1) = 1.0;
   const auto magnitude_y =
       Scalar<RealDataType>(magnitude(y_coord, spatial_metric));
+  // std::cout << "magnitude y: " << magnitude_y << std::endl;
   const std::complex<double> i = std::complex<double>(0.0, 1.0);
   tnsr::I<ComplexDataType, SpatialDim, Frame> y_hat{};
   // std::complex<double> + DataVector -> ComplexDataVector
   tenex::evaluate<ti::I>(make_not_null(&y_hat),
                          i * y_coord(ti::I) / magnitude_y());
+  // tenex::evaluate<ti::I>(make_not_null(&y_hat),
+  //                        i * y_coord(ti::I));
 
   // todo rad 2 stuff
   const auto m_bar = tenex::evaluate<ti::I>((x_hat(ti::I) + y_hat(ti::I)));

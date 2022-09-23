@@ -245,6 +245,11 @@ template <typename DataType>
 struct Psi4 : db::SimpleTag {
   using type = Scalar<DataType>;
 };
+
+template <typename DataType>
+struct Psi4Abs : db::SimpleTag {
+  using type = Scalar<DataType>;
+};
 }  // namespace Tags
 
 /// GR Tags commonly needed for the evolution of hydro systems
