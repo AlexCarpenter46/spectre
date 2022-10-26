@@ -99,6 +99,8 @@
 #include "PointwiseFunctions/GeneralRelativity/Psi4Abs.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Ricci.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Tags.hpp"
+#include "PointwiseFunctions/GeneralRelativity/WeylElectric.hpp"
+#include "PointwiseFunctions/GeneralRelativity/WeylMagnetic.hpp"
 #include "Time/Actions/AdvanceTime.hpp"
 #include "Time/Actions/ChangeSlabSize.hpp"
 #include "Time/Actions/RecordTimeStepperData.hpp"
@@ -261,7 +263,12 @@ struct GeneralizedHarmonicTemplateBase<
                   gr::Tags::ExtrinsicCurvature<3, frame>,
                   ::domain::Tags::InverseJacobian<
                       volume_dim, Frame::ElementLogical, Frame::Inertial>>,
-              gr::Tags::Psi4AbsCompute<3, Frame::Inertial, DataVector>>,
+              gr::Tags::WeylElectricCompute<3, Frame::Inertial, DataVector>,
+              gr::Tags::WeylMagneticCompute<Frame::Inertial, DataVector>,
+              gr::Tags::WeylElectricScalarCompute<3, Frame::Inertial,
+                                                  DataVector>,
+              gr::Tags::WeylMagneticScalarCompute<Frame::Inertial, DataVector>,
+              gr::Tags::Psi4RealCompute<3, Frame::Inertial, DataVector>>,
           tmpl::list<>>>;
   using non_tensor_compute_tags =
       tmpl::list<::Events::Tags::ObserverMeshCompute<volume_dim>,

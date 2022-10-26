@@ -23,8 +23,13 @@ namespace gr {
 
 /// @{
 /*!
+ * \ingroup GeneralRelativityGroup
+ * \brief Computes Newman Penrose quantity $\Psi_4$ using the characteristic
+ * field U$^{8+}$ and $\bar{m}^i.
  *
- *
+ * \details Computes $\Psi_4$ as: \f$\Psi_4\f$ =
+ * U\f$^{8+}_{ij}\bar{m}^i\bar{m}^j\f$ with the characteristic field using the
+ * Weyl Electric tensor E_{ij}
  */
 template <typename ComplexDataType, size_t SpatialDim, typename Frame,
           typename RealDataType>
@@ -37,8 +42,6 @@ void psi_4(
     const tnsr::ii<RealDataType, SpatialDim, Frame>& spatial_metric,
     const tnsr::II<RealDataType, SpatialDim, Frame>& inverse_spatial_metric,
     const tnsr::I<RealDataType, SpatialDim, Frame>& inertial_coords);
-// const tnsr::ii<DataType, SpatialDim, Frame>& weyl_electric,
-// const tnsr::ii<DataType, SpatialDim, Frame>& weyl_magnetic) {
 
 template <typename ComplexDataType, size_t SpatialDim, typename Frame,
           typename RealDataType>
@@ -51,12 +54,10 @@ Scalar<ComplexDataType> psi_4(
     const tnsr::II<RealDataType, SpatialDim, Frame>& inverse_spatial_metric,
     // const Scalar<DataType>& sqrt_det_spatial_metric,
     const tnsr::I<RealDataType, SpatialDim, Frame>& inertial_coords);
-// const tnsr::ii<DataType, SpatialDim, Frame>& weyl_electric,
-// const tnsr::ii<DataType, SpatialDim, Frame>& weyl_magnetic) {
 /// @}
 namespace Tags {
 /// Computes the Newman Penrose quantity Psi4 using the
-/// characteristic field U_{ij}^8+ and m_bar = (x^i + iy^i) / sqrt(2)
+/// characteristic field U_{ij}^8+ and m_bar = (x^i - iy^i) / sqrt(2)
 ///
 /// Can be retrieved using `gr::Tags::Psi4`
 template <typename ComplexDataType, size_t SpatialDim, typename Frame,

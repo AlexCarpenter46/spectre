@@ -37,6 +37,6 @@ def psi_4(spatial_ricci, extrinsic_curvature, cov_deriv_extrinsic_curvature,
     y_hat = y_coord / math.sqrt(
         np.einsum("a,b,ab", y_coord, y_coord, spatial_metric))
 
-    m_bar = x_hat + (y_hat * complex(0.0, 1.0))
+    m_bar = x_hat - (y_hat * complex(0.0, 1.0))
 
-    return (0.5 * np.einsum("ab,a,b", u8_plus, m_bar, m_bar))
+    return (-0.5 * np.einsum("ab,a,b", u8_plus, m_bar, m_bar))

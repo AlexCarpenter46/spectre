@@ -247,7 +247,7 @@ struct Psi4 : db::SimpleTag {
 };
 
 template <typename DataType>
-struct Psi4Abs : db::SimpleTag {
+struct Psi4Real : db::SimpleTag {
   using type = Scalar<DataType>;
 };
 }  // namespace Tags

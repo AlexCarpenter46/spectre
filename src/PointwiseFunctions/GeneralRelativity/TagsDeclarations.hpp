@@ -88,7 +88,7 @@ struct SpatialRicciScalar;
 template <typename DataType = ComplexDataVector>
 struct Psi4;
 template <typename DataType = DataVector>
-struct Psi4Abs;
+struct Psi4Real;
 template <typename DataType = DataVector>
 struct EnergyDensity;
 template <typename DataType = DataVector>
@@ -100,6 +100,10 @@ struct HamiltonianConstraint;
 template <size_t Dim, typename Frame = Frame::Inertial,
           typename DataType = DataVector>
 struct MomentumConstraint;
+template <size_t Dim, typename Frame, typename DataType>
+struct WeylElectric;
+template <typename DataType>
+struct WeylElectricScalar;
 template <typename Frame, typename DataType>
 struct WeylMagnetic;
 template <typename DataType>

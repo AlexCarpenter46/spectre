@@ -34,53 +34,60 @@ void psi_4(
     const tnsr::I<RealDataType, SpatialDim, Frame>& inertial_coords) {
   const auto magnitude_cartesian =
       Scalar<RealDataType>(magnitude(inertial_coords, spatial_metric));
-  const auto r_hat = tenex::evaluate<ti::j>(inertial_coords(ti::I) *
-                                            spatial_metric(ti::i, ti::j) /
-                                            magnitude_cartesian());
+  auto r_hat = make_with_value<tnsr::I<RealDataType, SpatialDim, Frame>>(
+      get<0, 0>(spatial_metric), 0.0);
+  for (size_t j = 0; j < SpatialDim; j++) {
+    if constexpr (is_derived_of_vector_impl_v<RealDataType>) {
+      for (size_t i = 0; i < magnitude_cartesian.size(); i++) {
+        if (magnitude_cartesian.get()[i] != 0.0) {
+          r_hat.get(j)[i] =
+              inertial_coords.get(j)[i] / magnitude_cartesian.get()[i];
+        }
+      }
+    } else {
+      if (magnitude_cartesian.get() == 0.0) {
+        r_hat.get(j) = 0.0;
+      } else {
+        r_hat.get(j) = inertial_coords.get(j) / magnitude_cartesian.get();
+      }
+    }
+  }
+  const auto lower_r_hat =
+      tenex::evaluate<ti::i>(r_hat(ti::J) * spatial_metric(ti::i, ti::j));
+  std::cout << magnitude(lower_r_hat, inverse_spatial_metric) << std::endl;
+
   const auto projection_tensor =
-      transverse_projection_operator(spatial_metric, r_hat);
-  const auto raised_r_hat = tenex::evaluate<ti::I>(
-      r_hat(ti::j) * inverse_spatial_metric(ti::I, ti::J));
+      transverse_projection_operator(spatial_metric, lower_r_hat);
   const auto inverse_projection_tensor =
-      transverse_projection_operator(inverse_spatial_metric, raised_r_hat);
-  // documentation says a and b but here since they're all spatial, we'll do
-  // a = k and b = l
+      transverse_projection_operator(inverse_spatial_metric, r_hat);
   const auto projection_up_lo = tenex::evaluate<ti::K, ti::i>(
       projection_tensor(ti::i, ti::j) * inverse_spatial_metric(ti::K, ti::J));
 
   const auto u8_plus = gr::weyl_propagating(
       spatial_ricci, extrinsic_curvature, inverse_spatial_metric,
-      cov_deriv_extrinsic_curvature, raised_r_hat, inverse_projection_tensor,
-      projection_tensor, projection_up_lo, 1);
+      cov_deriv_extrinsic_curvature, r_hat, inverse_projection_tensor,
+      projection_tensor, projection_up_lo, 1.0);
+
   auto x_coord = make_with_value<tnsr::I<RealDataType, SpatialDim, Frame>>(
       get<0, 0>(inverse_spatial_metric), 0.0);
   x_coord.get(0) = 1.0;
   const auto magnitude_x =
       Scalar<RealDataType>(magnitude(x_coord, spatial_metric));
-  // std::cout << "magnitude x: " << magnitude_x << std::endl;
-  // std::cout << "x_coords: " << x_coord << std::endl;
   const auto x_hat = tenex::evaluate<ti::I>(x_coord(ti::I) / magnitude_x());
-  // const auto x_hat = tenex::evaluate<ti::I>(x_coord(ti::I));
   auto y_coord = make_with_value<tnsr::I<RealDataType, SpatialDim, Frame>>(
       get<0, 0>(inverse_spatial_metric), 0.0);
   y_coord.get(1) = 1.0;
   const auto magnitude_y =
       Scalar<RealDataType>(magnitude(y_coord, spatial_metric));
-  // std::cout << "magnitude y: " << magnitude_y << std::endl;
-  const std::complex<double> i = std::complex<double>(0.0, 1.0);
+  const std::complex<double> imag = std::complex<double>(0.0, 1.0);
   tnsr::I<ComplexDataType, SpatialDim, Frame> y_hat{};
   // std::complex<double> + DataVector -> ComplexDataVector
   tenex::evaluate<ti::I>(make_not_null(&y_hat),
-                         i * y_coord(ti::I) / magnitude_y());
-  // tenex::evaluate<ti::I>(make_not_null(&y_hat),
-  //                        i * y_coord(ti::I));
+                         imag * y_coord(ti::I) / magnitude_y());
+  const auto m_bar = tenex::evaluate<ti::I>((x_hat(ti::I) - y_hat(ti::I)));
 
-  // todo rad 2 stuff
-  const auto m_bar = tenex::evaluate<ti::I>((x_hat(ti::I) + y_hat(ti::I)));
-
-  // making the real portion of psi4 only for now.
   tenex::evaluate(psi_4_result,
-                  0.5 * u8_plus(ti::i, ti::j) * m_bar(ti::I) * m_bar(ti::J));
+                  -0.5 * u8_plus(ti::i, ti::j) * m_bar(ti::I) * m_bar(ti::J));
 }
 
 template <typename ComplexDataType, size_t SpatialDim, typename Frame,
