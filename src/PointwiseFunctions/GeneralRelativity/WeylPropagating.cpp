@@ -87,7 +87,7 @@ void weyl_propagating(
       for (size_t k = 0; k < SpatialDim; ++k) {
         for (size_t l = 0; l < SpatialDim; ++l) {
           weyl_prop_u8->get(i, j) +=
-              (projection_Ij.get(k, i) * projection_Ij.get(l, j) -
+              (0.5 * projection_Ij.get(k, i) * projection_Ij.get(l, j) -
                0.5 * projection_IJ.get(k, l) * projection_ij.get(i, j)) *
               unprojected_weyl_prop_u8.get(k, l);
         }
