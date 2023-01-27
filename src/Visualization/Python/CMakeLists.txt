@@ -8,6 +8,7 @@ spectre_python_add_module(
   PYTHON_FILES
   __init__.py
   ApplyPointwise.py
+  GenerateVideo.py
   GenerateXdmf.py
   InterpolateToCoords.py
   InterpolateToMesh.py

@@ -20,6 +20,7 @@ class Cli(click.MultiCommand):
             "clean-output",
             "extract-dat",
             "extract-input",
+            "generate-video",
             "generate-xdmf",
             "interpolate-to-coords",
             "interpolate-to-mesh",
@@ -46,6 +47,10 @@ class Cli(click.MultiCommand):
             from spectre.IO.H5.ExtractInputSourceYamlFromH5 import (
                 extract_input_source_from_h5_command)
             return extract_input_source_from_h5_command
+        elif name == "generate-video":
+            from spectre.Visualization.GenerateVideo import (
+                generate_video_command)
+            return generate_video_command
         elif name == "generate-xdmf":
             from spectre.Visualization.GenerateXdmf import (
                 generate_xdmf_command)
