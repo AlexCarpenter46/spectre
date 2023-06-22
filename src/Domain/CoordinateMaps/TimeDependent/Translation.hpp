@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include "DataStructures/Tensor/TypeAliases.hpp"
+#include "PointwiseFunctions/MathFunctions/MathFunction.hpp"
 #include "Utilities/TypeTraits/RemoveReferenceWrapper.hpp"
 
 /// \cond
@@ -29,7 +30,7 @@ namespace CoordinateMaps {
 namespace TimeDependent {
 /*!
  * \ingroup CoordMapsTimeDependentGroup
- * \brief Translation map defined by \f$\vec{x} = \vec{\xi}+\vec{T}(t)\f$.
+ * \brief Translation map defined by \f$\vec{x} = \vec{\xi}+f(r)\vec{T}(t)\f$.
  *
  * The map adds a translation, \f$\vec{T}(t)\f$, to the coordinates
  * \f$\vec{\xi}\f$, where \f$\vec{T}(t)\f$ is a FunctionOfTime.
@@ -40,7 +41,10 @@ class Translation {
   static constexpr size_t dim = Dim;
 
   Translation() = default;
-  explicit Translation(std::string function_of_time_name);
+  explicit Translation(
+      std::string function_of_time_name,
+      std::unique_ptr<::MathFunction<1, Frame::NoFrame>> radial_function,
+      std::array<double, Dim>& center);
 
   template <typename T>
   std::array<tt::remove_cvref_wrap_t<T>, Dim> operator()(
@@ -71,11 +75,23 @@ class Translation {
 
   template <typename T>
   tnsr::Ij<tt::remove_cvref_wrap_t<T>, Dim, Frame::NoFrame> inv_jacobian(
-      const std::array<T, Dim>& source_coords) const;
+      const std::array<T, Dim>& source_coords, const double time,
+      const std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
+          functions_of_time) const;
 
   template <typename T>
   tnsr::Ij<tt::remove_cvref_wrap_t<T>, Dim, Frame::NoFrame> jacobian(
-      const std::array<T, Dim>& source_coords) const;
+      const std::array<T, Dim>& source_coords, const double time,
+      const std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
+          functions_of_time) const;
+
+  double root_finder(const std::array<double, Dim>& translated_coords,
+                     const double& translated_radius,
+                     const Scalar<double>& magnitude_function_of_time) const;
 
   // NOLINTNEXTLINE(google-runtime-references)
   void pup(PUP::er& p);
@@ -88,6 +104,8 @@ class Translation {
       const Translation<LocalDim>& lhs, const Translation<LocalDim>& rhs);
 
   std::string f_of_t_name_{};
+  std::unique_ptr<MathFunction<1, Frame::NoFrame>> f_of_r_{};
+  std::array<double, Dim>& center_{};
 };
 
 template <size_t Dim>
