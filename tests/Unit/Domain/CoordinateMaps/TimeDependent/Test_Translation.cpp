@@ -37,6 +37,8 @@ void test_translation() {
   const double amplitude = 1.0;
   const double width = 20.0;
   const std::array<double, 3>& center = {0., 0., 0.};
+  const MathFunctions::Gaussian<1, Frame::Inertial> gaussian{amplitude, width,
+                                                             center};
 
   const std::array<DataVector, deriv_order + 1> init_func{
       {{Dim, 1.0}, {Dim, -2.0}, {Dim, 2.0}, {Dim, 0.0}}};
@@ -50,7 +52,7 @@ void test_translation() {
   const FoftPtr& f_of_t = f_of_t_list.at("translation");
 
   const CoordinateMaps::TimeDependent::Translation<Dim> trans_map{
-      "translation", amplitude, width, center};
+      "translation", gaussian, center};
   // test serialized/deserialized map
   const auto trans_map_deserialized = serialize_and_deserialize(trans_map);
 

@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include "DataStructures/Tensor/TypeAliases.hpp"
+#include "PointwiseFunctions/MathFunctions/Gaussian.hpp"
 #include "PointwiseFunctions/MathFunctions/MathFunction.hpp"
 #include "Utilities/TypeTraits/RemoveReferenceWrapper.hpp"
 
@@ -43,7 +44,8 @@ class Translation {
   Translation() = default;
   explicit Translation(
       std::string function_of_time_name,
-      std::unique_ptr<::MathFunction<1, Frame::NoFrame>> radial_function,
+      std::unique_ptr<MathFunctions::Gaussian<1, Frame::Inertial>>
+          radial_function,
       std::array<double, Dim>& center);
 
   template <typename T>
@@ -103,9 +105,11 @@ class Translation {
   friend bool operator==(  // NOLINT(readability-redundant-declaration)
       const Translation<LocalDim>& lhs, const Translation<LocalDim>& rhs);
 
+  double function_call(const double x) { return (*f_of_r_)(x); }
+
   std::string f_of_t_name_{};
-  std::unique_ptr<MathFunction<1, Frame::NoFrame>> f_of_r_{};
-  std::array<double, Dim>& center_{};
+  std::unique_ptr<MathFunctions::Gaussian<1, Frame::Inertial>> f_of_r_{};
+  std::array<double, Dim> center_{};
 };
 
 template <size_t Dim>

@@ -7,6 +7,7 @@
 #include <ostream>
 #include <pup.h>
 #include <pup_stl.h>
+#include <type_traits>
 #include <utility>
 
 #include "DataStructures/DataVector.hpp"
@@ -18,6 +19,7 @@
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "NumericalAlgorithms/RootFinding/RootBracketing.hpp"
 #include "NumericalAlgorithms/RootFinding/TOMS748.hpp"
+#include "PointwiseFunctions/MathFunctions/Gaussian.hpp"
 #include "PointwiseFunctions/MathFunctions/MathFunction.hpp"
 #include "Utilities/DereferenceWrapper.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
@@ -31,7 +33,8 @@ namespace domain::CoordinateMaps::TimeDependent {
 template <size_t Dim>
 Translation<Dim>::Translation(
     std::string function_of_time_name,
-    std::unique_ptr<::MathFunction<1, Frame::NoFrame>> radial_function,
+    std::unique_ptr<MathFunctions::Gaussian<1, Frame::Inertial>>
+        radial_function,
     std::array<double, Dim>& center)
     : f_of_t_name_(std::move(function_of_time_name)),
       f_of_r_(std::move(radial_function)),
@@ -58,16 +61,20 @@ std::array<tt::remove_cvref_wrap_t<DataType>, Dim> Translation<Dim>::operator()(
              << ") does not match the dimension of the translation map (" << Dim
              << ").");
   // finding the r coord
-  std::array<DataType, Dim> distance_to_center = source_coords;
-  Scalar<DataType> radius_squared{0.};
+  std::array<tt::remove_cvref_wrap_t<DataType>, Dim> distance_to_center{};
+  // for (size_t i = 0; i < Dim; i++) {
+  //     distance_to_center[i] = source_coords[i];
+  // }
+  Scalar<tt::remove_cvref_wrap_t<DataType>> radius(
+      get_size(distance_to_center[0]));
   for (size_t i = 0; i < Dim; i++) {
-    distance_to_center[i] -= center_[i];
-    radius_squared.get() += square(distance_to_center[i]);
+    distance_to_center[i] = source_coords[i] - center_[i];
+    radius.get() += square(distance_to_center[i]);
   }
-  const DataType& radius = sqrt(radius_squared.get());
+  radius.get() = sqrt(radius.get());
   for (size_t i = 0; i < Dim; i++) {
-    gsl::at(result, i) =
-        gsl::at(source_coords, i) + function_of_time[i] * ((*f_of_r_)(radius));
+    gsl::at(result, i) = gsl::at(source_coords, i) +
+                         function_of_time[i] * ((*f_of_r_)(radius.get()));
   }
   return result;
 }
@@ -151,32 +158,47 @@ Translation<Dim>::jacobian(
     const std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time) const {
-  // find the r coord again
-  std::array<DataType, Dim> distance_to_center = source_coords;
-  Scalar<DataType> radius_squared{0.};
-  // double radius =0;
+  std::array<tt::remove_cvref_wrap_t<DataType>, Dim> distance_to_center{};
+  Scalar<tt::remove_cvref_wrap_t<DataType>> radius(
+      get_size(distance_to_center[0]));
   for (size_t i = 0; i < Dim; i++) {
-    distance_to_center[i] -= center_[i];
-    radius_squared.get() += square(distance_to_center[i]);
+    distance_to_center[i] = source_coords[i] - center_[i];
+    radius.get() += square(distance_to_center[i]);
   }
-  const double radius = sqrt(radius_squared.get());
+  radius.get() = sqrt(radius.get());
   // radius = sqrt(radius);
 
   const DataVector function_of_time =
       functions_of_time.at(f_of_t_name_)->func(time)[0];
 
-  tnsr::Ij<tt::remove_cvref_wrap_t<DataType>, Dim, Frame::NoFrame> result(
-      get_size(distance_to_center[0]));
+  auto result = make_with_value<
+      tnsr::Ij<tt::remove_cvref_wrap_t<DataType>, Dim, Frame::NoFrame>>(
+      dereference_wrapper(source_coords[0]), 0.0);
   for (size_t i = 0; i < Dim; i++) {
     for (size_t j = 0; j < Dim; j++) {
-      if (radius > 1.e-13) {
-        result.get(i, j) = (*f_of_r_).first_deriv(radius) *
-                           gsl::at(function_of_time, i) *
-                           gsl::at(distance_to_center, j) / radius;
+      if constexpr (std::is_same_v<tt::remove_cvref_wrap_t<DataType>, double>) {
+        if (radius.get() > 1.e-13) {
+          result.get(i, j) = (*f_of_r_).first_deriv(radius.get()) *
+                             gsl::at(function_of_time, i) *
+                             gsl::at(distance_to_center, j) / radius.get();
+        } else {
+          result.get(i, j) = (*f_of_r_).second_deriv(radius.get()) *
+                             gsl::at(function_of_time, i) *
+                             gsl::at(distance_to_center, j);
+        }
       } else {
-        result.get(i, j) = (*f_of_r_).second_deriv(radius) *
-                           gsl::at(function_of_time, i) *
-                           gsl::at(distance_to_center, j);
+        for (size_t k = 0; k < radius.size(); k++) {
+          if (radius.get()[k] > 1.e-13) {
+            result.get(i, j)[k] = (*f_of_r_).first_deriv(radius.get()[k]) *
+                                  gsl::at(function_of_time, i) *
+                                  gsl::at(distance_to_center, j)[k] /
+                                  radius.get()[k];
+          } else {
+            result.get(i, j)[k] = (*f_of_r_).second_deriv(radius.get()[k]) *
+                                  gsl::at(function_of_time, i) *
+                                  gsl::at(distance_to_center, j)[k];
+          }
+        }
       }
     }
     result.get(i, i) += 1.0;
@@ -207,14 +229,15 @@ double Translation<Dim>::root_finder(
   double upper_bound = (translated_radius + center_offset) * (1.0 + 1.e-9);
   double function_at_lower_bound = (*f_of_r_)(lower_bound);
   double function_at_upper_bound = (*f_of_r_)(upper_bound);
-  RootFinder::bracket_possibly_undefined_function_in_interval(
-      &lower_bound, &upper_bound, &function_at_lower_bound,
-      &function_at_upper_bound, *f_of_r_);
+  // RootFinder::bracket_possibly_undefined_function_in_interval(
+  //     &lower_bound, &upper_bound, &function_at_lower_bound,
+  //     &function_at_upper_bound, *f_of_r_);
   const double absolute_tol = std::numeric_limits<double>::epsilon() *
                               std::max(translated_radius, center_offset);
   const double relative_tol = std::numeric_limits<double>::epsilon();
-  return RootFinder::toms748(f_of_r_, lower_bound, upper_bound, absolute_tol,
-                             relative_tol);
+  return RootFinder::toms748(*f_of_r_, lower_bound, upper_bound,
+                             function_at_lower_bound, function_at_upper_bound,
+                             absolute_tol, relative_tol);
 }
 
 template <size_t Dim>
