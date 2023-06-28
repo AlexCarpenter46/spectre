@@ -44,7 +44,7 @@ class Translation {
   Translation() = default;
   explicit Translation(
       std::string function_of_time_name,
-      std::unique_ptr<MathFunctions::Gaussian<1, Frame::Inertial>>
+      std::unique_ptr<MathFunction<1, Frame::Inertial>>
           radial_function,
       std::array<double, Dim>& center);
 
@@ -108,7 +108,7 @@ class Translation {
   double function_call(const double x) { return (*f_of_r_)(x); }
 
   std::string f_of_t_name_{};
-  std::unique_ptr<MathFunctions::Gaussian<1, Frame::Inertial>> f_of_r_{};
+  std::unique_ptr<MathFunction<1, Frame::Inertial>> f_of_r_{};
   std::array<double, Dim> center_{};
 };
 

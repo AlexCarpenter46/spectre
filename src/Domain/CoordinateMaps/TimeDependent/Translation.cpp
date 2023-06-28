@@ -33,7 +33,7 @@ namespace domain::CoordinateMaps::TimeDependent {
 template <size_t Dim>
 Translation<Dim>::Translation(
     std::string function_of_time_name,
-    std::unique_ptr<MathFunctions::Gaussian<1, Frame::Inertial>>
+    std::unique_ptr<MathFunction<1, Frame::Inertial>>
         radial_function,
     std::array<double, Dim>& center)
     : f_of_t_name_(std::move(function_of_time_name)),
