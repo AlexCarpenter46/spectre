@@ -56,6 +56,7 @@
 #include "Evolution/Initialization/NonconservativeSystem.hpp"
 #include "Evolution/Initialization/SetVariables.hpp"
 #include "Evolution/NumericInitialData.hpp"
+#include "Evolution/Systems/Cce/Callbacks/DumpBondiSachsOnWorldtube.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/AllSolutions.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/BoundaryConditions/Factory.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/BoundaryCorrections/Factory.hpp"
@@ -149,11 +150,13 @@
 #include "ParallelAlgorithms/Interpolation/Callbacks/FindApparentHorizon.hpp"
 #include "ParallelAlgorithms/Interpolation/Callbacks/ObserveTimeSeriesOnSurface.hpp"
 #include "ParallelAlgorithms/Interpolation/Events/Interpolate.hpp"
+#include "ParallelAlgorithms/Interpolation/Events/InterpolateWithoutInterpComponent.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolationTarget.hpp"
 #include "ParallelAlgorithms/Interpolation/Interpolator.hpp"
 #include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/ApparentHorizon.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/KerrHorizon.hpp"
+#include "ParallelAlgorithms/Interpolation/Targets/Sphere.hpp"
 #include "PointwiseFunctions/AnalyticData/AnalyticData.hpp"
 #include "PointwiseFunctions/AnalyticData/GhGrMhd/Factory.hpp"
 #include "PointwiseFunctions/AnalyticData/GrMhd/BlastWave.hpp"
@@ -274,7 +277,6 @@ struct GhValenciaDivCleanDefaults {
   static constexpr bool use_damped_harmonic_rollon = true;
   using temporal_id = Tags::TimeStepId;
   static constexpr bool local_time_stepping = false;
-
   using system = grmhd::GhValenciaDivClean::System;
   using analytic_variables_tags =
       typename system::primitive_variables_tag::tags_list;
@@ -320,6 +322,11 @@ struct GhValenciaDivCleanDefaults {
           tmpl::list<>>,
       Parallel::Actions::TerminatePhase>;
 
+  using source_vars_no_deriv =
+      tmpl::list<gr::Tags::SpacetimeMetric<DataVector, volume_dim>,
+                 gh::Tags::Pi<DataVector, volume_dim>,
+                 gh::Tags::Phi<DataVector, volume_dim>>;
+
   // NOLINTNEXTLINE(google-runtime-references)
   void pup(PUP::er& /*p*/) {}
   struct domain : tt::ConformsTo<::domain::protocols::Metavariables> {
@@ -329,6 +336,8 @@ struct GhValenciaDivCleanDefaults {
 
 template <typename EvolutionMetavarsDerived, bool UseDgSubcell>
 struct GhValenciaDivCleanTemplateBase;
+
+struct BondiSachs;
 
 namespace detail {
 template <typename InitialData>
@@ -363,12 +372,14 @@ struct GhValenciaDivCleanTemplateBase<
       EvolutionMetavarsDerived<InitialData, InterpolationTargetTags...>;
   using defaults = GhValenciaDivCleanDefaults<UseDgSubcell>;
   static constexpr size_t volume_dim = defaults::volume_dim;
+  //   using bondi = typename defaults::BondiSachs;
   using domain = typename defaults::domain;
   using domain_frame = typename defaults::domain_frame;
   static constexpr bool use_damped_harmonic_rollon =
       defaults::use_damped_harmonic_rollon;
   using temporal_id = typename defaults::temporal_id;
   static constexpr bool local_time_stepping = defaults::local_time_stepping;
+  using source_vars_no_deriv = typename defaults::source_vars_no_deriv;
   using system = typename defaults::system;
   using analytic_variables_tags = typename defaults::analytic_variables_tags;
   using analytic_solution_fields = typename defaults::analytic_solution_fields;
@@ -525,8 +536,10 @@ struct GhValenciaDivCleanTemplateBase<
                 dg::Events::field_observations<volume_dim, Tags::Time,
                                                observe_fields,
                                                non_tensor_compute_tags>,
-                dg::Events::ObserveVolumeIntegrals<volume_dim,
-                                                   Tags::Time, integrand_fields,
+                intrp::Events::InterpolateWithoutInterpComponent<
+                    3, BondiSachs, derived_metavars, source_vars_no_deriv>,
+                dg::Events::ObserveVolumeIntegrals<volume_dim, Tags::Time,
+                                                   integrand_fields,
                                                    non_tensor_compute_tags>,
                 Events::ObserveAtExtremum<Tags::Time, observe_fields,
                                           non_tensor_compute_tags>,
@@ -562,7 +575,7 @@ struct GhValenciaDivCleanTemplateBase<
                                          Triggers::time_triggers>>>;
   };
 
-  using interpolation_target_tags = tmpl::list<InterpolationTargetTags...>;
+  //   using interpolation_target_tags = tmpl::list<InterpolationTargetTags...>;
 
   using observed_reduction_data_tags = observers::collect_reduction_data_tags<
       tmpl::at<typename factory_creation::factory_classes, Event>>;
@@ -766,6 +779,22 @@ struct GhValenciaDivCleanTemplateBase<
               tmpl::list<Actions::RunEventsOnFailure,
                          Parallel::Actions::TerminatePhase>>>>>;
 
+  struct BondiSachs : tt::ConformsTo<intrp::protocols::InterpolationTargetTag> {
+    static std::string name() { return "BondiSachsInterpolation"; }
+    using temporal_id = ::Tags::Time;
+    using vars_to_interpolate_to_target = source_vars_no_deriv;
+    using compute_target_points =
+        intrp::TargetPoints::Sphere<BondiSachs, ::Frame::Inertial>;
+    using post_interpolation_callback =
+        intrp::callbacks::DumpBondiSachsOnWorldtube<BondiSachs>;
+    using compute_items_on_target = tmpl::list<>;
+    template <typename Metavariables>
+    using interpolating_component = dg_element_array_component;
+  };
+
+  using interpolation_target_tags =
+      tmpl::push_back<BondiSachs, InterpolationTargetTags...>;
+
   template <typename ParallelComponent>
   struct registration_list {
     using type = std::conditional_t<
@@ -779,6 +808,9 @@ struct GhValenciaDivCleanTemplateBase<
       std::conditional_t<use_numeric_initial_data,
                          importers::ElementDataReader<derived_metavars>,
                          tmpl::list<>>,
+      tmpl::transform<interpolation_target_tags,
+                      tmpl::bind<intrp::InterpolationTarget,
+                                 tmpl::pin<derived_metavars>, tmpl::_1>>,
       intrp::Interpolator<derived_metavars>,
       intrp::InterpolationTarget<derived_metavars, InterpolationTargetTags>...,
       dg_element_array_component>>;

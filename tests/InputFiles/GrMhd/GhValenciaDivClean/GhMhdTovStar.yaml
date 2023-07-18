@@ -219,6 +219,16 @@ EventsAndTriggers:
     Events:
       - Completion
 
+InterpolationTargets:
+  BondiSachsInterpolation:
+    Lmax: 16
+    Radius: [100, 150, 200]
+    Center: [0, 0, 0]
+    AngularOrdering: Cce
+
+Cce:
+  BondiSachsOutputFilePrefix: "BondiSachs"
+
 Observers:
   VolumeFileName: "GhMhdTovStarVolume"
   ReductionFileName: "GhMhdTovStarReductions"
