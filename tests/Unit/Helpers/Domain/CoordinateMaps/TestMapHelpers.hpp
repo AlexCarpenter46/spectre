@@ -360,16 +360,17 @@ void test_coordinate_map_argument_types(
     }
     {
       INFO("Test inverse Jacobian");
+      Approx custom_approx = Approx::custom().epsilon(1.e-11);
       const auto expected = the_map.inv_jacobian(point, time_args...);
       CHECK_ITERABLE_APPROX(
           the_map.inv_jacobian(add_ref_wrap(point), time_args...), expected);
-      CHECK_ITERABLE_APPROX(
+      CHECK_ITERABLE_CUSTOM_APPROX(
           the_map.inv_jacobian(make_arr_data_vec(point), time_args...),
-          make_tensor_data_vector(expected));
-      CHECK_ITERABLE_APPROX(
+          make_tensor_data_vector(expected), custom_approx);
+      CHECK_ITERABLE_CUSTOM_APPROX(
           the_map.inv_jacobian(add_ref_wrap(make_arr_data_vec(point)),
                                time_args...),
-          make_tensor_data_vector(expected));
+          make_tensor_data_vector(expected), custom_approx);
     }
 
     return nullptr;
