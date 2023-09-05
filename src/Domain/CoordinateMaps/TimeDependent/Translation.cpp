@@ -19,6 +19,7 @@
 #include "PointwiseFunctions/MathFunctions/MathFunction.hpp"
 #include "Utilities/ContainerHelpers.hpp"
 #include "Utilities/DereferenceWrapper.hpp"
+#include "Utilities/EqualWithinRoundoff.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/GenerateInstantiations.hpp"
 #include "Utilities/Gsl.hpp"
@@ -34,8 +35,8 @@ template <size_t Dim>
 Translation<Dim>::Translation(std::string function_of_time_name)
     : f_of_t_name_(std::move(function_of_time_name)),
       f_of_t_names_({f_of_t_name_}),
-      inner_radius_(),
-      outer_radius_(),
+      inner_radius_(std::nullopt),
+      outer_radius_(std::nullopt),
       f_of_r_(nullptr),
       center_(make_array<Dim, double>(0.0)) {}
 
@@ -56,8 +57,8 @@ Translation<Dim>::Translation(
     std::array<double, Dim>& center)
     : f_of_t_name_(std::move(function_of_time_name)),
       f_of_t_names_({f_of_t_name_}),
-      inner_radius_(),
-      outer_radius_(),
+      inner_radius_(std::nullopt),
+      outer_radius_(std::nullopt),
       f_of_r_(std::move(radial_function)),
       center_(center) {}
 
@@ -82,10 +83,10 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> Translation<Dim>::operator()(
     const std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time) const {
-  if (!inner_radius_.has_value()) {
-    return math_function_helper(source_coords, time, functions_of_time, 0);
+  if (inner_radius_.has_value()) {
+    return piecewise_helper(source_coords, time, functions_of_time, 0);
   } else {
-    return inspiral_helper(source_coords, time, functions_of_time, 0);
+    return math_function_helper(source_coords, time, functions_of_time, 0);
   }
 }
 
@@ -106,22 +107,9 @@ std::optional<std::array<double, Dim>> Translation<Dim>::inverse(
              << function_of_time.size()
              << ") does not match the dimension of the translation map (" << Dim
              << ").");
-  // If an inner radius is not specified then take the inverse of the
-  // MathFunction specific translation.
-  if (!inner_radius_.has_value()) {
-    double radial_function_value = 1.0;
-    // If a MathFunction is specified, do a root find.
-    if (f_of_r_ != nullptr) {
-      const double root =
-          root_finder(target_coords - center_, function_of_time);
-      radial_function_value = (*f_of_r_)(root);
-    }
-    for (size_t i = 0; i < Dim; i++) {
-      gsl::at(result, i) -= function_of_time[i] * radial_function_value;
-    }
-    return result;
-  } else {
-    // Section for taking the inverse of the piecewise translation
+  // If an inner radius specified then take the inverse of the
+  // piecewise specific translation.
+  if (inner_radius_.has_value()) {
     auto target_radius = magnitude(target_coords);
     double non_translated_radius = 0.;
     for (size_t i = 0; i < Dim; i++) {
@@ -156,17 +144,37 @@ std::optional<std::array<double, Dim>> Translation<Dim>::inverse(
       c -= square(outer_radius_.value());
       auto roots = real_roots(a, b, c);
       double radial_falloff_factor = 0.;
-      if (roots.value()[0] >= 0.0 and roots.value()[0] <= 1.0) {
-        ASSERT(roots.value()[1] < 0.0 or roots.value()[1] > 1.0,
+      ASSERT(roots.value()[0] >= 0 and roots.value()[1] >= 0,
+             "One of the roots is negative, this should not happen.");
+      if (roots.value()[0] <= 1.0) {
+        ASSERT(roots.value()[1] > 1.0,
                "Singular map: two solutions between 0 and 1");
         radial_falloff_factor = roots.value()[0];
-      } else if (roots.value()[1] >= 0.0 and roots.value()[1] <= 1.0) {
+      } else if (roots.value()[1] <= 1.0) {
         radial_falloff_factor = roots.value()[1];
+      } else if (roots.value()[0] <=
+                     std::numeric_limits<double>::epsilon() + 1.0 or
+                 roots.value()[1] <=
+                     std::numeric_limits<double>::epsilon() + 1.0) {
+        radial_falloff_factor = 1.0;
       }
       for (size_t i = 0; i < Dim; i++) {
         gsl::at(result, i) -=
             gsl::at(function_of_time, i) * radial_falloff_factor;
       }
+    }
+    return result;
+    // Otherwise take the inverse of the radial MathFunction translation.
+  } else {
+    double radial_function_value = 1.0;
+    // If a MathFunction is specified, do a root find.
+    if (f_of_r_ != nullptr) {
+      const double root =
+          root_finder(target_coords - center_, function_of_time);
+      radial_function_value = (*f_of_r_)(root);
+    }
+    for (size_t i = 0; i < Dim; i++) {
+      gsl::at(result, i) -= function_of_time[i] * radial_function_value;
     }
     return result;
   }
@@ -178,10 +186,10 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> Translation<Dim>::frame_velocity(
     const std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time) const {
-  if (!inner_radius_.has_value()) {
-    return math_function_helper(source_coords, time, functions_of_time, 1);
+  if (inner_radius_.has_value()) {
+    return piecewise_helper(source_coords, time, functions_of_time, 1);
   } else {
-    return inspiral_helper(source_coords, time, functions_of_time, 1);
+    return math_function_helper(source_coords, time, functions_of_time, 1);
   }
 }
 
@@ -193,45 +201,9 @@ Translation<Dim>::jacobian(
     const std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time) const {
-  // If an inner radius is not specified then take the jacobian of the
-  // MathFunction specific translation.
-  if (!inner_radius_.has_value()) {
-    if (f_of_r_ == nullptr) {
-      return identity<Dim>(dereference_wrapper(source_coords[0]));
-    } else {
-      std::array<tt::remove_cvref_wrap_t<T>, Dim> distance_to_center{};
-      for (size_t i = 0; i < Dim; i++) {
-        gsl::at(distance_to_center, i) =
-            gsl::at(source_coords, i) - gsl::at(center_, i);
-      }
-      auto radius = magnitude(distance_to_center);
-      const DataVector function_of_time =
-          functions_of_time.at(f_of_t_name_)->func(time)[0];
-
-      auto result = make_with_value<
-          tnsr::Ij<tt::remove_cvref_wrap_t<T>, Dim, Frame::NoFrame>>(
-          dereference_wrapper(source_coords[0]), 0.0);
-      for (size_t i = 0; i < Dim; i++) {
-        for (size_t j = 0; j < Dim; j++) {
-          for (size_t k = 0; k < get_size(radius); k++) {
-            if (get_element(radius, k) > 1.e-13) {
-              result.get(i, j) =
-                  (*f_of_r_).first_deriv(get_element(radius, k)) *
-                  gsl::at(function_of_time, i) *
-                  gsl::at(distance_to_center, j) / get_element(radius, k);
-            } else {
-              result.get(i, j) =
-                  (*f_of_r_).second_deriv(get_element(radius, k)) *
-                  gsl::at(function_of_time, i) * gsl::at(distance_to_center, j);
-            }
-          }
-        }
-        result.get(i, i) += 1.0;
-      }
-      return result;
-    }
-  } else {
-    // Section for taking the jacobian of the piecewise translation
+  // If inner radius has a value, then calculate the jacobian for the piecewise
+  // translation.
+  if (inner_radius_.has_value()) {
     auto radius = magnitude(source_coords);
     const DataVector function_of_time =
         functions_of_time.at(f_of_t_name_)->func(time)[0];
@@ -257,6 +229,44 @@ Translation<Dim>::jacobian(
       result.get(i, i) += 1.0;
     }
     return result;
+    // Otherwise calculate the jacobian for the MathFunction translation.
+  } else {
+    if (f_of_r_ == nullptr) {
+      return identity<Dim>(dereference_wrapper(source_coords[0]));
+    } else {
+      std::array<tt::remove_cvref_wrap_t<T>, Dim> distance_to_center{};
+      for (size_t i = 0; i < Dim; i++) {
+        gsl::at(distance_to_center, i) =
+            gsl::at(source_coords, i) - gsl::at(center_, i);
+      }
+      auto radius = magnitude(distance_to_center);
+      const DataVector function_of_time =
+          functions_of_time.at(f_of_t_name_)->func(time)[0];
+
+      auto result = make_with_value<
+          tnsr::Ij<tt::remove_cvref_wrap_t<T>, Dim, Frame::NoFrame>>(
+          dereference_wrapper(source_coords[0]), 0.0);
+      for (size_t i = 0; i < Dim; i++) {
+        for (size_t j = 0; j < Dim; j++) {
+          for (size_t k = 0; k < get_size(radius); k++) {
+            if (get_element(radius, k) > 1.e-13) {
+              result.get(i, j) =
+                  (*f_of_r_).first_deriv(get_element(radius, k)) *
+                  gsl::at(function_of_time, i) *
+                  gsl::at(distance_to_center, j) / get_element(radius, k);
+            } else {
+              ASSERT(
+                  equal_within_roundoff(
+                      (*f_of_r_).first_deriv(get_element(radius, k)), 0.),
+                  "Non-smooth map, MathFunction should be 0.0 at map center");
+              result.get(i, j) = 0.0;
+            }
+          }
+        }
+        result.get(i, i) += 1.0;
+      }
+      return result;
+    }
   }
 }
 template <size_t Dim>
@@ -267,7 +277,7 @@ Translation<Dim>::inv_jacobian(
     const std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time) const {
-  if (f_of_r_ == nullptr and !inner_radius_.has_value()) {
+  if (f_of_r_ == nullptr and not inner_radius_.has_value()) {
     return identity<Dim>(dereference_wrapper(source_coords[0]));
   } else {
     return determinant_and_inverse(
@@ -317,7 +327,7 @@ Translation<Dim>::math_function_helper(
 
 template <size_t Dim>
 template <typename T>
-std::array<tt::remove_cvref_wrap_t<T>, Dim> Translation<Dim>::inspiral_helper(
+std::array<tt::remove_cvref_wrap_t<T>, Dim> Translation<Dim>::piecewise_helper(
     const std::array<T, Dim>& source_coords, double time,
     const std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
@@ -343,14 +353,14 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> Translation<Dim>::inspiral_helper(
     }
   }
   for (size_t k = 0; k < get_size(radius); k++) {
-    if (get_element(radius, k) <= inner_radius_) {
+    if (get_element(radius, k) <= inner_radius_.value()) {
       for (size_t i = 0; i < Dim; i++) {
         get_element(gsl::at(result, i), k) += gsl::at(func_or_deriv_of_time, i);
       }
       ASSERT(max(magnitude(result)) <= outer_radius_.value(),
              "Coordinates translated outside outer radius, This should not "
              "happen");
-    } else if (get_element(radius, k) > inner_radius_ and
+    } else if (get_element(radius, k) > inner_radius_.value() and
                get_element(radius, k) < outer_radius_.value()) {
       // this is the linear falloff factor w in the documentation of the form
       // w = (R_{out} - r) / (R_{out} - R_{in})
@@ -441,10 +451,8 @@ bool operator==(const Translation<Dim>& lhs, const Translation<Dim>& rhs) {
          ((lhs.f_of_r_ == nullptr and rhs.f_of_r_ == nullptr) or
           *lhs.f_of_r_ == *rhs.f_of_r_) and
          lhs.center_ == rhs.center_ and
-         (!lhs.inner_radius_.has_value() == !rhs.inner_radius_.has_value() or
-          lhs.inner_radius_.value() == rhs.inner_radius_.value()) and
-         (!lhs.outer_radius_.has_value() == !rhs.outer_radius_.has_value() or
-          lhs.outer_radius_.value() == rhs.outer_radius_.value());
+         lhs.inner_radius_ == rhs.inner_radius_ and
+         lhs.outer_radius_ == rhs.outer_radius_;
 }
 
 // Explicit instantiations

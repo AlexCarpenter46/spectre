@@ -31,7 +31,7 @@ namespace domain {
 namespace {
 template <size_t Dim>
 void test_translation() {
-  MAKE_GENERATOR(gen, 1927162167);
+  MAKE_GENERATOR(gen);
   // define vars for FunctionOfTime::PiecewisePolynomial f(t) = t**2.
   double t = -1.0;
   const double dt = 0.6;
@@ -70,7 +70,7 @@ void test_translation() {
   const CoordinateMaps::TimeDependent::Translation<Dim> translation_map{
       "translation"};
   const CoordinateMaps::TimeDependent::Translation<Dim>
-      inspiral_translation_map{"translation", inner_radius, outer_radius};
+      piecewise_translation_map{"translation", inner_radius, outer_radius};
   const CoordinateMaps::TimeDependent::Translation<Dim> radial_translation_map{
       "translation",
       std::make_unique<MathFunctions::Gaussian<1, Frame::Inertial>>(
@@ -88,8 +88,8 @@ void test_translation() {
       serialize_and_deserialize(translation_map);
   const auto radial_translation_map_deserialized =
       serialize_and_deserialize(radial_translation_map);
-  const auto inspiral_translation_map_deserialized =
-      serialize_and_deserialize(inspiral_translation_map);
+  const auto piecewise_translation_map_deserialized =
+      serialize_and_deserialize(piecewise_translation_map);
   check_names(translation_map_deserialized.function_of_time_names());
   check_names(radial_translation_map_deserialized.function_of_time_names());
 
@@ -103,8 +103,8 @@ void test_translation() {
       radius += square(distance_to_center[i]);
     }
     radius = sqrt(radius);
-    double inspiral_radius = magnitude(point_xi);
-    double radial_falloff_factor =
+    const double inspiral_radius = magnitude(point_xi);
+    const double radial_falloff_factor =
         (outer_radius - inspiral_radius) / (outer_radius - inner_radius);
     std::array<double, Dim> frame_vel{};
     std::array<double, Dim> radial_frame_vel{};
@@ -125,18 +125,18 @@ void test_translation() {
     CHECK_ITERABLE_APPROX(translation_map(point_xi, t, f_of_t_list),
                           point_xi + translation);
     if (inspiral_radius <= inner_radius) {
-      CHECK_ITERABLE_APPROX(inspiral_translation_map(point_xi, t, f_of_t_list),
+      CHECK_ITERABLE_APPROX(piecewise_translation_map(point_xi, t, f_of_t_list),
                             point_xi + translation);
-      CHECK_ITERABLE_APPROX(inspiral_translation_map
+      CHECK_ITERABLE_APPROX(piecewise_translation_map
                                 .inverse(point_xi + translation, t, f_of_t_list)
                                 .value(),
                             point_xi);
-    } else if (inspiral_radius > inner_radius &&
+    } else if (inspiral_radius > inner_radius and
                inspiral_radius < outer_radius) {
-      CHECK_ITERABLE_APPROX(inspiral_translation_map(point_xi, t, f_of_t_list),
+      CHECK_ITERABLE_APPROX(piecewise_translation_map(point_xi, t, f_of_t_list),
                             point_xi + translation * radial_falloff_factor);
       CHECK_ITERABLE_CUSTOM_APPROX(
-          inspiral_translation_map
+          piecewise_translation_map
               .inverse(point_xi + translation * radial_falloff_factor, t,
                        f_of_t_list)
               .value(),
@@ -144,9 +144,9 @@ void test_translation() {
     }
 
     CHECK_ITERABLE_APPROX(
-        inspiral_translation_map(far_point_xi, t, f_of_t_list), far_point_xi);
+        piecewise_translation_map(far_point_xi, t, f_of_t_list), far_point_xi);
     CHECK_ITERABLE_APPROX(
-        inspiral_translation_map.inverse(far_point_xi, t, f_of_t_list).value(),
+        piecewise_translation_map.inverse(far_point_xi, t, f_of_t_list).value(),
         far_point_xi);
     CHECK_ITERABLE_APPROX(radial_translation_map(point_xi, t, f_of_t_list),
                           point_xi + (translation * gaussian(radius)));
@@ -165,10 +165,10 @@ void test_translation() {
         radial_translation_map.frame_velocity(point_xi, t, f_of_t_list),
         radial_frame_vel);
     CHECK_ITERABLE_APPROX(
-        inspiral_translation_map.frame_velocity(point_xi, t, f_of_t_list),
+        piecewise_translation_map.frame_velocity(point_xi, t, f_of_t_list),
         inspiral_frame_vel);
     CHECK_ITERABLE_APPROX(
-        inspiral_translation_map.frame_velocity(far_point_xi, t, f_of_t_list),
+        piecewise_translation_map.frame_velocity(far_point_xi, t, f_of_t_list),
         far_inspiral_frame_vel);
     CHECK_ITERABLE_APPROX(
         radial_translation_map_deserialized(point_xi, t, f_of_t_list),
@@ -211,11 +211,11 @@ void test_translation() {
     // which region it's in.
     if (inspiral_radius <= inner_radius * .99 or
         inspiral_radius >= inner_radius * 1.01) {
-      test_jacobian(inspiral_translation_map, point_xi, t, f_of_t_list);
-      test_inv_jacobian(inspiral_translation_map, point_xi, t, f_of_t_list);
+      test_jacobian(piecewise_translation_map, point_xi, t, f_of_t_list);
+      test_inv_jacobian(piecewise_translation_map, point_xi, t, f_of_t_list);
     }
-    test_jacobian(inspiral_translation_map, far_point_xi, t, f_of_t_list);
-    test_inv_jacobian(inspiral_translation_map, far_point_xi, t, f_of_t_list);
+    test_jacobian(piecewise_translation_map, far_point_xi, t, f_of_t_list);
+    test_inv_jacobian(piecewise_translation_map, far_point_xi, t, f_of_t_list);
     t += dt;
   }
 
@@ -225,9 +225,9 @@ void test_translation() {
   CHECK_FALSE(radial_translation_map != radial_translation_map);
   CHECK_FALSE(radial_translation_map_deserialized !=
               radial_translation_map_deserialized);
-  CHECK_FALSE(inspiral_translation_map != inspiral_translation_map);
-  CHECK_FALSE(inspiral_translation_map_deserialized !=
-              inspiral_translation_map_deserialized);
+  CHECK_FALSE(piecewise_translation_map != piecewise_translation_map);
+  CHECK_FALSE(piecewise_translation_map_deserialized !=
+              piecewise_translation_map_deserialized);
 
   // Check serialization
   CHECK(translation_map == translation_map_deserialized);
@@ -239,10 +239,10 @@ void test_translation() {
 
   test_coordinate_map_argument_types(radial_translation_map, point_xi, t,
                                      f_of_t_list);
-  CHECK(inspiral_translation_map == inspiral_translation_map_deserialized);
-  CHECK_FALSE(inspiral_translation_map !=
-              inspiral_translation_map_deserialized);
-  test_coordinate_map_argument_types(inspiral_translation_map, point_xi, t,
+  CHECK(piecewise_translation_map == piecewise_translation_map_deserialized);
+  CHECK_FALSE(piecewise_translation_map !=
+              piecewise_translation_map_deserialized);
+  test_coordinate_map_argument_types(piecewise_translation_map, point_xi, t,
                                      f_of_t_list);
   CHECK(not CoordinateMaps::TimeDependent::Translation<Dim>{}.is_identity());
 }
