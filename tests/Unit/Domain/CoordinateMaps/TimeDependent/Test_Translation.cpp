@@ -59,6 +59,7 @@ void test_translation() {
   UniformCustomDistribution<double> dist_double{-5.0, 5.0};
   UniformCustomDistribution<double> far_dist_double{40.0, 50.0};
   std::array<double, Dim> point_xi{};
+  std::array<DataVector, Dim> point_xi_dv{};
   std::array<double, Dim> center{};
   std::array<double, Dim> far_point_xi{};
   fill_with_random_values(make_not_null(&point_xi), make_not_null(&gen),
@@ -67,6 +68,11 @@ void test_translation() {
                           make_not_null(&dist_double));
   fill_with_random_values(make_not_null(&far_point_xi), make_not_null(&gen),
                           make_not_null(&far_dist_double));
+  for (size_t i = 0; i < Dim; i++) {
+    auto points = make_with_random_values<DataVector>(
+        make_not_null(&gen), make_not_null(&dist_double), DataVector(5));
+    gsl::at(point_xi_dv, i) = points;
+  }
   const CoordinateMaps::TimeDependent::Translation<Dim> translation_map{
       "translation"};
   const CoordinateMaps::TimeDependent::Translation<Dim>
@@ -103,9 +109,11 @@ void test_translation() {
       radius += square(distance_to_center[i]);
     }
     radius = sqrt(radius);
-    const double inspiral_radius = magnitude(point_xi);
+    const double piecewise_radius = magnitude(point_xi);
+    const DataVector piecewise_radius_dv = magnitude(point_xi_dv);
+    const double far_piecewise_radius = magnitude(far_point_xi);
     const double radial_falloff_factor =
-        (outer_radius - inspiral_radius) / (outer_radius - inner_radius);
+        (outer_radius - piecewise_radius) / (outer_radius - inner_radius);
     std::array<double, Dim> frame_vel{};
     std::array<double, Dim> radial_frame_vel{};
     std::array<double, Dim> inspiral_frame_vel{};
@@ -114,7 +122,7 @@ void test_translation() {
       gsl::at(frame_vel, i) = f_of_t->func_and_deriv(t)[1][i];
       gsl::at(radial_frame_vel, i) =
           f_of_t->func_and_deriv(t)[1][i] * gaussian(radius);
-      if (inspiral_radius <= inner_radius) {
+      if (piecewise_radius <= inner_radius) {
         gsl::at(inspiral_frame_vel, i) = f_of_t->func_and_deriv(t)[1][i];
       } else {
         gsl::at(inspiral_frame_vel, i) =
@@ -124,19 +132,35 @@ void test_translation() {
     Approx custom_approx = Approx::custom().epsilon(1.e-9);
     CHECK_ITERABLE_APPROX(translation_map(point_xi, t, f_of_t_list),
                           point_xi + translation);
-    if (inspiral_radius <= inner_radius) {
+    if (piecewise_radius <= inner_radius) {
       CHECK_ITERABLE_APPROX(piecewise_translation_map(point_xi, t, f_of_t_list),
                             point_xi + translation);
       CHECK_ITERABLE_APPROX(piecewise_translation_map
                                 .inverse(point_xi + translation, t, f_of_t_list)
                                 .value(),
                             point_xi);
-    } else if (inspiral_radius > inner_radius and
-               inspiral_radius < outer_radius) {
+      CHECK_ITERABLE_APPROX(
+          piecewise_translation_map_deserialized(point_xi, t, f_of_t_list),
+          point_xi + translation);
+      CHECK_ITERABLE_APPROX(piecewise_translation_map_deserialized
+                                .inverse(point_xi + translation, t, f_of_t_list)
+                                .value(),
+                            point_xi);
+    } else if (piecewise_radius > inner_radius and
+               piecewise_radius < outer_radius) {
       CHECK_ITERABLE_APPROX(piecewise_translation_map(point_xi, t, f_of_t_list),
                             point_xi + translation * radial_falloff_factor);
       CHECK_ITERABLE_CUSTOM_APPROX(
           piecewise_translation_map
+              .inverse(point_xi + translation * radial_falloff_factor, t,
+                       f_of_t_list)
+              .value(),
+          point_xi, custom_approx);
+      CHECK_ITERABLE_APPROX(
+          piecewise_translation_map_deserialized(point_xi, t, f_of_t_list),
+          point_xi + translation * radial_falloff_factor);
+      CHECK_ITERABLE_CUSTOM_APPROX(
+          piecewise_translation_map_deserialized
               .inverse(point_xi + translation * radial_falloff_factor, t,
                        f_of_t_list)
               .value(),
@@ -148,6 +172,13 @@ void test_translation() {
     CHECK_ITERABLE_APPROX(
         piecewise_translation_map.inverse(far_point_xi, t, f_of_t_list).value(),
         far_point_xi);
+    CHECK_ITERABLE_APPROX(
+        piecewise_translation_map_deserialized(far_point_xi, t, f_of_t_list),
+        far_point_xi);
+    CHECK_ITERABLE_APPROX(piecewise_translation_map_deserialized
+                              .inverse(far_point_xi, t, f_of_t_list)
+                              .value(),
+                          far_point_xi);
     CHECK_ITERABLE_APPROX(radial_translation_map(point_xi, t, f_of_t_list),
                           point_xi + (translation * gaussian(radius)));
     CHECK_ITERABLE_APPROX(
@@ -170,6 +201,12 @@ void test_translation() {
     CHECK_ITERABLE_APPROX(
         piecewise_translation_map.frame_velocity(far_point_xi, t, f_of_t_list),
         far_inspiral_frame_vel);
+    CHECK_ITERABLE_APPROX(piecewise_translation_map_deserialized.frame_velocity(
+                              point_xi, t, f_of_t_list),
+                          inspiral_frame_vel);
+    CHECK_ITERABLE_APPROX(piecewise_translation_map_deserialized.frame_velocity(
+                              far_point_xi, t, f_of_t_list),
+                          far_inspiral_frame_vel);
     CHECK_ITERABLE_APPROX(
         radial_translation_map_deserialized(point_xi, t, f_of_t_list),
         point_xi + (translation * gaussian(radius)));
@@ -209,13 +246,41 @@ void test_translation() {
     // jacobian to be computed in the wrong region. However, when it calls the
     // jacobian, it still uses the original point_xi so there's a mixup between
     // which region it's in.
-    if (inspiral_radius <= inner_radius * .99 or
-        inspiral_radius >= inner_radius * 1.01) {
+    if (piecewise_radius <= inner_radius * .99 or
+        piecewise_radius >= inner_radius * 1.01) {
       test_jacobian(piecewise_translation_map, point_xi, t, f_of_t_list);
       test_inv_jacobian(piecewise_translation_map, point_xi, t, f_of_t_list);
+      test_jacobian(piecewise_translation_map_deserialized, point_xi, t,
+                    f_of_t_list);
+      test_inv_jacobian(piecewise_translation_map_deserialized, point_xi, t,
+                        f_of_t_list);
     }
-    test_jacobian(piecewise_translation_map, far_point_xi, t, f_of_t_list);
-    test_inv_jacobian(piecewise_translation_map, far_point_xi, t, f_of_t_list);
+    // Checking if any radius in the datavector is within the range above.
+    bool jac_flag = true;
+    for (size_t i = 0; i < get_size(get_element(point_xi_dv, 0)); i++) {
+      if (get_element(piecewise_radius_dv, i) > inner_radius * .99 and
+          get_element(piecewise_radius_dv, i) < inner_radius * 1.01) {
+        jac_flag = false;
+      }
+    }
+    if (jac_flag) {
+      test_jacobian(piecewise_translation_map, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(piecewise_translation_map, point_xi_dv, t, f_of_t_list);
+      test_jacobian(piecewise_translation_map_deserialized, point_xi_dv, t,
+                    f_of_t_list);
+      test_inv_jacobian(piecewise_translation_map_deserialized, point_xi_dv, t,
+                        f_of_t_list);
+    }
+    // Same issue as above, but for the outer boundary.
+    if (far_piecewise_radius >= outer_radius * 1.01) {
+      test_jacobian(piecewise_translation_map, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(piecewise_translation_map, far_point_xi, t,
+                        f_of_t_list);
+      test_jacobian(piecewise_translation_map_deserialized, far_point_xi, t,
+                    f_of_t_list);
+      test_inv_jacobian(piecewise_translation_map_deserialized, far_point_xi, t,
+                        f_of_t_list);
+    }
     t += dt;
   }
 

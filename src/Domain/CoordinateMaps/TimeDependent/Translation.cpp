@@ -219,10 +219,11 @@ Translation<Dim>::jacobian(
               get_element(radius, k) < outer_radius_.value()) {
             // using the derivative of the radial falloff factor as
             // \frac{dw}{dr} = \frac{-1.0}{R_{out} - R{in}}
-            result.get(i, j) =
+            get_element(result.get(i, j), k) =
                 (-1.0 / (outer_radius_.value() - inner_radius_.value())) *
-                gsl::at(function_of_time, i) *
-                (gsl::at(source_coords, j) / get_element(radius, k));
+                get_element(gsl::at(function_of_time, i), k) *
+                get_element(dereference_wrapper(gsl::at(source_coords, j)), k) /
+                get_element(radius, k);
           }
         }
       }
@@ -250,16 +251,16 @@ Translation<Dim>::jacobian(
         for (size_t j = 0; j < Dim; j++) {
           for (size_t k = 0; k < get_size(radius); k++) {
             if (get_element(radius, k) > 1.e-13) {
-              result.get(i, j) =
+              get_element(result.get(i, j), k) =
                   (*f_of_r_).first_deriv(get_element(radius, k)) *
-                  gsl::at(function_of_time, i) *
-                  gsl::at(distance_to_center, j) / get_element(radius, k);
+                  get_element(gsl::at(function_of_time, i), k) *
+                  get_element(gsl::at(distance_to_center, j), k) /
+                  get_element(radius, k);
             } else {
-              ASSERT(
-                  equal_within_roundoff(
-                      (*f_of_r_).first_deriv(get_element(radius, k)), 0.),
-                  "Non-smooth map, MathFunction should be 0.0 at map center");
-              result.get(i, j) = 0.0;
+              ASSERT(equal_within_roundoff(
+                         (*f_of_r_).first_deriv(get_element(radius, k)), 0.),
+                     "Non-smooth map, MathFunction derivative should be 0.0 at "
+                     "map center");
             }
           }
         }
