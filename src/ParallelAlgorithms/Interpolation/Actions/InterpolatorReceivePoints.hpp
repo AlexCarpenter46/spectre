@@ -45,6 +45,14 @@ namespace Actions {
 /// After receiving the points, interpolates volume data onto them
 /// if it already has all the volume data.
 ///
+/// The `iteration` parameter is used to order receives of
+/// `block_logical_coords`. Because of the asynchronous nature of communication,
+/// it is possible that a more recent set of points arrives before an older set.
+/// It is assumed that if a more recent set arrives, then the old set is no
+/// longer needed. This `iteration` parameter tags each communication as "more
+/// recent" or "older" so if we receive an older set of points after a more
+/// recent set, we don't overwrite the more recent set.
+///
 /// Uses:
 /// - Databox:
 ///   - `Tags::NumberOfElements`
@@ -69,9 +77,10 @@ struct ReceivePoints {
       std::vector<std::optional<
           IdPair<domain::BlockId,
                  tnsr::I<double, VolumeDim, typename ::Frame::BlockLogical>>>>&&
-          block_logical_coords) {
+          block_logical_coords,
+      const size_t iteration = 0_st) {
     db::mutate<intrp::Tags::InterpolatedVarsHolders<Metavariables>>(
-        [&temporal_id, &block_logical_coords](
+        [&temporal_id, &block_logical_coords, &iteration](
             const gsl::not_null<typename intrp::Tags::InterpolatedVarsHolders<
                 Metavariables>::type*>
                 vars_holders) {
@@ -80,12 +89,34 @@ struct ReceivePoints {
                                          Metavariables>>(*vars_holders)
                   .infos;
 
-          // Add the target interpolation points at this temporal_id.
-          vars_infos.emplace(std::make_pair(
-              temporal_id,
-              intrp::Vars::Info<VolumeDim, typename InterpolationTargetTag::
-                                               vars_to_interpolate_to_target>{
-                  std::move(block_logical_coords)}));
+          // Add the new target interpolation points at this temporal_id. There
+          // are two conditions that allow us to overwrite the current target
+          // points. Either
+          //
+          //  1. There are no current target points at the temporal_id, OR
+          //  2. There are target points already at this temporal_id, but the
+          //     iteration of the new target points is greater than the
+          //     iteration of the current target points.
+          //
+          // If we already have target points and the iteration of the new
+          // points is less than or equal to the iteration of the current target
+          // points, then we ignore the new points. The new points are outdated
+          // and we definitely didn't have any of the new target points in our
+          // element by the fact that we have already received the next
+          // iteration of points.
+          //
+          // Whenever we overwrite the target points, we also empty the
+          // `interpolation_is_done_for_these_elements` (by virtue of a default
+          // constructed `intrp::Vars::Info`) so that we always check every
+          // element for this new set of target points.
+          if (vars_infos.count(temporal_id) == 0 or
+              vars_infos.at(temporal_id).iteration < iteration) {
+            vars_infos.insert_or_assign(
+                temporal_id,
+                intrp::Vars::Info<VolumeDim, typename InterpolationTargetTag::
+                                                 vars_to_interpolate_to_target>{
+                    std::move(block_logical_coords), iteration});
+          }
         },
         make_not_null(&box));
 
