@@ -270,7 +270,7 @@ struct FindApparentHorizon
         // The iteration of these new coords is the fast flow iteration
         Parallel::simple_action<
             Actions::SendPointsToInterpolator<InterpolationTargetTag>>(
-            interpolation_target, temporal_ids.front(), info.iteration);
+            interpolation_target, temporal_ids.front(), info.iteration + 1);
         // We return false because we don't want this iteration to clean
         // up the volume data, since we are using it for the next iteration
         // (i.e. the simple_action that we just called).
