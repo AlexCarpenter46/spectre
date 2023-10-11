@@ -209,6 +209,19 @@ void test_boundary_gts() {
                                                  start_points, epsilon, false);
     }
   }
+
+  // FIXME add rest
+  namespace lts_helpers = TimeStepperTestUtils::lts;
+  lts_helpers::test_convergence<lts_helpers::patterns::Lts2to1>(
+      TimeSteppers::AdamsMoultonPc(3), {200, 400}, 40);
+  lts_helpers::test_convergence<lts_helpers::patterns::Lts2to1>(
+      TimeSteppers::AdamsMoultonPc(5), {100, 200}, 20);
+
+  lts_helpers::test_convergence<lts_helpers::patterns::Lts3and1to2>(
+      TimeSteppers::AdamsMoultonPc(3), {200, 400}, 40);
+  // doesn't seem to work.  Maybe can choose better parameters in helper?
+  // lts_helpers::test_convergence<lts_helpers::patterns::Lts3and1to2>(
+  //     TimeSteppers::AdamsMoultonPc(5), {50, 500}, 1, true);
 }
 
 void test_boundary_lts() {
