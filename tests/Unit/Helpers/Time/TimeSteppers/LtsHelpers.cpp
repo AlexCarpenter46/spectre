@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <deque>
 
+#include "Helpers/Time/TimeSteppers/TimeStepperTestUtils.hpp"
 #include "Time/BoundaryHistory.hpp"
 #include "Time/History.hpp"
 #include "Time/Slab.hpp"
@@ -19,9 +20,259 @@
 #include "Time/TimeStepId.hpp"
 #include "Time/TimeSteppers/LtsTimeStepper.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
+#include "Utilities/GenerateInstantiations.hpp"
 #include "Utilities/Gsl.hpp"
 
 namespace TimeStepperTestUtils::lts {
+namespace {
+// Initialize a BoundaryHistory for each side of an interface with
+// constant steps if the integrator requires such data.  No entry is
+// added for the initial time.
+template <
+    typename CouplingResult, typename Func1, typename Func2,
+    typename Data1 = std::decay_t<std::invoke_result_t<const Func1&, double>>,
+    typename Data2 = std::decay_t<std::invoke_result_t<const Func2&, double>>>
+auto initialize_history(const size_t number_of_past_values, const size_t order,
+                        const double initial_time, const double step_size,
+                        const Func1& data_func1, const Func2& data_func2)
+    -> std::pair<TimeSteppers::BoundaryHistory<Data1, Data2, CouplingResult>,
+                 TimeSteppers::BoundaryHistory<Data2, Data1, CouplingResult>> {
+  std::pair<TimeSteppers::BoundaryHistory<Data1, Data2, CouplingResult>,
+            TimeSteppers::BoundaryHistory<Data2, Data1, CouplingResult>>
+      result;
+
+  const bool time_runs_forward = step_size > 0.0;
+  // We use one step per slab.
+  auto slab = time_runs_forward
+                  ? Slab::with_duration_to_end(initial_time, step_size)
+                  : Slab::with_duration_from_start(initial_time, -step_size);
+  const auto first_slab_number = -static_cast<int64_t>(number_of_past_values);
+  for (int64_t slab_num = -1; slab_num >= first_slab_number; --slab_num) {
+    const TimeStepId id(time_runs_forward, slab_num,
+                        time_runs_forward ? slab.start() : slab.end());
+    const double time = id.step_time().value();
+    const auto data1 = data_func1(time);
+    const auto data2 = data_func2(time);
+    result.first.local().insert_initial(id, order, data1);
+    result.second.remote().insert_initial(id, order, data1);
+    result.second.local().insert_initial(id, order, data2);
+    result.first.remote().insert_initial(id, order, data2);
+    slab = time_runs_forward ? slab.retreat() : slab.advance();
+  }
+  return result;
+}
+
+template <typename Rhs>
+struct SideData {
+  TimeStepId id;
+  TimeStepId next_id;
+  double step_value;
+  double substep_value;
+  TimeSteppers::BoundaryHistory<double, double, double> history;
+  std::deque<std::pair<TimeStepId, double>> messages;
+  Rhs rhs;
+  Rational (*pattern)(const Rational&);
+};
+
+// FIXME dense output
+template <typename Pattern>
+double lts_error(const LtsTimeStepper& stepper, const bool time_runs_forward,
+                 const int32_t pattern_repeats,
+                 const std::optional<double> dense_output_fraction) {
+  ASSERT(not dense_output_fraction.has_value() or
+             (*dense_output_fraction >= 0.0 and *dense_output_fraction <= 1.0),
+         "Bad dense output fraction: " << dense_output_fraction);
+
+  // Test system:
+  // dx/dt = x y
+  // dy/dt = - x y
+  //
+  // Solution:
+  // x = c / [1 + exp(-c (t - d))]
+  // y = c - x
+  const auto rhs_x = [](const double x, const double y) { return x * y; };
+  const auto rhs_y = [](const double x, const double y) { return -x * y; };
+
+  // Arbitrary
+  double conserved_sum = 0.7;
+  double offset = 0.4;
+  double t_init = 0.6;
+  double t_final = 6.3;
+  if (not time_runs_forward) {
+    conserved_sum *= -1.0;
+    offset *= -1.0;
+    t_init *= -1.0;
+    t_final *= -1.0;
+  }
+
+  const auto expected_x = [&conserved_sum, &offset](const double t) {
+    return conserved_sum / (1.0 + exp(-conserved_sum * (t - offset)));
+  };
+  const auto expected_y = [&conserved_sum, &expected_x](const double t) {
+    return conserved_sum - expected_x(t);
+  };
+
+  const auto slab =
+      time_runs_forward ? Slab(t_init, t_final) : Slab(t_final, t_init);
+  const TimeDelta pattern_size =
+      (time_runs_forward ? 1 : -1) * slab.duration() / pattern_repeats;
+  const TimeStepId initial_id(time_runs_forward, 0,
+                              time_runs_forward ? slab.start() : slab.end());
+  const TimeStepId final_id(time_runs_forward, 0,
+                            time_runs_forward ? slab.end() : slab.start());
+
+  auto histories = initialize_history<double>(
+      stepper.number_of_past_steps(), stepper.order(), t_init,
+      (t_final - t_init) / pattern_repeats, expected_x, expected_y);
+
+  histories.first.local().insert(initial_id, stepper.order(),
+                                 expected_x(t_init));
+  histories.second.remote().insert(initial_id, stepper.order(),
+                                   expected_x(t_init));
+  histories.second.local().insert(initial_id, stepper.order(),
+                                  expected_y(t_init));
+  histories.first.remote().insert(initial_id, stepper.order(),
+                                  expected_y(t_init));
+
+  SideData<decltype(&rhs_x)> data_x{
+      initial_id,
+      stepper.next_time_id(initial_id, Pattern::x(0) * pattern_size),
+      expected_x(t_init),
+      expected_x(t_init),
+      std::move(histories.first),
+      {},
+      &rhs_x,
+      &Pattern::x};
+
+  SideData<decltype(&rhs_y)> data_y{
+      initial_id,
+      stepper.next_time_id(initial_id, Pattern::y(0) * pattern_size),
+      expected_y(t_init),
+      expected_y(t_init),
+      std::move(histories.second),
+      {},
+      &rhs_y,
+      &Pattern::y};
+
+  // FIXME make function?
+  const auto take_steps = [&final_id, &pattern_size, &stepper](
+                              const auto local_data, const auto remote_data) {
+    while (not stepper.neighbor_data_required(local_data->next_id,
+                                              remote_data->next_id)) {
+      auto& local_messages = local_data->messages;
+      while (not local_messages.empty() and
+             stepper.neighbor_data_required(local_data->next_id,
+                                            local_messages.front().first)) {
+        local_data->history.remote().insert(local_messages.front().first,
+                                            stepper.order(),
+                                            local_messages.front().second);
+        local_messages.pop_front();
+      }
+
+      const auto pattern_fraction_after =
+          [&pattern_size](const TimeStepId& id) {
+            Rational total_pattern_fraction = id.step_time().fraction();
+            if (not id.time_runs_forward()) {
+              total_pattern_fraction = 1 - total_pattern_fraction;
+            }
+            total_pattern_fraction /= abs(pattern_size).fraction();
+            return total_pattern_fraction -
+                   total_pattern_fraction.numerator() /
+                       total_pattern_fraction.denominator();
+          };
+
+      const auto time_step =
+          local_data->pattern(pattern_fraction_after(local_data->id)) *
+          pattern_size;
+
+      local_data->id = local_data->next_id;
+      local_data->substep_value = local_data->step_value;
+      stepper.add_boundary_delta(make_not_null(&local_data->substep_value),
+                                 make_not_null(&local_data->history), time_step,
+                                 *local_data->rhs);
+      // FIXME dense here?
+      if (local_data->id.substep() == 0) {
+        local_data->step_value = local_data->substep_value;
+      }
+      if (local_data->id == final_id) {
+        return true;
+      }
+      const auto next_time_step =
+          local_data->pattern(pattern_fraction_after(local_data->next_id)) *
+          pattern_size;
+      local_data->next_id =
+          stepper.next_time_id(local_data->next_id, next_time_step);
+
+      local_data->history.local().insert(local_data->id, stepper.order(),
+                                         local_data->substep_value);
+      remote_data->messages.emplace_back(local_data->id,
+                                         local_data->substep_value);
+    }
+    return false;
+  };
+
+  {
+    bool done_x = false;
+    bool done_y = false;
+    for (;;) {
+      done_x = take_steps(&data_x, &data_y);
+      if (done_y) {
+        REQUIRE(done_x);
+        break;
+      }
+      done_y = take_steps(&data_y, &data_x);
+      if (done_x) {
+        REQUIRE(done_y);
+        break;
+      }
+    }
+  }
+  REQUIRE(not dense_output_fraction.has_value());
+
+  CAPTURE(data_x.step_value);
+  CAPTURE(data_y.step_value);
+  CHECK(data_x.step_value + data_y.step_value == approx(conserved_sum));
+  // x + y is conserved, so no need to include y.
+  return std::abs(data_x.step_value - expected_x(t_final));
+}
+}  // namespace
+
+namespace patterns {
+struct Lts2to1 {
+  static Rational x(const Rational& /*time*/) { return {1, 2}; }
+  static Rational y(const Rational& /*time*/) { return {1}; }
+};
+
+struct Lts3and1to2 {
+  static Rational x(const Rational& time) {
+    if (time == 0) {
+      return {3, 4};
+    } else {
+      REQUIRE(time == Rational(3, 4));
+      return {1, 4};
+    }
+  }
+  static Rational y(const Rational& /*time*/) { return {1, 2}; }
+};
+}  // namespace patterns
+
+template <typename Pattern>
+void test_convergence(const LtsTimeStepper& stepper,
+                      const std::pair<int32_t, int32_t>& step_range,
+                      const int32_t stride, const bool output) {
+  const auto error = [&](const int32_t intervals) {
+    const double forward_error =
+        lts_error<Pattern>(stepper, true, intervals, std::nullopt);
+    const double backward_error =
+        lts_error<Pattern>(stepper, false, intervals, std::nullopt);
+    CHECK(forward_error == approx(backward_error));
+    return forward_error;
+  };
+  REQUIRE(TimeStepperTestUtils::convergence_rate(step_range, stride, error,
+                                                 output) ==
+          approx(stepper.order()).margin(0.4));
+}
+
 void test_equal_rate(const LtsTimeStepper& stepper, const size_t order,
                      const size_t number_of_past_steps, const double epsilon,
                      const bool forward) {
@@ -171,4 +422,17 @@ void test_dense_output(const LtsTimeStepper& stepper) {
     }
   }
 }
+
+#define PATTERN(data) BOOST_PP_TUPLE_ELEM(0, data)
+
+#define INSTANTIATE(_, data)                                               \
+  template void test_convergence<PATTERN(data)>(                           \
+      const LtsTimeStepper& stepper,                                       \
+      const std::pair<int32_t, int32_t>& step_range, const int32_t stride, \
+      const bool output);
+
+GENERATE_INSTANTIATIONS(INSTANTIATE, (patterns::Lts2to1, patterns::Lts3and1to2))
+
+#undef INSTANTIATE
+#undef PATTERN
 }  // namespace TimeStepperTestUtils::lts

@@ -381,6 +381,22 @@ SPECTRE_TEST_CASE("Unit.Time.TimeSteppers.AdamsBashforth.Boundary",
     }
   }
 
+  namespace lts_helpers = TimeStepperTestUtils::lts;
+  lts_helpers::test_convergence<lts_helpers::patterns::Lts2to1>(
+      TimeSteppers::AdamsBashforth(1), {200, 400}, 40);
+  // FIXME add rest
+  lts_helpers::test_convergence<lts_helpers::patterns::Lts2to1>(
+      TimeSteppers::AdamsBashforth(5), {200, 300}, 20);
+  lts_helpers::test_convergence<lts_helpers::patterns::Lts2to1>(
+      TimeSteppers::AdamsBashforth(7), {80, 120}, 8);
+  // 8th-order AB hits the floating-point noise floor before
+  // higher-order terms die out sufficiently for a good measurement.
+
+  lts_helpers::test_convergence<lts_helpers::patterns::Lts3and1to2>(
+      TimeSteppers::AdamsBashforth(1), {200, 400}, 40);
+  lts_helpers::test_convergence<lts_helpers::patterns::Lts3and1to2>(
+      TimeSteppers::AdamsBashforth(5), {100, 150}, 10);
+
   // Local stepping with constant step sizes
   const Slab slab(0., 1.);
   for (const auto& full : {slab.duration(), -slab.duration()}) {
