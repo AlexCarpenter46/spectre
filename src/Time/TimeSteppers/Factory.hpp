@@ -30,7 +30,8 @@ using time_steppers =
                TimeSteppers::Rk5Tsitouras>;
 
 /// Typelist of available LtsTimeSteppers
-using lts_time_steppers = tmpl::list<TimeSteppers::AdamsBashforth>;
+using lts_time_steppers =
+    tmpl::list<TimeSteppers::AdamsBashforth, TimeSteppers::AdamsMoultonPc>;
 
 /// Typelist of available ImexTimeSteppers
 using imex_time_steppers =
