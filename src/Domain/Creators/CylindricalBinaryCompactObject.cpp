@@ -275,6 +275,8 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
   // 4 blocks: 42 thru 45
   add_cylinder_name("CB", "Outer");
 
+  first_outer_shell_block = 46;
+
   if (include_inner_sphere_A) {
     // 5 blocks
     add_filled_cylinder_name("InnerSphereEA", "InnerSphereA");
@@ -282,6 +284,7 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
     add_filled_cylinder_name("InnerSphereMA", "InnerSphereA");
     // 4 blocks
     add_cylinder_name("InnerSphereEA", "InnerSphereA");
+    first_outer_shell_block += 14;
   }
   if (include_inner_sphere_B) {
     // 5 blocks
@@ -290,6 +293,7 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
     add_filled_cylinder_name("InnerSphereMB", "InnerSphereB");
     // 4 blocks
     add_cylinder_name("InnerSphereEB", "InnerSphereB");
+    first_outer_shell_block += 14;
   }
   if (include_outer_sphere) {
     // 5 blocks
@@ -300,6 +304,7 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
     add_cylinder_name("OuterSphereCA", "OuterSphere");
     // 4 blocks
     add_cylinder_name("OuterSphereCB", "OuterSphere");
+    first_outer_shell_block += 18;
   }
 
   // Expand initial refinement over all blocks
@@ -418,13 +423,20 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
                 "you must include the inner spheres for both objects. "
                 "Currently, one or both objects is missing the inner spheres.");
   }
-
+  if (not include_outer_sphere) {
+    PARSE_ERROR(context,
+                "To use the translation map in the CylindricalBBH domain, you "
+                "must specify an outer sphere.");
+  }
   if (time_dependent_options_.has_value()) {
+    // make this a private member variable
+    const double inner_radius_C = 3.0 * (center_A_[2] - center_B_[2]);
     time_dependent_options_->build_maps(
         std::array{rotate_from_z_to_x_axis(center_A_),
                    rotate_from_z_to_x_axis(center_B_)},
         std::make_pair(radius_A_, outer_radius_A_),
-        std::make_pair(radius_B_, outer_radius_B_), outer_radius_);
+        std::make_pair(radius_B_, outer_radius_B_), inner_radius_C,
+        outer_radius_);
   }
 }
 
@@ -913,7 +925,13 @@ Domain<3> CylindricalBinaryCompactObject::create_domain() const {
     // map from the grid to inertial frame. No maps to the distorted frame
     grid_to_inertial_block_maps[0] =
         time_dependent_options_
-            ->grid_to_inertial_map<domain::ObjectLabel::None>(false);
+            ->grid_to_inertial_map<domain::ObjectLabel::None>(false, true);
+
+    if (include_outer_sphere_) {
+      grid_to_inertial_block_maps[first_outer_shell_block] =
+          time_dependent_options_
+              ->grid_to_inertial_map<domain::ObjectLabel::None>(false, false);
+    }
 
     // Inside the excision sphere we add the grid to inertial map from the outer
     // shell. This allows the center of the excisions/horizons to be mapped
@@ -931,21 +949,21 @@ Domain<3> CylindricalBinaryCompactObject::create_domain() const {
     // distorted frame.
     grid_to_inertial_block_maps[46] =
         time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::A>(
-            true);
+            true, true);
     grid_to_distorted_block_maps[46] =
         time_dependent_options_->grid_to_distorted_map<domain::ObjectLabel::A>(
             true);
     distorted_to_inertial_block_maps[46] =
-        time_dependent_options_->distorted_to_inertial_map(true);
+        time_dependent_options_->distorted_to_inertial_map(true, true);
 
     grid_to_inertial_block_maps[60] =
         time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::B>(
-            true);
+            true, true);
     grid_to_distorted_block_maps[60] =
         time_dependent_options_->grid_to_distorted_map<domain::ObjectLabel::B>(
             true);
     distorted_to_inertial_block_maps[60] =
-        time_dependent_options_->distorted_to_inertial_map(true);
+        time_dependent_options_->distorted_to_inertial_map(true, true);
 
     for (size_t block = 1; block < number_of_blocks_; ++block) {
       if (block == 46 or block == 60) {
@@ -968,6 +986,9 @@ Domain<3> CylindricalBinaryCompactObject::create_domain() const {
           distorted_to_inertial_block_maps[block] =
               distorted_to_inertial_block_maps[60]->get_clone();
         }
+      } else if (block > 74) {
+        grid_to_inertial_block_maps[block] =
+            grid_to_inertial_block_maps[first_outer_shell_block]->get_clone();
       } else {
         grid_to_inertial_block_maps[block] =
             grid_to_inertial_block_maps[0]->get_clone();

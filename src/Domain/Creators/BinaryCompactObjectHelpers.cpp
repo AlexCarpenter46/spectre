@@ -4,6 +4,7 @@
 #include "Domain/Creators/BinaryCompactObjectHelpers.hpp"
 
 #include <array>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <string>
@@ -19,6 +20,7 @@
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
 #include "Domain/FunctionsOfTime/QuaternionFunctionOfTime.hpp"
+#include "Domain/FunctionsOfTime/SettleToConstant.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Spherepack.hpp"
 #include "Options/ParseError.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
@@ -44,16 +46,19 @@ TimeDependentMapOptions::TimeDependentMapOptions(
     double initial_time,
     std::optional<ExpansionMapOptions> expansion_map_options,
     std::optional<RotationMapOptions> rotation_options,
+    std::optional<TranslationMapOptions> translation_map_options,
     std::optional<ShapeMapOptions<domain::ObjectLabel::A>> shape_options_A,
     std::optional<ShapeMapOptions<domain::ObjectLabel::B>> shape_options_B,
     const Options::Context& context)
     : initial_time_(initial_time),
       expansion_map_options_(expansion_map_options),
       rotation_options_(rotation_options),
+      translation_options_(translation_map_options),
       shape_options_A_(shape_options_A),
       shape_options_B_(shape_options_B) {
   if (not(expansion_map_options_.has_value() or rotation_options_.has_value() or
-          shape_options_A_.has_value() or shape_options_B_.has_value())) {
+          translation_options_.has_value() or shape_options_A_.has_value() or
+          shape_options_B_.has_value())) {
     PARSE_ERROR(context,
                 "Time dependent map options were specified, but all options "
                 "were 'None'. If you don't want time dependent maps, specify "
@@ -88,6 +93,7 @@ TimeDependentMapOptions::create_functions_of_time(
   std::unordered_map<std::string, double> expiration_times{
       {expansion_name, std::numeric_limits<double>::infinity()},
       {rotation_name, std::numeric_limits<double>::infinity()},
+      {translation_name, std::numeric_limits<double>::infinity()},
       {gsl::at(size_names, 0), std::numeric_limits<double>::infinity()},
       {gsl::at(size_names, 1), std::numeric_limits<double>::infinity()},
       {gsl::at(shape_names, 0), std::numeric_limits<double>::infinity()},
@@ -141,6 +147,22 @@ TimeDependentMapOptions::create_functions_of_time(
         expiration_times.at(rotation_name));
   }
 
+  // TranslationMap FunctionOfTime
+  if (translation_options_.has_value()) {
+    result[translation_name] =
+        std::make_unique<FunctionsOfTime::PiecewisePolynomial<2>>(
+            initial_time_,
+            std::array<DataVector, 3>{
+                {{gsl::at(translation_options_.value().initial_values, 0)[0],
+                  gsl::at(translation_options_.value().initial_values, 0)[1],
+                  gsl::at(translation_options_.value().initial_values, 0)[2]},
+                 {gsl::at(translation_options_.value().initial_values, 1)[0],
+                  gsl::at(translation_options_.value().initial_values, 1)[1],
+                  gsl::at(translation_options_.value().initial_values, 1)[2]},
+                 {3, 0.0}}},
+            expiration_times.at(translation_name));
+  }
+
   // Size and Shape FunctionOfTime for objects A and B
   for (size_t i = 0; i < shape_names.size(); i++) {
     if (i == 0 ? shape_options_A_.has_value() : shape_options_B_.has_value()) {
@@ -179,13 +201,18 @@ void TimeDependentMapOptions::build_maps(
     const std::array<std::array<double, 3>, 2>& centers,
     const std::optional<std::pair<double, double>>& object_A_inner_outer_radii,
     const std::optional<std::pair<double, double>>& object_B_inner_outer_radii,
-    const double domain_outer_radius) {
+    const double envelope_radius, const double domain_outer_radius) {
   if (expansion_map_options_.has_value()) {
     expansion_map_ = Expansion{domain_outer_radius, expansion_name,
                                expansion_outer_boundary_name};
   }
   if (rotation_options_.has_value()) {
     rotation_map_ = Rotation{rotation_name};
+  }
+  if (translation_options_.has_value()) {
+    translation_map_ = std::make_pair(
+        Translation{translation_name},
+        Translation{translation_name, envelope_radius, domain_outer_radius});
   }
 
   for (size_t i = 0; i < 2; i++) {
@@ -235,16 +262,36 @@ bool TimeDependentMapOptions::has_distorted_frame_options(
 
 TimeDependentMapOptions::MapType<Frame::Distorted, Frame::Inertial>
 TimeDependentMapOptions::distorted_to_inertial_map(
-    const bool include_distorted_map) const {
+    const bool include_distorted_map, const bool use_rigid_translation) const {
   if (include_distorted_map) {
-    if (expansion_map_.has_value() and rotation_map_.has_value()) {
+    // Makes a reference to the translation being used (rigid or linear) to
+    // avoid if/else statements below. Makes a default translation that won't be
+    // used if a translation is not specified.
+    const auto& translation = translation_map_.has_value()
+                                  ? use_rigid_translation
+                                        ? translation_map_->first
+                                        : translation_map_->second
+                                  : Translation{};
+    if (expansion_map_.has_value() and rotation_map_.has_value() and
+        translation_map_.has_value()) {
+      return std::make_unique<detail::di_map<Expansion, Rotation, Translation>>(
+          expansion_map_.value(), rotation_map_.value(), translation);
+    } else if (expansion_map_.has_value() and rotation_map_.has_value()) {
       return std::make_unique<detail::di_map<Expansion, Rotation>>(
           expansion_map_.value(), rotation_map_.value());
+    } else if (expansion_map_.has_value() and translation_map_.has_value()) {
+      return std::make_unique<detail::di_map<Expansion, Translation>>(
+          expansion_map_.value(), translation);
+    } else if (rotation_map_.has_value() and translation_map_.has_value()) {
+      return std::make_unique<detail::di_map<Rotation, Translation>>(
+          rotation_map_.value(), translation);
     } else if (expansion_map_.has_value()) {
       return std::make_unique<detail::di_map<Expansion>>(
           expansion_map_.value());
     } else if (rotation_map_.has_value()) {
       return std::make_unique<detail::di_map<Rotation>>(rotation_map_.value());
+    } else if (translation_map_.has_value()) {
+      return std::make_unique<detail::di_map<Translation>>(translation);
     } else {
       return std::make_unique<detail::di_map<Identity>>(Identity{});
     }
@@ -274,7 +321,15 @@ TimeDependentMapOptions::grid_to_distorted_map(
 template <domain::ObjectLabel Object>
 TimeDependentMapOptions::MapType<Frame::Grid, Frame::Inertial>
 TimeDependentMapOptions::grid_to_inertial_map(
-    const bool include_distorted_map) const {
+    const bool include_distorted_map, const bool use_rigid_translation) const {
+  // Makes a reference to the translation being used (rigid or linear) to
+  // avoid if/else statements below. Makes a default translation that won't be
+  // used if a translation is not specified.
+  const auto& translation = translation_map_.has_value()
+                                ? use_rigid_translation
+                                      ? translation_map_->first
+                                      : translation_map_->second
+                                : Translation{};
   if (include_distorted_map) {
     const size_t index = get_index(Object);
     if (not gsl::at(shape_maps_, index).has_value()) {
@@ -282,29 +337,58 @@ TimeDependentMapOptions::grid_to_inertial_map(
           "Requesting grid to inertial map with distorted frame but shape map "
           "options were not specified.");
     }
-    if (expansion_map_.has_value() and rotation_map_.has_value()) {
+    if (expansion_map_.has_value() and rotation_map_.has_value() and
+        translation_map_.has_value()) {
+      return std::make_unique<
+          detail::gi_map<Shape, Expansion, Rotation, Translation>>(
+          gsl::at(shape_maps_, index).value(), expansion_map_.value(),
+          rotation_map_.value(), translation);
+    } else if (expansion_map_.has_value() and rotation_map_.has_value()) {
       return std::make_unique<detail::gi_map<Shape, Expansion, Rotation>>(
           gsl::at(shape_maps_, index).value(), expansion_map_.value(),
           rotation_map_.value());
+    } else if (expansion_map_.has_value() and translation_map_.has_value()) {
+      return std::make_unique<detail::gi_map<Shape, Expansion, Translation>>(
+          gsl::at(shape_maps_, index).value(), expansion_map_.value(),
+          translation);
+    } else if (rotation_map_.has_value() and translation_map_.has_value()) {
+      return std::make_unique<detail::gi_map<Shape, Rotation, Translation>>(
+          gsl::at(shape_maps_, index).value(), rotation_map_.value(),
+          translation);
     } else if (expansion_map_.has_value()) {
       return std::make_unique<detail::gi_map<Shape, Expansion>>(
           gsl::at(shape_maps_, index).value(), expansion_map_.value());
     } else if (rotation_map_.has_value()) {
       return std::make_unique<detail::gi_map<Shape, Rotation>>(
           gsl::at(shape_maps_, index).value(), rotation_map_.value());
+    } else if (translation_map_.has_value()) {
+      return std::make_unique<detail::gi_map<Shape, Translation>>(
+          gsl::at(shape_maps_, index).value(), translation);
     } else {
       return std::make_unique<detail::gi_map<Shape>>(
           gsl::at(shape_maps_, index).value());
     }
   } else {
-    if (expansion_map_.has_value() and rotation_map_.has_value()) {
+    if (expansion_map_.has_value() and rotation_map_.has_value() and
+        translation_map_.has_value()) {
+      return std::make_unique<detail::gi_map<Expansion, Rotation, Translation>>(
+          expansion_map_.value(), rotation_map_.value(), translation);
+    } else if (expansion_map_.has_value() and rotation_map_.has_value()) {
       return std::make_unique<detail::gi_map<Expansion, Rotation>>(
           expansion_map_.value(), rotation_map_.value());
+    } else if (expansion_map_.has_value() and translation_map_.has_value()) {
+      return std::make_unique<detail::gi_map<Expansion, Translation>>(
+          expansion_map_.value(), translation);
+    } else if (rotation_map_.has_value() and translation_map_.has_value()) {
+      return std::make_unique<detail::gi_map<Rotation, Translation>>(
+          rotation_map_.value(), translation);
     } else if (expansion_map_.has_value()) {
       return std::make_unique<detail::gi_map<Expansion>>(
           expansion_map_.value());
     } else if (rotation_map_.has_value()) {
       return std::make_unique<detail::gi_map<Rotation>>(rotation_map_.value());
+    } else if (translation_map_.has_value()) {
+      return std::make_unique<detail::gi_map<Translation>>(translation);
     } else {
       ERROR(
           "Requesting grid to inertial map without a distorted frame and "
@@ -330,7 +414,8 @@ size_t TimeDependentMapOptions::get_index(const domain::ObjectLabel object) {
   template TimeDependentMapOptions::MapType<Frame::Grid, Frame::Distorted>  \
   TimeDependentMapOptions::grid_to_distorted_map<OBJECT(data)>(bool) const; \
   template TimeDependentMapOptions::MapType<Frame::Grid, Frame::Inertial>   \
-  TimeDependentMapOptions::grid_to_inertial_map<OBJECT(data)>(bool) const;
+  TimeDependentMapOptions::grid_to_inertial_map<OBJECT(data)>(bool, bool)   \
+      const;
 
 GENERATE_INSTANTIATIONS(INSTANTIATE,
                         (domain::ObjectLabel::A, domain::ObjectLabel::B,

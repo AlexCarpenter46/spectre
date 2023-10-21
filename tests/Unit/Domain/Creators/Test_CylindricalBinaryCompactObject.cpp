@@ -248,6 +248,8 @@ std::string create_option_string(
                    "    ExpansionMap: None\n"
                    "    RotationMap:\n"
                    "      InitialAngularVelocity: [0.0, 0.0, -0.2]\n"
+                   "    TranslationMap:\n"
+                   "      None\n"
                    "    ShapeMapA:\n"
                    "      LMax: 8\n"
                    "      SizeInitialValues: [1.1, 0.0, 0.0]\n"
@@ -352,6 +354,9 @@ void test_construction(const CylBCO& creator,
 
   if (block.is_time_dependent()) {
     // Taken from option string above
+
+    // add a constant translation in one direction that'll have to be the same
+    // as the options string above.
     const double initial_time = 1.0;
     const double time = 2.0;
     const double z_angle = (time - initial_time) * -0.2;
@@ -399,10 +404,12 @@ TimeDepOptions construct_time_dependent_options() {
 
   // No expansion map options because of above option string
   return TimeDepOptions{
-      expected_time, std::nullopt,
+      expected_time,
+      std::nullopt,
       TimeDepOptions::RotationMapOptions{{initial_angular_velocity[0],
                                           initial_angular_velocity[1],
                                           initial_angular_velocity[2]}},
+      std::nullopt,
       TimeDepOptions::ShapeMapOptions<domain::ObjectLabel::A>{
           8_st,
           {initial_size_A_coefs[0][0], initial_size_A_coefs[1][0],
@@ -466,7 +473,7 @@ void test_parse_errors() {
           TimeDepOptions{
               0.0, std::nullopt,
               TimeDepOptions::RotationMapOptions{std::array{0.0, 0.0, 0.0}},
-              std::nullopt, std::nullopt},
+              std::nullopt, std::nullopt, std::nullopt},
           {{4.0, 0.0, 0.0}}, {-4.0, 0.0, 0.0}, 1.0, 1.0, false, false, false,
           25.0, false, 1_st, 3_st, create_inner_boundary_condition(),
           create_outer_boundary_condition(), Options::Context{false, {}, 1, 1}),
@@ -561,7 +568,6 @@ void test_cylindrical_bbh() {
                              make_array(true, false), make_array(true, false)),
            make_not_null(&gen))) {
     CAPTURE(with_sphere_e);
-    CAPTURE(include_outer_sphere);
     CAPTURE(use_equiangular_map);
     CAPTURE(with_boundary_conditions);
     CAPTURE(with_additional_outer_radial_refinement);
@@ -570,12 +576,14 @@ void test_cylindrical_bbh() {
     if (with_time_dependence) {
       include_inner_sphere_A = true;
       include_inner_sphere_B = true;
+      include_outer_sphere = true;
     } else {
       // With no time dependence, can't have control systems
       with_control_systems = false;
     }
     CAPTURE(include_inner_sphere_A);
     CAPTURE(include_inner_sphere_B);
+    CAPTURE(include_outer_sphere);
     CAPTURE(with_control_systems);
 
     const double outer_radius = include_outer_sphere ? 100.0 : 30.0;

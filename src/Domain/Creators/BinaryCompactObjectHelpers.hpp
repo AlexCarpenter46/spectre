@@ -15,12 +15,14 @@
 #include "Domain/CoordinateMaps/TimeDependent/CubicScale.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/Rotation.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/Shape.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/Translation.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
 #include "Options/Auto.hpp"
 #include "Options/Context.hpp"
 #include "Options/Options.hpp"
 #include "Options/String.hpp"
+#include "PointwiseFunctions/MathFunctions/MathFunction.hpp"
 #include "Utilities/GetOutput.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -164,6 +166,7 @@ struct TimeDependentMapOptions {
   using Expansion = domain::CoordinateMaps::TimeDependent::CubicScale<3>;
   using Rotation = domain::CoordinateMaps::TimeDependent::Rotation<3>;
   using Shape = domain::CoordinateMaps::TimeDependent::Shape;
+  using Translation = domain::CoordinateMaps::TimeDependent::Translation<3>;
   using Identity = domain::CoordinateMaps::Identity<3>;
 
  public:
@@ -176,10 +179,10 @@ struct TimeDependentMapOptions {
       // distorted frame, but didn't specify shape map options, an error occurs.
       tmpl::list<detail::di_map<Identity>>,
       detail::produce_all_maps<Frame::Grid, Frame::Inertial, Shape, Expansion,
-                               Rotation>,
+                               Rotation, Translation>,
       detail::produce_all_maps<Frame::Grid, Frame::Distorted, Shape>,
       detail::produce_all_maps<Frame::Distorted, Frame::Inertial, Expansion,
-                               Rotation>>;
+                               Rotation, Translation>>;
 
   /// \brief The initial time of the functions of time.
   struct InitialTime {
@@ -242,20 +245,41 @@ struct TimeDependentMapOptions {
     std::array<double, 3> initial_angular_velocity{};
   };
 
+  // \brief Options for the Translation Map, the outer radius is always set to
+  // the outer boundary of the Domain, so there's no option needed for outer
+  // boundary.
+  struct TranslationMapOptions {
+    using type = Options::Auto<TranslationMapOptions, Options::AutoLabel::None>;
+    static std::string name() { return "TranslationMap"; }
+    static constexpr Options::String help = {
+        "Options for a time-dependent translation map. Specify 'None' to not "
+        "use this map."};
+
+    struct InitialValues {
+      using type = std::array<std::array<double, 3>, 2>;
+      static constexpr Options::String help = {
+          "Initial value and deriv of expansion."};
+    };
+
+    using options = tmpl::list<InitialValues>;
+
+    std::array<std::array<double, 3>, 2> initial_values{};
+  };
+
   // We use a type alias here instead of defining the ShapeMapOptions struct
   // because there appears to be a bug in clang-10. If the definition of
   // ShapeMapOptions is here inside TimeDependentMapOptions, on clang-10 there
   // is a linking error that there is an undefined reference to
-  // Options::Option::parse_as<TimeDependentMapOptions<A>> (and B). This doesn't
-  // show up for GCC. If we put the definition of ShapeMapOptions outside of
-  // TimeDependentMapOptions and just use a type alias here, the linking error
-  // goes away.
+  // Options::Option::parse_as<TimeDependentMapOptions<A>> (and B). This
+  // doesn't show up for GCC. If we put the definition of ShapeMapOptions
+  // outside of TimeDependentMapOptions and just use a type alias here, the
+  // linking error goes away.
   template <domain::ObjectLabel Object>
   using ShapeMapOptions = domain::creators::bco::ShapeMapOptions<Object>;
 
   using options =
       tmpl::list<InitialTime, ExpansionMapOptions, RotationMapOptions,
-                 ShapeMapOptions<domain::ObjectLabel::A>,
+                 TranslationMapOptions, ShapeMapOptions<domain::ObjectLabel::A>,
                  ShapeMapOptions<domain::ObjectLabel::B>>;
   static constexpr Options::String help{
       "The options for all time dependent maps in a binary compact object "
@@ -267,6 +291,7 @@ struct TimeDependentMapOptions {
       double initial_time,
       std::optional<ExpansionMapOptions> expansion_map_options,
       std::optional<RotationMapOptions> rotation_options,
+      std::optional<TranslationMapOptions> translation_options,
       std::optional<ShapeMapOptions<domain::ObjectLabel::A>> shape_options_A,
       std::optional<ShapeMapOptions<domain::ObjectLabel::B>> shape_options_B,
       const Options::Context& context = {});
@@ -297,16 +322,16 @@ struct TimeDependentMapOptions {
    * - Rotation: `Rotation<3>`
    * - ShapeA/B: `Shape` (with size FunctionOfTime)
    *
-   * If the inner/outer radii for an object are `std::nullopt`, this means that
-   * a Size map is not constructed for that object. An identity map will be used
-   * instead.
+   * If the inner/outer radii for an object are `std::nullopt`, this means
+   * that a Size map is not constructed for that object. An identity map will
+   * be used instead.
    */
   void build_maps(const std::array<std::array<double, 3>, 2>& centers,
                   const std::optional<std::pair<double, double>>&
                       object_A_inner_outer_radii,
                   const std::optional<std::pair<double, double>>&
                       object_B_inner_outer_radii,
-                  double domain_outer_radius);
+                  double envelope_radius, double domain_outer_radius);
 
   /*!
    * \brief Check whether options were specified in the constructor for the
@@ -323,15 +348,15 @@ struct TimeDependentMapOptions {
    * returns a `nullptr`.
    */
   MapType<Frame::Distorted, Frame::Inertial> distorted_to_inertial_map(
-      bool include_distorted_map) const;
+      bool include_distorted_map, bool use_rigid_translation) const;
 
   /*!
    * \brief This will construct the maps from the `Frame::Grid` to the
    * `Frame::Distorted`.
    *
    * If the argument `include_distorted_map` is true, then this will be a
-   * `Shape` map (with size FunctionOfTime) for the templated `Object`. If it is
-   * false, then this returns a `nullptr`.
+   * `Shape` map (with size FunctionOfTime) for the templated `Object`. If it
+   * is false, then this returns a `nullptr`.
    */
   template <domain::ObjectLabel Object>
   MapType<Frame::Grid, Frame::Distorted> grid_to_distorted_map(
@@ -341,21 +366,22 @@ struct TimeDependentMapOptions {
    * \brief This will construct the entire map from the `Frame::Grid` to the
    * `Frame::Inertial`.
    *
-   * If the argument `include_distorted_map` is true, then this map will have a
-   * composition of a `Shape` (with size FunctionOfTime), `CubicScale`, and
+   * If the argument `include_distorted_map` is true, then this map will have
+   * a composition of a `Shape` (with size FunctionOfTime), `CubicScale`, and
    * `Rotation` map. If it is false, there will only be `CubicScale` and
    * `Rotation` maps.
    */
   template <domain::ObjectLabel Object>
   MapType<Frame::Grid, Frame::Inertial> grid_to_inertial_map(
-      bool include_distorted_map) const;
+      bool include_distorted_map, bool use_rigid_translation) const;
 
-  // Names are public because they need to be used when constructing maps in the
-  // BCO domain creators themselves
+  // Names are public because they need to be used when constructing maps in
+  // the BCO domain creators themselves
   inline static const std::string expansion_name{"Expansion"};
   inline static const std::string expansion_outer_boundary_name{
       "ExpansionOuterBoundary"};
   inline static const std::string rotation_name{"Rotation"};
+  inline static const std::string translation_name{"Translation"};
   inline static const std::array<std::string, 2> size_names{{"SizeA", "SizeB"}};
   inline static const std::array<std::string, 2> shape_names{
       {"ShapeA", "ShapeB"}};
@@ -366,12 +392,14 @@ struct TimeDependentMapOptions {
   double initial_time_{std::numeric_limits<double>::signaling_NaN()};
   std::optional<ExpansionMapOptions> expansion_map_options_{};
   std::optional<RotationMapOptions> rotation_options_{};
+  std::optional<TranslationMapOptions> translation_options_{};
   std::optional<ShapeMapOptions<domain::ObjectLabel::A>> shape_options_A_{};
   std::optional<ShapeMapOptions<domain::ObjectLabel::B>> shape_options_B_{};
 
   // Maps
   std::optional<Expansion> expansion_map_{};
   std::optional<Rotation> rotation_map_{};
+  std::optional<std::pair<Translation, Translation>> translation_map_{};
   std::array<std::optional<Shape>, 2> shape_maps_{};
 };
 
