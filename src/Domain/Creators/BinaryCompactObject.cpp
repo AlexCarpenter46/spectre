@@ -677,7 +677,8 @@ Domain<3> BinaryCompactObject::create_domain() const {
               distorted_to_inertial_block_maps[first_block_object_B]
                   ->get_clone();
         }
-        // check if block is less than outer shell block rigid translation here
+        // check if block is less than outer shell block for rigid translation,
+        // but no distorted map
       } else if (block < first_outer_shell_block_) {
         // We always have a grid to inertial map. We may or may not have maps to
         // the distorted frame.
@@ -696,7 +697,7 @@ Domain<3> BinaryCompactObject::create_domain() const {
               grid_to_inertial_block_maps[first_block_object_B]->get_clone();
         }
       } else {
-        // in here clone the block that has linear translation
+        // For the outer shell, clone the block that has linear translation
         grid_to_inertial_block_maps[block] =
             grid_to_inertial_block_maps[final_block_outer_shell]->get_clone();
       }
