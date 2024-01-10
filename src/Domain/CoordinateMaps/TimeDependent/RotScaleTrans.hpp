@@ -249,24 +249,11 @@ class RotScaleTrans {
 
   RotScaleTrans() = default;
 
-  explicit RotScaleTrans(std::pair<std::string, std::string> scale_f_of_t_names,
-                         std::string rot_f_of_t_name,
-                         std::string trans_f_of_t_name, double inner_radius,
-                         double outer_radius, bool rigid_translation);
-  explicit RotScaleTrans(std::pair<std::string, std::string> scale_f_of_t_names,
-                         double inner_radius, double outer_radius);
-  explicit RotScaleTrans(std::string rot_f_of_t_name);
-  explicit RotScaleTrans(std::string trans_f_of_t_name, double inner_radius,
-                         double outer_radius, bool rigid_translation);
-  explicit RotScaleTrans(std::pair<std::string, std::string> scale_f_of_t_names,
-                         std::string rot_f_of_t_name, double inner_radius,
-                         double outer_radius);
-  explicit RotScaleTrans(std::string rot_f_of_t_name,
-                         std::string trans_f_of_t_name, double inner_radius,
-                         double outer_radius, bool rigid_translation);
-  explicit RotScaleTrans(std::pair<std::string, std::string> scale_f_of_t_names,
-                         std::string trans_f_of_t_name, double inner_radius,
-                         double outer_radius, bool rigid_translation);
+  explicit RotScaleTrans(
+      std::optional<std::pair<std::string, std::string>> scale_f_of_t_names,
+      std::optional<std::string> rot_f_of_t_name,
+      std::optional<std::string> trans_f_of_t_name, double inner_radius,
+      double outer_radius, bool rigid_translation);
 
   RotScaleTrans(const RotScaleTrans<Dim>& RotScaleTrans_Map);
 

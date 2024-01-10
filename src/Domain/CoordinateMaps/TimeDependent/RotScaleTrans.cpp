@@ -42,98 +42,26 @@ namespace domain::CoordinateMaps::TimeDependent {
 
 template <size_t Dim>
 RotScaleTrans<Dim>::RotScaleTrans(
-    std::pair<std::string, std::string> scale_f_of_t_names,
-    std::string rot_f_of_t_name, std::string trans_f_of_t_name,
-    double inner_radius, double outer_radius, bool rigid)
-    : scale_f_of_t_a_(std::move(scale_f_of_t_names.first)),
-      scale_f_of_t_b_(std::move(scale_f_of_t_names.second)),
-      rot_f_of_t_(std::move(rot_f_of_t_name)),
-      trans_f_of_t_(std::move(trans_f_of_t_name)),
-      f_of_t_names_({rot_f_of_t_.value(), scale_f_of_t_a_.value(),
-                     scale_f_of_t_b_.value(), trans_f_of_t_.value()}),
-      inner_radius_(inner_radius),
-      outer_radius_(outer_radius),
-      rigid_(rigid) {}
-
-template <size_t Dim>
-RotScaleTrans<Dim>::RotScaleTrans(
-    std::pair<std::string, std::string> scale_f_of_t_names, double inner_radius,
-    double outer_radius)
-    : scale_f_of_t_a_(std::move(scale_f_of_t_names.first)),
-      scale_f_of_t_b_(std::move(scale_f_of_t_names.second)),
-      rot_f_of_t_(std::nullopt),
-      trans_f_of_t_(std::nullopt),
-      f_of_t_names_({scale_f_of_t_a_.value(), scale_f_of_t_b_.value()}),
-      inner_radius_(inner_radius),
-      outer_radius_(outer_radius),
-      rigid_(false) {}
-
-template <size_t Dim>
-RotScaleTrans<Dim>::RotScaleTrans(std::string rot_f_of_t_name)
-    : scale_f_of_t_a_(std::nullopt),
-      scale_f_of_t_b_(std::nullopt),
-      rot_f_of_t_(std::move(rot_f_of_t_name)),
-      trans_f_of_t_(std::nullopt),
-      f_of_t_names_({rot_f_of_t_.value()}),
-      inner_radius_(std::nullopt),
-      outer_radius_(std::nullopt),
-      rigid_(false) {}
-
-template <size_t Dim>
-RotScaleTrans<Dim>::RotScaleTrans(std::string trans_f_of_t_name,
-                                  double inner_radius, double outer_radius,
-                                  bool rigid)
-    : scale_f_of_t_a_(std::nullopt),
-      scale_f_of_t_b_(std::nullopt),
-      rot_f_of_t_(std::nullopt),
-      trans_f_of_t_(std::move(trans_f_of_t_name)),
-      f_of_t_names_({trans_f_of_t_.value()}),
-      inner_radius_(inner_radius),
-      outer_radius_(outer_radius),
-      rigid_(rigid) {}
-
-template <size_t Dim>
-RotScaleTrans<Dim>::RotScaleTrans(
-    std::pair<std::string, std::string> scale_f_of_t_names,
-    std::string rot_f_of_t_name, double inner_radius, double outer_radius)
-    : scale_f_of_t_a_(std::move(scale_f_of_t_names.first)),
-      scale_f_of_t_b_(std::move(scale_f_of_t_names.second)),
-      rot_f_of_t_(std::move(rot_f_of_t_name)),
-      trans_f_of_t_(std::nullopt),
-      f_of_t_names_({rot_f_of_t_.value(), scale_f_of_t_a_.value(),
-                     scale_f_of_t_b_.value()}),
-      inner_radius_(inner_radius),
-      outer_radius_(outer_radius),
-      rigid_(false) {}
-
-template <size_t Dim>
-RotScaleTrans<Dim>::RotScaleTrans(std::string rot_f_of_t_name,
-                                  std::string trans_f_of_t_name,
-                                  double inner_radius, double outer_radius,
-                                  bool rigid)
-    : scale_f_of_t_a_(std::nullopt),
-      scale_f_of_t_b_(std::nullopt),
-      rot_f_of_t_(std::move(rot_f_of_t_name)),
-      trans_f_of_t_(std::move(trans_f_of_t_name)),
-      f_of_t_names_({rot_f_of_t_.value(), trans_f_of_t_.value()}),
-      inner_radius_(inner_radius),
-      outer_radius_(outer_radius),
-      rigid_(rigid) {}
-
-template <size_t Dim>
-RotScaleTrans<Dim>::RotScaleTrans(
-    std::pair<std::string, std::string> scale_f_of_t_names,
-    std::string trans_f_of_t_name, double inner_radius, double outer_radius,
-    bool rigid)
-    : scale_f_of_t_a_(std::move(scale_f_of_t_names.first)),
-      scale_f_of_t_b_(std::move(scale_f_of_t_names.second)),
-      rot_f_of_t_(std::nullopt),
-      trans_f_of_t_(std::move(trans_f_of_t_name)),
-      f_of_t_names_({scale_f_of_t_a_.value(), scale_f_of_t_b_.value(),
-                     trans_f_of_t_.value()}),
-      inner_radius_(inner_radius),
-      outer_radius_(outer_radius),
-      rigid_(rigid) {}
+    std::optional<std::pair<std::string, std::string>> scale_f_of_t_names,
+    std::optional<std::string> rot_f_of_t_name,
+    std::optional<std::string> trans_f_of_t_name, double inner_radius,
+    double outer_radius, bool rigid)
+    : inner_radius_(inner_radius), outer_radius_(outer_radius), rigid_(rigid) {
+  if (scale_f_of_t_names.has_value()) {
+    scale_f_of_t_a_ = std::move(scale_f_of_t_names.value().first);
+    scale_f_of_t_b_ = std::move(scale_f_of_t_names.value().second);
+    f_of_t_names_.insert(scale_f_of_t_a_.value());
+    f_of_t_names_.insert(scale_f_of_t_b_.value());
+  }
+  if (rot_f_of_t_name.has_value()) {
+    rot_f_of_t_ = std::move(rot_f_of_t_name.value());
+    f_of_t_names_.insert(rot_f_of_t_.value());
+  }
+  if (trans_f_of_t_name.has_value()) {
+    trans_f_of_t_ = std::move(trans_f_of_t_name.value());
+    f_of_t_names_.insert(trans_f_of_t_.value());
+  }
+}
 
 template <size_t Dim>
 RotScaleTrans<Dim>::RotScaleTrans(const RotScaleTrans<Dim>& RotScaleTrans_Map)
