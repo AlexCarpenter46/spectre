@@ -668,12 +668,12 @@ Domain<3> BinaryCompactObject::create_domain() const {
       } else if (block < first_outer_shell_block_) {
         grid_to_inertial_block_maps[block] =
             time_dependent_options_
-                ->grid_to_inertial_map<domain::ObjectLabel::A>(
-                    block_for_distorted_frame, true);
+                ->grid_to_inertial_map<domain::ObjectLabel::A>(std::nullopt,
+                                                               true);
         distorted_to_inertial_block_maps[block] =
             time_dependent_options_
                 ->distorted_to_inertial_map<domain::ObjectLabel::A>(
-                    block_for_distorted_frame, true);
+                    std::nullopt, true);
       } else if (block > final_block_outer_shell) {
         // the inner cube blocks are after outershell and we want to copy the
         // corresponding object blocks.

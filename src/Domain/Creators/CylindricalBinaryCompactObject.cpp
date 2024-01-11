@@ -276,6 +276,8 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
   // 4 blocks: 42 thru 45
   add_cylinder_name("CB", "Outer");
 
+  first_outer_shell_block = 46;
+
   if (include_inner_sphere_A) {
     // 5 blocks
     add_filled_cylinder_name("InnerSphereEA", "InnerSphereA");
@@ -283,6 +285,7 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
     add_filled_cylinder_name("InnerSphereMA", "InnerSphereA");
     // 4 blocks
     add_cylinder_name("InnerSphereEA", "InnerSphereA");
+    first_outer_shell_block += 14;
   }
   if (include_inner_sphere_B) {
     // 5 blocks
@@ -291,6 +294,7 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
     add_filled_cylinder_name("InnerSphereMB", "InnerSphereB");
     // 4 blocks
     add_cylinder_name("InnerSphereEB", "InnerSphereB");
+    first_outer_shell_block += 14;
   }
   if (include_outer_sphere) {
     // 5 blocks
@@ -301,6 +305,7 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
     add_cylinder_name("OuterSphereCA", "OuterSphere");
     // 4 blocks
     add_cylinder_name("OuterSphereCB", "OuterSphere");
+    first_outer_shell_block += 18;
   }
 
   // Expand initial refinement over all blocks
@@ -407,6 +412,12 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
           std::move(outer_boundary_condition), context) {
   time_dependent_options_ = std::move(time_dependent_options);
 
+  if (not include_outer_sphere) {
+    PARSE_ERROR(context,
+                "To use the translation map in the CylindricalBBH domain, you "
+                "must specify an outer sphere.");
+  }
+
   // The size map, which is applied from the grid to distorted frame, currently
   // needs to start and stop at certain radii around each excision. If the inner
   // spheres aren't included, the outer radii would have to be in the middle of
@@ -421,11 +432,12 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
   }
 
   if (time_dependent_options_.has_value()) {
+    const double inner_radius_C = 3.0 * (center_A_[2] - center_B_[2]);
     time_dependent_options_->build_maps(
         std::array{rotate_from_z_to_x_axis(center_A_),
                    rotate_from_z_to_x_axis(center_B_)},
         std::array{radius_A_, outer_radius_A_},
-        std::array{radius_B_, outer_radius_B_}, outer_radius_);
+        std::array{radius_B_, outer_radius_B_}, inner_radius_C, outer_radius_);
   }
 }
 
@@ -898,6 +910,7 @@ Domain<3> CylindricalBinaryCompactObject::create_domain() const {
     ASSERT(include_inner_sphere_A_ and include_inner_sphere_B_,
            "When using time dependent maps for the CylindricalBBH domain, you "
            "must include both inner spheres.");
+  }
     // Default initialize everything to nullptr so that we only need to set the
     // appropriate block maps for the specific frames
     std::vector<std::unique_ptr<
@@ -914,76 +927,84 @@ Domain<3> CylindricalBinaryCompactObject::create_domain() const {
     // map from the grid to inertial frame. No maps to the distorted frame
     grid_to_inertial_block_maps[0] =
         time_dependent_options_
-            ->grid_to_inertial_map<domain::ObjectLabel::None>(false);
+            ->grid_to_inertial_map<domain::ObjectLabel::None>(false, true);
 
-    // Inside the excision sphere we add the grid to inertial map from the outer
-    // shell. This allows the center of the excisions/horizons to be mapped
-    // properly to the inertial frame.
-    domain.inject_time_dependent_map_for_excision_sphere(
-        "ExcisionSphereA", grid_to_inertial_block_maps[0]->get_clone());
-    domain.inject_time_dependent_map_for_excision_sphere(
-        "ExcisionSphereB", grid_to_inertial_block_maps[0]->get_clone());
+    if (include_outer_sphere_) {
+      grid_to_inertial_block_maps[first_outer_shell_block] =
+          time_dependent_options_
+              ->grid_to_inertial_map<domain::ObjectLabel::None>(false, false);
 
-    // Because we require that both objects have inner shells, object A
-    // corresponds to blocks 46-59 and object B corresponds to blocks 60-73. If
-    // we have extra outer shells, those will have the same maps as
-    // block 0, and will start at block 74. The `true` being passed to
-    // the functions specifies that the size map *should* be included in the
-    // distorted frame.
-    grid_to_inertial_block_maps[46] =
-        time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::A>(
-            true);
-    grid_to_distorted_block_maps[46] =
-        time_dependent_options_->grid_to_distorted_map<domain::ObjectLabel::A>(
-            true);
-    distorted_to_inertial_block_maps[46] =
-        time_dependent_options_
-            ->distorted_to_inertial_map<domain::ObjectLabel::A>(true);
+      // Inside the excision sphere we add the grid to inertial map from the
+      // outer shell. This allows the center of the excisions/horizons to be
+      // mapped properly to the inertial frame.
+      domain.inject_time_dependent_map_for_excision_sphere(
+          "ExcisionSphereA", grid_to_inertial_block_maps[0]->get_clone());
+      domain.inject_time_dependent_map_for_excision_sphere(
+          "ExcisionSphereB", grid_to_inertial_block_maps[0]->get_clone());
 
-    grid_to_inertial_block_maps[60] =
-        time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::B>(
-            true);
-    grid_to_distorted_block_maps[60] =
-        time_dependent_options_->grid_to_distorted_map<domain::ObjectLabel::B>(
-            true);
-    distorted_to_inertial_block_maps[60] =
-        time_dependent_options_
-            ->distorted_to_inertial_map<domain::ObjectLabel::B>(true);
+      // Because we require that both objects have inner shells, object A
+      // corresponds to blocks 46-59 and object B corresponds to blocks 60-73.
+      // If we have extra outer shells, those will have the same maps as block
+      // 0, and will start at block 74. The `true` being passed to the functions
+      // specifies that the size map *should* be included in the distorted
+      // frame.
+      grid_to_inertial_block_maps[46] =
+          time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::A>(
+              true, true);
+      grid_to_distorted_block_maps[46] =
+          time_dependent_options_
+              ->grid_to_distorted_map<domain::ObjectLabel::A>(true);
+      distorted_to_inertial_block_maps[46] =
+          time_dependent_options_
+              ->distorted_to_inertial_map<domain::ObjectLabel::A>(true, true);
 
-    for (size_t block = 1; block < number_of_blocks_; ++block) {
-      if (block == 46 or block == 60) {
-        continue;  // Already initialized
-      } else if (block > 46 and block < 60) {
-        grid_to_inertial_block_maps[block] =
-            grid_to_inertial_block_maps[46]->get_clone();
-        if (grid_to_distorted_block_maps[46] != nullptr) {
-          grid_to_distorted_block_maps[block] =
-              grid_to_distorted_block_maps[46]->get_clone();
-          distorted_to_inertial_block_maps[block] =
-              distorted_to_inertial_block_maps[46]->get_clone();
+      grid_to_inertial_block_maps[60] =
+          time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::B>(
+              true, true);
+      grid_to_distorted_block_maps[60] =
+          time_dependent_options_
+              ->grid_to_distorted_map<domain::ObjectLabel::B>(true);
+      distorted_to_inertial_block_maps[60] =
+          time_dependent_options_
+              ->distorted_to_inertial_map<domain::ObjectLabel::B>(true, true);
+
+      for (size_t block = 1; block < number_of_blocks_; ++block) {
+        if (block == 46 or block == 60) {
+          continue;  // Already initialized
+        } else if (block > 46 and block < 60) {
+          grid_to_inertial_block_maps[block] =
+              grid_to_inertial_block_maps[46]->get_clone();
+          if (grid_to_distorted_block_maps[46] != nullptr) {
+            grid_to_distorted_block_maps[block] =
+                grid_to_distorted_block_maps[46]->get_clone();
+            distorted_to_inertial_block_maps[block] =
+                distorted_to_inertial_block_maps[46]->get_clone();
+          }
+        } else if (block > 60 and block < 74) {
+          grid_to_inertial_block_maps[block] =
+              grid_to_inertial_block_maps[60]->get_clone();
+          if (grid_to_distorted_block_maps[60] != nullptr) {
+            grid_to_distorted_block_maps[block] =
+                grid_to_distorted_block_maps[60]->get_clone();
+            distorted_to_inertial_block_maps[block] =
+                distorted_to_inertial_block_maps[60]->get_clone();
+          }
+        } else if (block > 74) {
+          grid_to_inertial_block_maps[block] =
+              grid_to_inertial_block_maps[first_outer_shell_block]->get_clone();
+        } else {
+          grid_to_inertial_block_maps[block] =
+              grid_to_inertial_block_maps[0]->get_clone();
         }
-      } else if (block > 60 and block < 74) {
-        grid_to_inertial_block_maps[block] =
-            grid_to_inertial_block_maps[60]->get_clone();
-        if (grid_to_distorted_block_maps[60] != nullptr) {
-          grid_to_distorted_block_maps[block] =
-              grid_to_distorted_block_maps[60]->get_clone();
-          distorted_to_inertial_block_maps[block] =
-              distorted_to_inertial_block_maps[60]->get_clone();
-        }
-      } else {
-        grid_to_inertial_block_maps[block] =
-            grid_to_inertial_block_maps[0]->get_clone();
+      }
+
+      for (size_t block = 0; block < number_of_blocks_; ++block) {
+        domain.inject_time_dependent_map_for_block(
+            block, std::move(grid_to_inertial_block_maps[block]),
+            std::move(grid_to_distorted_block_maps[block]),
+            std::move(distorted_to_inertial_block_maps[block]));
       }
     }
-
-    for (size_t block = 0; block < number_of_blocks_; ++block) {
-      domain.inject_time_dependent_map_for_block(
-          block, std::move(grid_to_inertial_block_maps[block]),
-          std::move(grid_to_distorted_block_maps[block]),
-          std::move(distorted_to_inertial_block_maps[block]));
-    }
-  }
 
   return domain;
 }

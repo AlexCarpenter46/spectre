@@ -206,18 +206,70 @@ void TimeDependentMapOptions<IsCylindrical>::build_maps(
     const std::optional<std::array<double, IsCylindrical ? 2 : 3>>&
         object_B_radii,
     const double envelope_radius, const double domain_outer_radius) {
-  if (expansion_map_options_.has_value()) {
-    expansion_map_ = Expansion{domain_outer_radius, expansion_name,
-                               expansion_outer_boundary_name};
+  if (expansion_map_options_.has_value() and rotation_options_.has_value() and
+      translation_options_.has_value()) {
+    rot_scale_trans_map_ = std::make_pair(
+        RotScaleTrans{
+            std::make_pair(expansion_name, expansion_outer_boundary_name),
+            rotation_name, translation_name, envelope_radius,
+            domain_outer_radius, true},
+        RotScaleTrans{
+            std::make_pair(expansion_name, expansion_outer_boundary_name),
+            rotation_name, translation_name, envelope_radius,
+            domain_outer_radius, false});
+  } else if (expansion_map_options_.has_value() and
+             rotation_options_.has_value()) {
+    rot_scale_trans_map_ = std::make_pair(
+        RotScaleTrans{
+            std::make_pair(expansion_name, expansion_outer_boundary_name),
+            rotation_name, std::nullopt, envelope_radius, domain_outer_radius,
+            true},
+        RotScaleTrans{
+            std::make_pair(expansion_name, expansion_outer_boundary_name),
+            rotation_name, std::nullopt, envelope_radius, domain_outer_radius,
+            false});
+  } else if (rotation_options_.has_value() and
+             translation_options_.has_value()) {
+    rot_scale_trans_map_ = std::make_pair(
+        RotScaleTrans{std::nullopt, rotation_name, translation_name,
+                      envelope_radius, domain_outer_radius, true},
+        RotScaleTrans{std::nullopt, rotation_name, translation_name,
+                      envelope_radius, domain_outer_radius, false});
+  } else if (expansion_map_options_.has_value() and
+             translation_options_.has_value()) {
+    rot_scale_trans_map_ = std::make_pair(
+        RotScaleTrans{
+            std::make_pair(expansion_name, expansion_outer_boundary_name),
+            std::nullopt, translation_name, envelope_radius,
+            domain_outer_radius, true},
+        RotScaleTrans{
+            std::make_pair(expansion_name, expansion_outer_boundary_name),
+            std::nullopt, translation_name, envelope_radius,
+            domain_outer_radius, false});
+  } else if (expansion_map_options_.has_value()) {
+    rot_scale_trans_map_ = std::make_pair(
+        RotScaleTrans{
+            std::make_pair(expansion_name, expansion_outer_boundary_name),
+            std::nullopt, std::nullopt, envelope_radius, domain_outer_radius,
+            true},
+        RotScaleTrans{
+            std::make_pair(expansion_name, expansion_outer_boundary_name),
+            std::nullopt, std::nullopt, envelope_radius, domain_outer_radius,
+            false});
+  } else if (rotation_options_.has_value()) {
+    rot_scale_trans_map_ = std::make_pair(
+        RotScaleTrans{std::nullopt, rotation_name, std::nullopt,
+                      envelope_radius, domain_outer_radius, true},
+        RotScaleTrans{std::nullopt, rotation_name, std::nullopt,
+                      envelope_radius, domain_outer_radius, false});
+  } else if (translation_options_.has_value()) {
+    rot_scale_trans_map_ = std::make_pair(
+        RotScaleTrans{std::nullopt, std::nullopt, translation_name,
+                      envelope_radius, domain_outer_radius, true},
+        RotScaleTrans{std::nullopt, std::nullopt, translation_name,
+                      envelope_radius, domain_outer_radius, false});
   }
-  if (rotation_options_.has_value()) {
-    rotation_map_ = Rotation{rotation_name};
-  }
-  if (translation_options_.has_value()) {
-    translation_map_ = std::make_pair(
-        Translation{translation_name},
-        Translation{translation_name, envelope_radius, domain_outer_radius});
-  }
+
   for (size_t i = 0; i < 2; i++) {
     const auto& radii_opt = i == 0 ? object_A_radii : object_B_radii;
     if (radii_opt.has_value()) {
@@ -320,10 +372,15 @@ TimeDependentMapOptions<IsCylindrical>::distorted_to_inertial_map(
         (transition_ends_at_cube or include_distorted_map.value() < 6);
   }
 
+  const auto& rot_scale_trans = rot_scale_trans_map_.has_value()
+                                    ? use_rigid_map
+                                          ? rot_scale_trans_map_->first
+                                          : rot_scale_trans_map_->second
+                                    : RotScaleTrans{};
+
   if (block_has_shape_map) {
     if (rot_scale_trans_map_.has_value()) {
-      return std::make_unique<detail::di_map<RotScaleTrans>>(
-          rot_scale_trans_map_.value());
+      return std::make_unique<detail::di_map<RotScaleTrans>>(rot_scale_trans);
     } else {
       return std::make_unique<detail::di_map<Identity>>(Identity{});
     }
@@ -399,6 +456,12 @@ TimeDependentMapOptions<IsCylindrical>::grid_to_inertial_map(
         (transition_ends_at_cube or include_distorted_map.value() < 6);
   }
 
+  const auto& rot_scale_trans = rot_scale_trans_map_.has_value()
+                                    ? use_rigid_map
+                                          ? rot_scale_trans_map_->first
+                                          : rot_scale_trans_map_->second
+                                    : RotScaleTrans{};
+
   if (block_has_shape_map) {
     const size_t index = get_index(Object);
     const std::optional<Shape>* shape{};
@@ -421,14 +484,13 @@ TimeDependentMapOptions<IsCylindrical>::grid_to_inertial_map(
     }
     if (rot_scale_trans_map_.has_value()) {
       return std::make_unique<detail::gi_map<Shape, RotScaleTrans>>(
-          shape->value(), rot_scale_trans_map_.value());
+          shape->value(), rot_scale_trans);
     } else {
       return std::make_unique<detail::gi_map<Shape>>(shape->value());
     }
   } else {
     if (rot_scale_trans_map_.has_value()) {
-      return std::make_unique<detail::gi_map<RotScaleTrans>>(
-          rot_scale_trans_map_.value());
+      return std::make_unique<detail::gi_map<RotScaleTrans>>(rot_scale_trans);
     } else {
       ERROR(
           "Requesting grid to inertial map without a distorted frame and "

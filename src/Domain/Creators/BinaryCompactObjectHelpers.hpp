@@ -12,8 +12,8 @@
 
 #include "Domain/CoordinateMaps/CoordinateMap.hpp"
 #include "Domain/CoordinateMaps/Identity.hpp"
-#include "Domain/CoordinateMaps/TimeDependent/CubicScale.hpp"
-#include "Domain/CoordinateMaps/TimeDependent/RotScaleTrans.hpp
+#include "Domain/CoordinateMaps/TimeDependent/RotScaleTrans.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/Shape.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
@@ -347,7 +347,7 @@ struct TimeDependentMapOptions {
           object_A_radii,
       const std::optional<std::array<double, IsCylindrical ? 2 : 3>>&
           object_B_radii,
-      double domain_outer_radius);
+      double envelope_radius, double domain_outer_radius);
 
   /*!
    * \brief Check whether options were specified in the constructor for the
