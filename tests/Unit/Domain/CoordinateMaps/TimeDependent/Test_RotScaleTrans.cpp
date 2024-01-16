@@ -94,70 +94,85 @@ void test_RotScaleTrans() {
   const std::pair<std::string, std::string> scale_pair{"expansion_a",
                                                        "expansion_b"};
   // Rotation, Scaling, Translation Non-Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
       rot_scale_trans_map_non_rigid{scale_pair,    "rotation_angle",
                                     "translation", inner_radius,
                                     outer_radius,  false};
+  rot_scale_trans_map_non_rigid =
+      serialize_and_deserialize(rot_scale_trans_map_non_rigid);
 
   // Rotation, Scaling, Translation Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
       rot_scale_trans_map_rigid{scale_pair,   "rotation_angle", "translation",
                                 inner_radius, outer_radius,     true};
+  rot_scale_trans_map_rigid =
+      serialize_and_deserialize(rot_scale_trans_map_rigid);
 
   // Rotation, Scaling Non-Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
       rot_scale_map_non_rigid{scale_pair,   "rotation_angle", std::nullopt,
                               inner_radius, outer_radius,     false};
+  rot_scale_map_non_rigid = serialize_and_deserialize(rot_scale_map_non_rigid);
 
   // Rotation, Scaling Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
-      rot_scale_map_rigid{scale_pair,   "rotation_angle", std::nullopt,
-                          inner_radius, outer_radius,     true};
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim> rot_scale_map_rigid{
+      scale_pair,   "rotation_angle", std::nullopt,
+      inner_radius, outer_radius,     true};
+  rot_scale_map_rigid = serialize_and_deserialize(rot_scale_map_rigid);
 
   // Rotation, Translation Non-Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
       rot_trans_map_non_rigid{std::nullopt, "rotation_angle", "translation",
                               inner_radius, outer_radius,     false};
+  rot_trans_map_non_rigid = serialize_and_deserialize(rot_trans_map_non_rigid);
 
   // Rotation, Translation Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
-      rot_trans_map_rigid{std::nullopt, "rotation_angle", "translation",
-                          inner_radius, outer_radius,     true};
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim> rot_trans_map_rigid{
+      std::nullopt, "rotation_angle", "translation",
+      inner_radius, outer_radius,     true};
+  rot_trans_map_rigid = serialize_and_deserialize(rot_trans_map_rigid);
 
   // Scaling, Translation Non-Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
       scale_trans_map_non_rigid{scale_pair,   std::nullopt, "translation",
                                 inner_radius, outer_radius, false};
+  scale_trans_map_non_rigid =
+      serialize_and_deserialize(scale_trans_map_non_rigid);
 
   // Scaling, Translation Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
       scale_trans_map_rigid{scale_pair,   std::nullopt, "translation",
                             inner_radius, outer_radius, true};
+  scale_trans_map_rigid = serialize_and_deserialize(scale_trans_map_rigid);
 
   // Rotation
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim> rot_map{
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim> rot_map{
       std::nullopt, "rotation_angle", std::nullopt,
       inner_radius, outer_radius,     true};
+  rot_map = serialize_and_deserialize(rot_map);
 
   // Scaling Non-Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
-      scale_map_non_rigid{scale_pair,   std::nullopt, std::nullopt,
-                          inner_radius, outer_radius, false};
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim> scale_map_non_rigid{
+      scale_pair,   std::nullopt, std::nullopt,
+      inner_radius, outer_radius, false};
+  scale_map_non_rigid = serialize_and_deserialize(scale_map_non_rigid);
 
   // Scaling Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
-      scale_map_rigid{scale_pair,   std::nullopt, std::nullopt,
-                      inner_radius, outer_radius, true};
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim> scale_map_rigid{
+      scale_pair, std::nullopt, std::nullopt, inner_radius, outer_radius, true};
+  scale_map_rigid = serialize_and_deserialize(scale_map_rigid);
 
   // Translation Non-Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
-      trans_map_non_rigid{std::nullopt, std::nullopt, "translation",
-                          inner_radius, outer_radius, false};
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim> trans_map_non_rigid{
+      std::nullopt, std::nullopt, "translation",
+      inner_radius, outer_radius, false};
+  trans_map_non_rigid = serialize_and_deserialize(trans_map_non_rigid);
 
   // Translation Rigid
-  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
-      trans_map_rigid{std::nullopt, std::nullopt, "translation",
-                      inner_radius, outer_radius, true};
+  domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim> trans_map_rigid{
+      std::nullopt, std::nullopt, "translation",
+      inner_radius, outer_radius, true};
+  trans_map_rigid = serialize_and_deserialize(trans_map_rigid);
 
   UniformCustomDistribution<double> dist_double{-5.0, 5.0};
   UniformCustomDistribution<double> far_dist_double{50.0, 60.0};
@@ -657,7 +672,7 @@ void test_RotScaleTrans() {
   check_names4(rot_scale_trans_map_non_rigid.function_of_time_names());
 }
 namespace domain {
-// [[Timeout, 10]]
+// [[Timeout, 20]]
 SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.TimeDependent.RotScaleTrans",
                   "[Domain][Unit]") {
   test_RotScaleTrans<2>();

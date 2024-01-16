@@ -336,8 +336,8 @@ class RotScaleTrans {
   std::optional<std::string> rot_f_of_t_{};
   std::optional<std::string> trans_f_of_t_{};
   std::unordered_set<std::string> f_of_t_names_;
-  double inner_radius_;
-  double outer_radius_;
+  double inner_radius_{std::numeric_limits<double>::signaling_NaN()};
+  double outer_radius_{std::numeric_limits<double>::signaling_NaN()};
   bool rigid_ = true;
 };
 
