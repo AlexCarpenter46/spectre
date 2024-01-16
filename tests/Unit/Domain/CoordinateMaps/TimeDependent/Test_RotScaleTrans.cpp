@@ -36,7 +36,8 @@ template <size_t Dim>
 void test_RotScaleTrans() {
   MAKE_GENERATOR(gen);
   // define vars for FunctionOfTime::PiecewisePolynomial f(t) = t**2.
-  double t = -1.0;
+  double initial_t = -1.0;
+  double t = -0.9;
   const double dt = 0.6;
   const double final_time = 4.0;
   constexpr size_t deriv_order = 3;
@@ -60,12 +61,13 @@ void test_RotScaleTrans() {
   const std::array<DataVector, deriv_order + 1> init_func_b{
       {{0.58}, {0.0}, {0.0}, {0.0}}};
   const std::string rot_f_of_t_name{"rotation_angle"};
+  // custom_approx will be redifined multiple times below.
   Approx custom_approx = Approx::custom().epsilon(1.0).scale(1.0);
 
   if constexpr (Dim == 2) {
     init_func = {{{angle}, {omega}, {dtomega}, {d2tomega}}};
     f_of_t_list[rot_f_of_t_name] =
-        std::make_unique<Polynomial>(t, init_func, final_time + dt);
+        std::make_unique<Polynomial>(initial_t, init_func, final_time + dt);
     custom_approx = Approx::custom().epsilon(5.0e-13).scale(1.0);
   } else {
     // Axis of rotation nhat = (1.0, -1.0, 1.0) / sqrt(3.0)
@@ -76,16 +78,16 @@ void test_RotScaleTrans() {
     const std::array<DataVector, 1> init_quat{
         DataVector{{cos(angle / 2.0), axis[0] * sin(angle / 2.0),
                     axis[1] * sin(angle / 2.0), axis[2] * sin(angle / 2.0)}}};
-    f_of_t_list[rot_f_of_t_name] =
-        std::make_unique<QuatFoT>(t, init_quat, init_func, final_time + dt);
+    f_of_t_list[rot_f_of_t_name] = std::make_unique<QuatFoT>(
+        initial_t, init_quat, init_func, final_time + dt);
     custom_approx = Approx::custom().epsilon(5.0e-11).scale(1.0);
   }
   f_of_t_list["expansion_a"] =
-      std::make_unique<Polynomial>(t, init_func_a, final_time);
+      std::make_unique<Polynomial>(initial_t, init_func_a, final_time);
   f_of_t_list["expansion_b"] =
-      std::make_unique<Polynomial>(t, init_func_b, final_time);
+      std::make_unique<Polynomial>(initial_t, init_func_b, final_time);
   f_of_t_list["translation"] =
-      std::make_unique<Polynomial>(t, init_func_trans, final_time + dt);
+      std::make_unique<Polynomial>(initial_t, init_func_trans, final_time + dt);
 
   const FoftPtr& scale_a_of_t = f_of_t_list.at("expansion_a");
   const FoftPtr& scale_b_of_t = f_of_t_list.at("expansion_b");
@@ -107,6 +109,11 @@ void test_RotScaleTrans() {
   const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
       rot_scale_map_non_rigid{scale_pair,   "rotation_angle", std::nullopt,
                               inner_radius, outer_radius,     false};
+
+  // Rotation, Scaling Rigid
+  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
+      rot_scale_map_rigid{scale_pair,   "rotation_angle", std::nullopt,
+                          inner_radius, outer_radius,     true};
 
   // Rotation, Translation Non-Rigid
   const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
@@ -133,10 +140,15 @@ void test_RotScaleTrans() {
       std::nullopt, "rotation_angle", std::nullopt,
       inner_radius, outer_radius,     true};
 
-  // Scaling
+  // Scaling Non-Rigid
   const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
       scale_map_non_rigid{scale_pair,   std::nullopt, std::nullopt,
                           inner_radius, outer_radius, false};
+
+  // Scaling Rigid
+  const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
+      scale_map_rigid{scale_pair,   std::nullopt, std::nullopt,
+                      inner_radius, outer_radius, true};
 
   // Translation Non-Rigid
   const domain::CoordinateMaps::TimeDependent::RotScaleTrans<Dim>
@@ -165,76 +177,55 @@ void test_RotScaleTrans() {
 
   while (t < final_time) {
     std::array<double, Dim> translation{};
-    std::array<double, Dim> deriv_translation{};
     std::array<double, Dim> expected_rotation{};
-    std::array<double, Dim> expected_rotation_deriv{};
     std::array<double, Dim> far_expected_rotation{};
-    std::array<double, Dim> far_expected_rotation_deriv{};
     const double radius = magnitude(point_xi);
     const DataVector radius_dv = magnitude(point_xi_dv);
-    std::array<double, Dim> frame_vel_rot_scale{};
-    std::array<double, Dim> far_frame_vel_rot_scale{};
-    std::array<double, Dim> frame_vel_rot_scale_rigid{};
-    std::array<double, Dim> frame_vel_t_nr{0.};
+    const double far_radius = magnitude(far_point_xi);
     const Matrix rot_matrix =
         rotation_matrix<Dim>(t, *(f_of_t_list[rot_f_of_t_name]));
     const Matrix deriv_rot_matrix =
         rotation_matrix_deriv<Dim>(t, *(f_of_t_list[rot_f_of_t_name]));
     const double scale_a = scale_a_of_t->func_and_deriv(t)[0][0];
     const double scale_b = scale_b_of_t->func_and_deriv(t)[0][0];
-    const double d_scale_a = scale_a_of_t->func_and_deriv(t)[1][0];
-    const double d_scale_b = scale_b_of_t->func_and_deriv(t)[1][0];
     double radial_scaling_factor = 0.0;
-    double deriv_radial_scaling_factor = 0.0;
     double radial_translation_factor = 0.0;
     custom_approx = Approx::custom().epsilon(1.e-10);
     for (size_t i = 0; i < Dim; i++) {
       gsl::at(translation, i) = square(t);
-      gsl::at(deriv_translation, i) = trans_f_of_t->func_and_deriv(t)[1][i];
       for (size_t j = 0; j < Dim; j++) {
         gsl::at(expected_rotation, i) +=
             rot_matrix(i, j) * gsl::at(point_xi, j);
-        gsl::at(expected_rotation_deriv, i) +=
-            deriv_rot_matrix(i, j) * gsl::at(point_xi, j);
-        gsl::at(frame_vel_rot_scale_rigid, i) +=
-            gsl::at(point_xi, j) *
-            (scale_a * deriv_rot_matrix(i, j) + d_scale_a * rot_matrix(i, j));
         gsl::at(far_expected_rotation, i) +=
             rot_matrix(i, j) * gsl::at(far_point_xi, j);
-        gsl::at(far_expected_rotation_deriv, i) +=
-            deriv_rot_matrix(i, j) * gsl::at(far_point_xi, j);
-        gsl::at(far_frame_vel_rot_scale, i) +=
-            gsl::at(far_point_xi, j) *
-            (scale_b * deriv_rot_matrix(i, j) + d_scale_b * rot_matrix(i, j));
       }
     }
     // Operator
     CHECK_ITERABLE_APPROX(trans_map_rigid(point_xi, t, f_of_t_list),
                           point_xi + translation);
+    CHECK_ITERABLE_APPROX(scale_map_rigid(point_xi, t, f_of_t_list),
+                          point_xi * scale_a);
     CHECK_ITERABLE_APPROX(rot_map(point_xi, t, f_of_t_list), expected_rotation);
+    CHECK_ITERABLE_APPROX(rot_scale_map_rigid(point_xi, t, f_of_t_list),
+                          expected_rotation * scale_a);
     CHECK_ITERABLE_APPROX(rot_trans_map_rigid(point_xi, t, f_of_t_list),
                           expected_rotation + translation);
     CHECK_ITERABLE_APPROX(scale_trans_map_rigid(point_xi, t, f_of_t_list),
                           point_xi * scale_a + translation);
     CHECK_ITERABLE_APPROX(rot_scale_trans_map_rigid(point_xi, t, f_of_t_list),
                           expected_rotation * scale_a + translation);
-    // Frame Velocity
-    CHECK_ITERABLE_APPROX(rot_map.frame_velocity(point_xi, t, f_of_t_list),
-                          expected_rotation_deriv);
-    CHECK_ITERABLE_APPROX(
-        trans_map_rigid.frame_velocity(point_xi, t, f_of_t_list),
-        deriv_translation);
-    CHECK_ITERABLE_APPROX(
-        rot_trans_map_rigid.frame_velocity(point_xi, t, f_of_t_list),
-        expected_rotation_deriv + deriv_translation);
-    CHECK_ITERABLE_APPROX(
-        scale_trans_map_rigid.frame_velocity(point_xi, t, f_of_t_list),
-        point_xi * (scale_a + d_scale_a) + deriv_translation);
     // Inverse
     CHECK_ITERABLE_APPROX(
         rot_map.inverse(expected_rotation, t, f_of_t_list).value(), point_xi);
     CHECK_ITERABLE_APPROX(
         trans_map_rigid.inverse(point_xi + translation, t, f_of_t_list).value(),
+        point_xi);
+    CHECK_ITERABLE_APPROX(
+        scale_map_rigid.inverse(point_xi * scale_a, t, f_of_t_list).value(),
+        point_xi);
+    CHECK_ITERABLE_APPROX(
+        rot_scale_map_rigid.inverse(expected_rotation * scale_a, t, f_of_t_list)
+            .value(),
         point_xi);
     CHECK_ITERABLE_APPROX(
         rot_trans_map_rigid
@@ -253,8 +244,6 @@ void test_RotScaleTrans() {
         point_xi);
 
     if (radius <= inner_radius) {
-      frame_vel_t_nr = deriv_translation;
-      frame_vel_rot_scale = frame_vel_rot_scale_rigid;
       CHECK_ITERABLE_APPROX(scale_map_non_rigid(point_xi, t, f_of_t_list),
                             point_xi * scale_a);
       CHECK_ITERABLE_APPROX(trans_map_non_rigid(point_xi, t, f_of_t_list),
@@ -268,19 +257,6 @@ void test_RotScaleTrans() {
       CHECK_ITERABLE_APPROX(
           rot_scale_trans_map_non_rigid(point_xi, t, f_of_t_list),
           expected_rotation * scale_a + translation);
-      // Frame Velocity
-      CHECK_ITERABLE_APPROX(
-          scale_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-          point_xi * (scale_a + d_scale_a));
-      CHECK_ITERABLE_APPROX(
-          trans_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-          deriv_translation);
-      CHECK_ITERABLE_APPROX(
-          rot_trans_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-          expected_rotation_deriv + deriv_translation);
-      CHECK_ITERABLE_APPROX(
-          scale_trans_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-          point_xi * (scale_a + d_scale_a) + deriv_translation);
       // Inverse
       CHECK_ITERABLE_APPROX(
           scale_map_non_rigid.inverse(point_xi * scale_a, t, f_of_t_list)
@@ -316,20 +292,8 @@ void test_RotScaleTrans() {
         radial_scaling_factor =
             ((outer_radius - radius) * (scale_a - scale_b) * inner_radius) /
             ((outer_radius - inner_radius) * radius);
-        deriv_radial_scaling_factor =
-            ((outer_radius - radius) * (d_scale_a - d_scale_b) * inner_radius) /
-            ((outer_radius - inner_radius) * radius);
         radial_translation_factor =
             (outer_radius - radius) / (outer_radius - inner_radius);
-        frame_vel_t_nr = deriv_translation * radial_translation_factor;
-        for (size_t i = 0; i < Dim; i++) {
-          for (size_t j = 0; j < Dim; j++) {
-            gsl::at(frame_vel_rot_scale, i) +=
-                gsl::at(point_xi, j) *
-                (deriv_rot_matrix(i, j) * (scale_b + radial_scaling_factor) +
-                 rot_matrix(i, j) * (d_scale_b + deriv_radial_scaling_factor));
-          }
-        }
         CHECK_ITERABLE_APPROX(scale_map_non_rigid(point_xi, t, f_of_t_list),
                               point_xi * (radial_scaling_factor + scale_b));
         CHECK_ITERABLE_APPROX(
@@ -349,23 +313,6 @@ void test_RotScaleTrans() {
             rot_scale_trans_map_non_rigid(point_xi, t, f_of_t_list),
             expected_rotation * (radial_scaling_factor + scale_b) +
                 translation * radial_translation_factor);
-        // Frame Velocity
-        CHECK_ITERABLE_APPROX(
-            scale_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-            point_xi * (scale_b + d_scale_b + radial_scaling_factor +
-                        deriv_radial_scaling_factor));
-        CHECK_ITERABLE_APPROX(
-            trans_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-            deriv_translation * radial_translation_factor);
-        CHECK_ITERABLE_APPROX(
-            rot_trans_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-            expected_rotation_deriv +
-                deriv_translation * radial_translation_factor);
-        CHECK_ITERABLE_APPROX(
-            scale_trans_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-            point_xi * (scale_b + d_scale_b + radial_scaling_factor +
-                        deriv_radial_scaling_factor) +
-                deriv_translation * radial_translation_factor);
         // Inverse
         CHECK_ITERABLE_CUSTOM_APPROX(
             scale_map_non_rigid
@@ -410,21 +357,8 @@ void test_RotScaleTrans() {
         radial_scaling_factor =
             ((inner_radius - radius) * (scale_a - scale_b) * outer_radius) /
             ((outer_radius - inner_radius) * radius);
-        deriv_radial_scaling_factor =
-            ((inner_radius - radius) * (d_scale_a - d_scale_b) * outer_radius) /
-            ((outer_radius - inner_radius) * radius);
         radial_translation_factor =
             (inner_radius - radius) / (outer_radius - inner_radius);
-        frame_vel_t_nr =
-            deriv_translation + deriv_translation * radial_translation_factor;
-        for (size_t i = 0; i < Dim; i++) {
-          for (size_t j = 0; j < Dim; j++) {
-            gsl::at(frame_vel_rot_scale, i) +=
-                gsl::at(point_xi, j) *
-                (deriv_rot_matrix(i, j) * (scale_a + radial_scaling_factor) +
-                 rot_matrix(i, j) * (d_scale_a + deriv_radial_scaling_factor));
-          }
-        }
         CHECK_ITERABLE_APPROX(scale_map_non_rigid(point_xi, t, f_of_t_list),
                               point_xi * (radial_scaling_factor + scale_a));
         CHECK_ITERABLE_APPROX(
@@ -444,24 +378,6 @@ void test_RotScaleTrans() {
             rot_scale_trans_map_non_rigid(point_xi, t, f_of_t_list),
             expected_rotation * (radial_scaling_factor + scale_a) +
                 translation + translation * radial_translation_factor);
-        // Frame Velocity
-        CHECK_ITERABLE_APPROX(
-            scale_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-            point_xi * (scale_a + d_scale_a + radial_scaling_factor +
-                        deriv_radial_scaling_factor));
-        CHECK_ITERABLE_APPROX(
-            trans_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-            deriv_translation + deriv_translation * radial_translation_factor);
-        CHECK_ITERABLE_APPROX(
-            rot_trans_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-            expected_rotation_deriv + deriv_translation +
-                deriv_translation * radial_translation_factor);
-        CHECK_ITERABLE_APPROX(
-            scale_trans_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-            point_xi * (scale_a + d_scale_a + radial_scaling_factor +
-                        deriv_radial_scaling_factor) +
-                deriv_translation +
-                deriv_translation * radial_translation_factor);
         // Inverse
         CHECK_ITERABLE_CUSTOM_APPROX(
             scale_map_non_rigid
@@ -519,16 +435,6 @@ void test_RotScaleTrans() {
     CHECK_ITERABLE_APPROX(
         rot_scale_trans_map_non_rigid(far_point_xi, t, f_of_t_list),
         far_expected_rotation * scale_b);
-    // Frame Velocity
-    CHECK_ITERABLE_APPROX(
-        scale_map_non_rigid.frame_velocity(far_point_xi, t, f_of_t_list),
-        far_point_xi * (scale_b + d_scale_b));
-    CHECK_ITERABLE_APPROX(
-        rot_trans_map_non_rigid.frame_velocity(far_point_xi, t, f_of_t_list),
-        far_expected_rotation_deriv);
-    CHECK_ITERABLE_APPROX(
-        scale_trans_map_non_rigid.frame_velocity(far_point_xi, t, f_of_t_list),
-        far_point_xi * (scale_b + d_scale_b));
     // Inverse
     CHECK_ITERABLE_APPROX(
         scale_map_non_rigid.inverse(far_point_xi * scale_b, t, f_of_t_list)
@@ -556,26 +462,34 @@ void test_RotScaleTrans() {
             .value(),
         far_point_xi);
 
-    // frame velocity from different sections
-    CHECK_ITERABLE_APPROX(
-        rot_scale_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-        frame_vel_rot_scale);
-    CHECK_ITERABLE_APPROX(
-        rot_scale_trans_map_rigid.frame_velocity(point_xi, t, f_of_t_list),
-        frame_vel_rot_scale_rigid + deriv_translation);
-    CHECK_ITERABLE_APPROX(
-        rot_scale_trans_map_non_rigid.frame_velocity(point_xi, t, f_of_t_list),
-        frame_vel_rot_scale + frame_vel_t_nr);
-
     if (radius <= inner_radius * .99 or radius >= inner_radius * 1.01) {
+      // frame velocity
+      test_frame_velocity(rot_map, point_xi, t, f_of_t_list);
+      test_frame_velocity(scale_map_rigid, point_xi, t, f_of_t_list);
+      test_frame_velocity(scale_map_non_rigid, point_xi, t, f_of_t_list);
+      test_frame_velocity(trans_map_rigid, point_xi, t, f_of_t_list);
+      test_frame_velocity(trans_map_non_rigid, point_xi, t, f_of_t_list);
+      test_frame_velocity(rot_scale_map_rigid, point_xi, t, f_of_t_list);
+      test_frame_velocity(rot_scale_map_non_rigid, point_xi, t, f_of_t_list);
+      test_frame_velocity(rot_trans_map_rigid, point_xi, t, f_of_t_list);
+      test_frame_velocity(rot_trans_map_non_rigid, point_xi, t, f_of_t_list);
+      test_frame_velocity(scale_trans_map_rigid, point_xi, t, f_of_t_list);
+      test_frame_velocity(scale_trans_map_non_rigid, point_xi, t, f_of_t_list);
+      test_frame_velocity(rot_scale_trans_map_rigid, point_xi, t, f_of_t_list);
+      test_frame_velocity(rot_scale_trans_map_non_rigid, point_xi, t,
+                          f_of_t_list);
+      // jacobian/inv jacobian
       test_jacobian(rot_map, point_xi, t, f_of_t_list);
-      test_inv_jacobian(rot_map, point_xi, t, f_of_t_list);
+      test_jacobian(scale_map_rigid, point_xi, t, f_of_t_list);
+      test_inv_jacobian(scale_map_rigid, point_xi, t, f_of_t_list);
       test_jacobian(scale_map_non_rigid, point_xi, t, f_of_t_list);
       test_inv_jacobian(scale_map_non_rigid, point_xi, t, f_of_t_list);
       test_jacobian(trans_map_rigid, point_xi, t, f_of_t_list);
       test_inv_jacobian(trans_map_rigid, point_xi, t, f_of_t_list);
       test_jacobian(trans_map_non_rigid, point_xi, t, f_of_t_list);
       test_inv_jacobian(trans_map_non_rigid, point_xi, t, f_of_t_list);
+      test_jacobian(rot_scale_map_rigid, point_xi, t, f_of_t_list);
+      test_inv_jacobian(rot_scale_map_rigid, point_xi, t, f_of_t_list);
       test_jacobian(rot_scale_map_non_rigid, point_xi, t, f_of_t_list);
       test_inv_jacobian(rot_scale_map_non_rigid, point_xi, t, f_of_t_list);
       test_jacobian(rot_trans_map_rigid, point_xi, t, f_of_t_list);
@@ -590,6 +504,94 @@ void test_RotScaleTrans() {
       test_inv_jacobian(rot_scale_trans_map_rigid, point_xi, t, f_of_t_list);
       test_jacobian(rot_scale_trans_map_non_rigid, point_xi, t, f_of_t_list);
       test_inv_jacobian(rot_scale_trans_map_non_rigid, point_xi, t,
+                        f_of_t_list);
+    }
+    // Checking if any radius in the DataVector is within the range above.
+    bool jac_flag = true;
+    for (size_t i = 0; i < gsl::at(point_xi_dv, 0).size(); i++) {
+      if (gsl::at(radius_dv, i) > inner_radius * .99 and
+          gsl::at(radius_dv, i) < inner_radius * 1.01) {
+        jac_flag = false;
+      }
+    }
+    if (jac_flag) {
+      // jacobian/inv jacobian
+      test_jacobian(rot_map, point_xi_dv, t, f_of_t_list);
+      test_jacobian(scale_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(scale_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_jacobian(scale_map_non_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(scale_map_non_rigid, point_xi_dv, t, f_of_t_list);
+      test_jacobian(trans_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(trans_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_jacobian(trans_map_non_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(trans_map_non_rigid, point_xi_dv, t, f_of_t_list);
+      test_jacobian(rot_scale_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(rot_scale_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_jacobian(rot_scale_map_non_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(rot_scale_map_non_rigid, point_xi_dv, t, f_of_t_list);
+      test_jacobian(rot_trans_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(rot_trans_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_jacobian(rot_trans_map_non_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(rot_trans_map_non_rigid, point_xi_dv, t, f_of_t_list);
+      test_jacobian(scale_trans_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(scale_trans_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_jacobian(scale_trans_map_non_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(scale_trans_map_non_rigid, point_xi_dv, t, f_of_t_list);
+      test_jacobian(rot_scale_trans_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(rot_scale_trans_map_rigid, point_xi_dv, t, f_of_t_list);
+      test_jacobian(rot_scale_trans_map_non_rigid, point_xi_dv, t, f_of_t_list);
+      test_inv_jacobian(rot_scale_trans_map_non_rigid, point_xi_dv, t,
+                        f_of_t_list);
+    }
+    if (far_radius >= outer_radius * 1.01) {
+      // frame velocity
+      test_frame_velocity(rot_map, point_xi, t, f_of_t_list);
+      test_frame_velocity(scale_map_rigid, far_point_xi, t, f_of_t_list);
+      test_frame_velocity(scale_map_non_rigid, far_point_xi, t, f_of_t_list);
+      test_frame_velocity(trans_map_rigid, far_point_xi, t, f_of_t_list);
+      test_frame_velocity(trans_map_non_rigid, far_point_xi, t, f_of_t_list);
+      test_frame_velocity(rot_scale_map_rigid, far_point_xi, t, f_of_t_list);
+      test_frame_velocity(rot_scale_map_non_rigid, far_point_xi, t,
+                          f_of_t_list);
+      test_frame_velocity(rot_trans_map_rigid, far_point_xi, t, f_of_t_list);
+      test_frame_velocity(rot_trans_map_non_rigid, far_point_xi, t,
+                          f_of_t_list);
+      test_frame_velocity(scale_trans_map_rigid, far_point_xi, t, f_of_t_list);
+      test_frame_velocity(scale_trans_map_non_rigid, far_point_xi, t,
+                          f_of_t_list);
+      test_frame_velocity(rot_scale_trans_map_rigid, far_point_xi, t,
+                          f_of_t_list);
+      test_frame_velocity(rot_scale_trans_map_non_rigid, far_point_xi, t,
+                          f_of_t_list);
+      // jacobian/inv jacobian
+      test_jacobian(rot_map, far_point_xi, t, f_of_t_list);
+      test_jacobian(scale_map_rigid, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(scale_map_rigid, far_point_xi, t, f_of_t_list);
+      test_jacobian(scale_map_non_rigid, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(scale_map_non_rigid, far_point_xi, t, f_of_t_list);
+      test_jacobian(trans_map_rigid, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(trans_map_rigid, far_point_xi, t, f_of_t_list);
+      test_jacobian(trans_map_non_rigid, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(trans_map_non_rigid, far_point_xi, t, f_of_t_list);
+      test_jacobian(rot_scale_map_rigid, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(rot_scale_map_rigid, far_point_xi, t, f_of_t_list);
+      test_jacobian(rot_scale_map_non_rigid, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(rot_scale_map_non_rigid, far_point_xi, t, f_of_t_list);
+      test_jacobian(rot_trans_map_rigid, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(rot_trans_map_rigid, far_point_xi, t, f_of_t_list);
+      test_jacobian(rot_trans_map_non_rigid, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(rot_trans_map_non_rigid, far_point_xi, t, f_of_t_list);
+      test_jacobian(scale_trans_map_rigid, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(scale_trans_map_rigid, far_point_xi, t, f_of_t_list);
+      test_jacobian(scale_trans_map_non_rigid, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(scale_trans_map_non_rigid, far_point_xi, t,
+                        f_of_t_list);
+      test_jacobian(rot_scale_trans_map_rigid, far_point_xi, t, f_of_t_list);
+      test_inv_jacobian(rot_scale_trans_map_rigid, far_point_xi, t,
+                        f_of_t_list);
+      test_jacobian(rot_scale_trans_map_non_rigid, far_point_xi, t,
+                    f_of_t_list);
+      test_inv_jacobian(rot_scale_trans_map_non_rigid, far_point_xi, t,
                         f_of_t_list);
     }
 
