@@ -91,7 +91,6 @@ void test_RotScaleTrans() {
 
   const FoftPtr& scale_a_of_t = f_of_t_list.at("expansion_a");
   const FoftPtr& scale_b_of_t = f_of_t_list.at("expansion_b");
-  const FoftPtr& trans_f_of_t = f_of_t_list.at("translation");
   const std::pair<std::string, std::string> scale_pair{"expansion_a",
                                                        "expansion_b"};
   // Rotation, Scaling, Translation Non-Rigid

@@ -265,7 +265,10 @@ class RotScaleTrans {
 
   RotScaleTrans() = default;
   ~RotScaleTrans() = default;
+  RotScaleTrans(const RotScaleTrans<Dim>& RotScaleTrans_Map) = default;
   RotScaleTrans(RotScaleTrans&&) = default;
+  RotScaleTrans& operator=(RotScaleTrans&&) = default;
+  RotScaleTrans& operator=(const RotScaleTrans& RotScaleTrans_Map);
 
   template <typename T>
   std::array<tt::remove_cvref_wrap_t<T>, Dim> operator()(

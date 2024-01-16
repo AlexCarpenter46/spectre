@@ -64,17 +64,6 @@ RotScaleTrans<Dim>::RotScaleTrans(
 }
 
 template <size_t Dim>
-RotScaleTrans<Dim>::RotScaleTrans(const RotScaleTrans<Dim>& RotScaleTrans_Map)
-    : scale_f_of_t_a_(RotScaleTrans_Map.scale_f_of_t_a_),
-      scale_f_of_t_b_(RotScaleTrans_Map.scale_f_of_t_b_),
-      rot_f_of_t_(RotScaleTrans_Map.rot_f_of_t_),
-      trans_f_of_t_(RotScaleTrans_Map.trans_f_of_t_),
-      f_of_t_names_(RotScaleTrans_Map.f_of_t_names_),
-      inner_radius_(RotScaleTrans_Map.inner_radius_),
-      outer_radius_(RotScaleTrans_Map.outer_radius_),
-      rigid_(RotScaleTrans_Map.rigid_) {}
-
-template <size_t Dim>
 template <typename T>
 std::array<tt::remove_cvref_wrap_t<T>, Dim> RotScaleTrans<Dim>::operator()(
     const std::array<T, Dim>& source_coords, const double time,
