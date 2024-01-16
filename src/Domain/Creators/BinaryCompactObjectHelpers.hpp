@@ -12,6 +12,8 @@
 
 #include "Domain/CoordinateMaps/CoordinateMap.hpp"
 #include "Domain/CoordinateMaps/Identity.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/CubicScale.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/Rotation.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/RotScaleTrans.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/Shape.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
@@ -177,6 +179,8 @@ struct TimeDependentMapOptions {
   using MapType =
       std::unique_ptr<domain::CoordinateMapBase<SourceFrame, TargetFrame, 3>>;
   // Time-dependent maps
+  using Expansion = domain::CoordinateMaps::TimeDependent::CubicScale<3>;
+  using Rotation = domain::CoordinateMaps::TimeDependent::Rotation<3>;
   using RotScaleTrans = domain::CoordinateMaps::TimeDependent::RotScaleTrans<3>;
   using Shape = domain::CoordinateMaps::TimeDependent::Shape;
   using Identity = domain::CoordinateMaps::Identity<3>;
@@ -190,8 +194,12 @@ struct TimeDependentMapOptions {
       // map because if a user requests the grid to distorted frame map with a
       // distorted frame, but didn't specify shape map options, an error occurs.
       tmpl::list<detail::di_map<Identity>>,
-      detail::produce_all_maps<Frame::Grid, Frame::Inertial, RotScaleTrans>,
+      detail::produce_all_maps<Frame::Grid, Frame::Inertial, Shape, Expansion,
+                               Rotation>,
       detail::produce_all_maps<Frame::Grid, Frame::Distorted, Shape>,
+      detail::produce_all_maps<Frame::Distorted, Frame::Inertial, Expansion,
+                               Rotation>,
+      detail::produce_all_maps<Frame::Grid, Frame::Inertial, RotScaleTrans>,
       detail::produce_all_maps<Frame::Distorted, Frame::Inertial,
                                RotScaleTrans>>;
 
@@ -433,6 +441,8 @@ struct TimeDependentMapOptions {
   std::optional<ShapeMapOptions<domain::ObjectLabel::B>> shape_options_B_{};
 
   // Maps
+  std::optional<Expansion> expansion_map_{};
+  std::optional<Rotation> rotation_map_{};
   std::optional<std::pair<RotScaleTrans, RotScaleTrans>> rot_scale_trans_map_{};
   using ShapeMapType =
       tmpl::conditional_t<IsCylindrical, std::array<std::optional<Shape>, 2>,
