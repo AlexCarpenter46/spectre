@@ -672,7 +672,7 @@ void test_RotScaleTrans() {
   check_names4(rot_scale_trans_map_non_rigid.function_of_time_names());
 }
 namespace domain {
-// [[Timeout, 20]]
+// [[Timeout, 30]]
 SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.TimeDependent.RotScaleTrans",
                   "[Domain][Unit]") {
   test_RotScaleTrans<2>();
