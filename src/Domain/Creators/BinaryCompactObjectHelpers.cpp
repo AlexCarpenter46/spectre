@@ -206,6 +206,13 @@ void TimeDependentMapOptions<IsCylindrical>::build_maps(
     const std::optional<std::array<double, IsCylindrical ? 2 : 3>>&
         object_B_radii,
     const double envelope_radius, const double domain_outer_radius) {
+  // if (expansion_map_options_.has_value()) {
+  //   expansion_map_ = Expansion{domain_outer_radius, expansion_name,
+  //                              expansion_outer_boundary_name};
+  // }
+  // if (rotation_options_.has_value()) {
+  //   rotation_map_ = Rotation{rotation_name};
+  // }
   if (expansion_map_options_.has_value() and rotation_options_.has_value() and
       translation_options_.has_value()) {
     rot_scale_trans_map_ = std::make_pair(
@@ -381,6 +388,9 @@ TimeDependentMapOptions<IsCylindrical>::distorted_to_inertial_map(
   if (block_has_shape_map) {
     if (rot_scale_trans_map_.has_value()) {
       return std::make_unique<detail::di_map<RotScaleTrans>>(rot_scale_trans);
+    } else if (expansion_map_.has_value() and rotation_map_.has_value()) {
+      return std::make_unique<detail::di_map<Expansion, Rotation>>(
+          expansion_map_.value(), rotation_map_.value());
     } else {
       return std::make_unique<detail::di_map<Identity>>(Identity{});
     }
@@ -485,7 +495,12 @@ TimeDependentMapOptions<IsCylindrical>::grid_to_inertial_map(
     if (rot_scale_trans_map_.has_value()) {
       return std::make_unique<detail::gi_map<Shape, RotScaleTrans>>(
           shape->value(), rot_scale_trans);
-    } else {
+    }
+    // else if (expansion_map_.has_value() and rotation_map_.has_value()) {
+    //   return std::make_unique<detail::gi_map<Shape, Expansion, Rotation>>(
+    //       shape->value(), expansion_map_.value(), rotation_map_.value());
+    // }
+    else {
       return std::make_unique<detail::gi_map<Shape>>(shape->value());
     }
   } else {

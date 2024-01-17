@@ -199,7 +199,8 @@ struct TimeDependentMapOptions {
       detail::produce_all_maps<Frame::Grid, Frame::Distorted, Shape>,
       detail::produce_all_maps<Frame::Distorted, Frame::Inertial, Expansion,
                                Rotation>,
-      detail::produce_all_maps<Frame::Grid, Frame::Inertial, RotScaleTrans>,
+      detail::produce_all_maps<Frame::Grid, Frame::Inertial, Shape,
+                               RotScaleTrans>,
       detail::produce_all_maps<Frame::Distorted, Frame::Inertial,
                                RotScaleTrans>>;
 
