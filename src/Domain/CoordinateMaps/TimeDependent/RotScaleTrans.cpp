@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstddef>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -71,6 +72,7 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> RotScaleTrans<Dim>::operator()(
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time) const {
   std::array<tt::remove_cvref_wrap_t<T>, Dim> result{};
+  double outer_boundary = outer_radius_;
   for (size_t i = 0; i < Dim; i++) {
     gsl::at(result, i) = gsl::at(source_coords, i);
   }
@@ -92,6 +94,7 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> RotScaleTrans<Dim>::operator()(
         functions_of_time.at(scale_f_of_t_a_.value())->func(time)[0][0];
     const double scale_b_of_t =
         functions_of_time.at(scale_f_of_t_b_.value())->func(time)[0][0];
+    outer_boundary *= scale_b_of_t;
     if (not rigid_) {
       for (size_t k = 0; k < get_size(radius); k++) {
         if (get_element(radius, k) <= inner_radius_) {
@@ -102,7 +105,8 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> RotScaleTrans<Dim>::operator()(
                    get_element(radius, k) < outer_radius_) {
           // Optimization from SpEC to reduce roundoff.
           // Closer to outer radius
-          if (1.0 - get_element(radius, k) / outer_radius_ < .1) {
+          if (1.0 - get_element(radius, k) / (inner_radius_ + outer_radius_) <
+              .5) {
             // Expansion falloff factor w_E in the documentation of the form
             // w_E = \frac{R_{in}(R_{out} - r)(E_{a}(t) - E_{b}(t))}{r(R_{out} -
             // R_{in})}
@@ -157,12 +161,10 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> RotScaleTrans<Dim>::operator()(
             get_element(gsl::at(result, i), k) +=
                 gsl::at(trans_func_of_time, i);
           }
-          ASSERT(max(magnitude(result)) <= outer_radius_,
-                 "Coordinates translated outside outer radius, this should "
-                 "not happen");
         } else if (get_element(radius, k) > inner_radius_ and
                    get_element(radius, k) < outer_radius_) {
-          if (1.0 - get_element(radius, k) / outer_radius_ < .1) {
+          if (1.0 - get_element(radius, k) / (inner_radius_ + outer_radius_) <
+              .5) {
             // Translation falloff factor w_T in the documentation of the
             // form w_T = (R_{out} - r) / (R_{out} - R_{in})
             const double radial_translation_factor =
@@ -184,9 +186,6 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> RotScaleTrans<Dim>::operator()(
                   gsl::at(trans_func_of_time, i) * radial_translation_factor;
             }
           }
-          ASSERT(max(magnitude(result)) <= outer_radius_,
-                 "Coordinates translated outside outer radius, this should "
-                 "not happen");
         }
       }
       // Rigid translation
@@ -194,6 +193,11 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> RotScaleTrans<Dim>::operator()(
       for (size_t i = 0; i < Dim; i++) {
         gsl::at(result, i) += gsl::at(trans_func_of_time, i);
       }
+    }
+    if (scale_f_of_t_a_.has_value()) {
+      ASSERT(max(magnitude(result)) <= outer_boundary,
+             "Coordinates translated outside outer radius, this should "
+             "not happen");
     }
   }
   return result;
@@ -247,11 +251,11 @@ std::optional<std::array<double, Dim>> RotScaleTrans<Dim>::inverse(
           a += square(gsl::at(trans_func_of_time, i));
         }
         a -= square(outer_radius_ - inner_radius_);
-        // When closer to the inner radius the quadratic has the form
+        // When closer to the outer radius the quadratic has the form
         // a = T(t)^2 - (R_{out} - R_{in})^2,
         // b = 2(R_{out}(R_{out} - R_{in}) - T(t)\vec{\bar{\xi}}), and
         // c = \vec{\bar{\xi}}^2 - R_{out}^2
-        if (radius / outer_radius_ < .5) {
+        if (1.0 - radius / (inner_radius_ + outer_radius_) < .5) {
           c = square(radius) - square(outer_radius_);
           for (size_t i = 0; i < Dim; i++) {
             b -= 2.0 * gsl::at(trans_func_of_time, i) *
@@ -265,7 +269,7 @@ std::optional<std::array<double, Dim>> RotScaleTrans<Dim>::inverse(
                 gsl::at(trans_func_of_time, i) * radial_translation_factor;
           }
         }
-        // When closer to the outer radius, the quadratic has the form
+        // When closer to the inner radius, the quadratic has the form
         // a = T(t)^2 - (R_{out} - R_{in})^2,
         // b = -2 (T(t)(T(t) - \vec{\bar{\xi}}) + R_{in}(R_{out} - R_{in}),
         // c = (T(t) - \vec{\bar{\xi}})^2 - R_{in}^2
@@ -299,6 +303,10 @@ std::optional<std::array<double, Dim>> RotScaleTrans<Dim>::inverse(
         functions_of_time.at(scale_f_of_t_a_.value())->func(time)[0][0];
     const double scale_b_of_t =
         functions_of_time.at(scale_f_of_t_b_.value())->func(time)[0][0];
+    ASSERT(scale_a_of_t != 0.0 and scale_b_of_t != 0.0,
+           "An expansion map "
+           "value was set to 0.0, this will cause an FPE. Expansion a: "
+               << scale_a_of_t << " expansion b: " << scale_b_of_t);
     // if not rigid expansion do piecewise expansion
     if (not rigid_) {
       if (radius >= scale_b_of_t * outer_radius_) {
@@ -322,7 +330,10 @@ std::optional<std::array<double, Dim>> RotScaleTrans<Dim>::inverse(
         // b = 2\rho(\bar{\xi}}^2(R_{out} - R_{in}) - \rho R_{out}^2 E_{b}(t)),
         // c = \rho^2(\bar{\xi}}^2 - (E_{b}(t) R_{out})^2)
         // where \rho = R_{in}(E_{a}(t) - E_{b}(t)).
-        if (radius_squared / square(outer_radius_ * scale_b_of_t) < .25) {
+        // if (1.0 - radius / (inner_radius_ * scale_a_of_t + outer_radius_ *
+        // scale_b_of_t) < .5) {
+        if (scale_a_of_t >= scale_b_of_t) {
+          std::cout << "closer to outer boundary" << std::endl;
           double radial_scaling_factor =
               inner_radius_ * (scale_a_of_t - scale_b_of_t);
           double squared_radial_scaling_factor = square(radial_scaling_factor);
@@ -334,6 +345,7 @@ std::optional<std::array<double, Dim>> RotScaleTrans<Dim>::inverse(
           c = squared_radial_scaling_factor *
               (radius_squared - (square(scale_b_of_t * outer_radius_)));
           std::optional<std::array<double, 2>> roots = real_roots(a, b, c);
+          std::cout << "if roots: " << roots << std::endl;
           radial_scaling_factor = root_helper(roots);
           for (size_t i = 0; i < Dim; i++) {
             gsl::at(pre_rotation_result, i) /=
@@ -346,21 +358,23 @@ std::optional<std::array<double, Dim>> RotScaleTrans<Dim>::inverse(
         // c = \rho^2(\bar{\xi}}^2 - (E_{a}(t) R_{in})^2)
         // where \rho = R_{out}(E_{a}(t) - E_{b}(t)).
         else {
+          std::cout << "closer to inner boundary" << std::endl;
           double radial_scaling_factor =
               outer_radius_ * (scale_a_of_t - scale_b_of_t);
           double squared_radial_scaling_factor = square(radial_scaling_factor);
           a = radius_squared * square(outer_radius_ - inner_radius_) -
               squared_radial_scaling_factor * square(inner_radius_);
           b = 2.0 * radial_scaling_factor *
-              (radius_squared * (inner_radius_ - outer_radius_) -
+              (radius_squared * (outer_radius_ - inner_radius_) -
                radial_scaling_factor * square(inner_radius_) * scale_a_of_t);
           c = squared_radial_scaling_factor *
               (radius_squared - (square(scale_a_of_t * inner_radius_)));
           std::optional<std::array<double, 2>> roots = real_roots(a, b, c);
+          std::cout << "if roots: " << roots << std::endl;
           radial_scaling_factor = root_helper(roots);
           for (size_t i = 0; i < Dim; i++) {
             gsl::at(pre_rotation_result, i) /=
-                (scale_a_of_t + (1 - radial_scaling_factor));
+                (scale_a_of_t + radial_scaling_factor);
           }
         }
       }
@@ -414,8 +428,6 @@ std::optional<std::array<double, Dim>> RotScaleTrans<Dim>::inverse(
         }
         double b = 0.;
         double c = 0.;
-        double radius_factor =
-            square(scale_b_of_t * outer_radius_) - square(radius);
         double radial_translation_factor = 0.;
         double radial_scaling_factor = 0.;
         // When closer to the inner radius, the quadratic has the form
@@ -423,7 +435,9 @@ std::optional<std::array<double, Dim>> RotScaleTrans<Dim>::inverse(
         // b = 2(E_{b}(t)R_{out}(E_{a}(t)R_{in} - E_{b}(t)R_{out}) +
         // T(t)\vec{\bar{\xi}}), and
         // c = E_{b}(t)^2 R_{out}^2 - \vec{\bar{\xi}}^2
-        if (radius_factor / square(scale_b_of_t * outer_radius_) < .25) {
+        if (1.0 - radius / (scale_a_of_t * inner_radius_ +
+                            scale_b_of_t * outer_radius_) <
+            .5) {
           b = 2.0 *
               (scale_b_of_t * outer_radius_ *
                (scale_a_of_t * inner_radius_ - scale_b_of_t * outer_radius_));
@@ -431,7 +445,7 @@ std::optional<std::array<double, Dim>> RotScaleTrans<Dim>::inverse(
             b += 2.0 * gsl::at(trans_func_of_time, i) *
                  gsl::at(target_coords, i);
           }
-          c = radius_factor;
+          c = square(scale_b_of_t * outer_radius_) - square(radius);
           std::optional<std::array<double, 2>> roots = real_roots(a, b, c);
           radial_translation_factor = root_helper(roots);
           for (size_t i = 0; i < Dim; i++) {
@@ -548,7 +562,8 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> RotScaleTrans<Dim>::frame_velocity(
           double deriv_radial_scaling_factor = 0;
           // Optimization from SpEC to reduce roundoff.
           // Closer to outer radius
-          if (1.0 - get_element(radius, k) / outer_radius_ < .1) {
+          if (1.0 - get_element(radius, k) / (inner_radius_ + outer_radius_) <
+              .5) {
             deriv_radial_scaling_factor =
                 ((outer_radius_ - get_element(radius, k)) *
                  (dt_a_of_t - dt_b_of_t) * inner_radius_) /
@@ -620,7 +635,8 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> RotScaleTrans<Dim>::frame_velocity(
           double deriv_radial_scaling_factor = 0;
           // Optimization from SpEC to reduce roundoff.
           // Closer to outer radius
-          if (1.0 - get_element(radius, k) / outer_radius_ < .1) {
+          if (1.0 - get_element(radius, k) / (inner_radius_ + outer_radius_) <
+              .5) {
             radial_scaling_factor =
                 ((outer_radius_ - get_element(radius, k)) *
                  (scale_a_of_t - scale_b_of_t) * inner_radius_) /
@@ -705,7 +721,8 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> RotScaleTrans<Dim>::frame_velocity(
                    get_element(radius, k) < outer_radius_) {
           // this is the linear falloff factor w in the documentation of the
           // form w = (R_{out} - r) / (R_{out} - R_{in})
-          if (1.0 - get_element(radius, k) / outer_radius_ < .1) {
+          if (1.0 - get_element(radius, k) / (inner_radius_ + outer_radius_) <
+              .5) {
             const double radial_translation_factor =
                 (outer_radius_ - get_element(radius, k)) /
                 (outer_radius_ - inner_radius_);
@@ -783,7 +800,8 @@ RotScaleTrans<Dim>::jacobian(
                                 (inner_radius_ - outer_radius_));
           // Optimization from SpEC to reduce roundoff.
           // Closer to outer radius
-          if (1.0 - get_element(radius, k) / outer_radius_ < .1) {
+          if (1.0 - get_element(radius, k) / (inner_radius_ + outer_radius_) <
+              .5) {
             double radial_scaling_factor =
                 ((outer_radius_ - get_element(radius, k)) *
                  (scale_a_of_t - scale_b_of_t) * inner_radius_) /
@@ -860,7 +878,8 @@ RotScaleTrans<Dim>::jacobian(
                                 (inner_radius_ - outer_radius_));
           // Optimization from SpEC to reduce roundoff.
           // Closer to outer radius
-          if (1.0 - get_element(radius, k) / outer_radius_ < .1) {
+          if (1.0 - get_element(radius, k) / (inner_radius_ + outer_radius_) <
+              .5) {
             double radial_scaling_factor =
                 ((outer_radius_ - get_element(radius, k)) *
                  (scale_a_of_t - scale_b_of_t) * inner_radius_) /
@@ -981,18 +1000,16 @@ double RotScaleTrans<Dim>::root_helper(
     return roots.value()[0];
   } else if (roots.value()[1] >= 0 and roots.value()[1] <= 1.0) {
     return roots.value()[1];
-  } else if ((roots.value()[0] > 1.0 and
-              equal_within_roundoff(roots.value()[0], 1.0)) or
-             (roots.value()[1] > 1.0 and
-              equal_within_roundoff(roots.value()[1], 1.0))) {
+  } else if (equal_within_roundoff(roots.value()[0], 1.0) or
+
+             equal_within_roundoff(roots.value()[1], 1.0)) {
     return 1.0;
-  } else if ((roots.value()[0] < 0.0 and
-              equal_within_roundoff(roots.value()[0], 0.0)) or
-             (roots.value()[1] < 0.0 and
-              equal_within_roundoff(roots.value()[0], 0.0))) {
+  } else if (equal_within_roundoff(roots.value()[0], 0.0) or
+
+             equal_within_roundoff(roots.value()[0], 0.0)) {
     return 0.0;
   }
-  ASSERT(false, "Root helper couldn't find correct root");
+  ERROR("Root helper couldn't find the correct root");
   return 0.0;
 }
 

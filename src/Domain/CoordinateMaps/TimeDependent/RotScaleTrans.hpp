@@ -92,10 +92,11 @@ namespace domain::CoordinateMaps::TimeDependent {
  * inverse is given by
  *
  * \f{equation}{
+ * \label{eq:full_inverse}
  * \vec{\xi} = \left\{\begin{array}{ll}R^{T}(t)(\frac{(\vec{\bar{\xi}} -
  * \vec{T}(t))}{E_{a}(t)}), & |\vec{\bar{\xi}}| \leq R_{in}E_{a}(t),
  * \\ R^{T}(t)\frac{\vec{\bar{\xi}} - w_{T}\vec{T}(t)}{w_{E}},
- * & R_{in} < |\vec{\bar{\xi}}| < 0.5 R_{out}E_{b}(t),
+ * & R_{in}E_{a}(t) < |\vec{\bar{\xi}}| < 0.5 R_{out}E_{b}(t),
  * \\ R^{T}(t)\frac{\vec{\bar{\xi}} - (1.0 - w_{T})\vec{T}(t)}{w_{E}},
  * & 0.5 R_{out}E_{b}(t) \leq |\vec{\bar{\xi}}| < R_{out}E_{b}(t),
  * \\ R^{T}(t)\frac{\vec{\bar{\xi}}}{E_{b}(t)}, & |\vec{\bar{\xi}}| \geq
@@ -132,7 +133,7 @@ namespace domain::CoordinateMaps::TimeDependent {
  * \vec{\xi} =
  * \left\{\begin{array}{ll}R^{T}(t)(\frac{\vec{\bar{\xi}}}{E_{a}(t)}), &
  * |\vec{\bar{\xi}}| \leq R_{in}E_{a}(t),
- * \\ R^{T}(t)\frac{\vec{\bar{\xi}}}{E_{b}(t) + w_{E}}, & R_{in} <
+ * \\ R^{T}(t)\frac{\vec{\bar{\xi}}}{E_{b}(t) + w_{E}}, & R_{in}E_{a}(t) <
  * |\vec{\bar{\xi}}| < 0.5 R_{out}E_{b}(t),
  * \\ R^{T}(t)\frac{\vec{\bar{\xi}}}{E_{a}(t) + 1 - w_{E}}, & 0.5
  * R_{out}E_{b}(t) \leq |\vec{\bar{\xi}}| < R_{out}E_{b}(t),
@@ -188,7 +189,7 @@ namespace domain::CoordinateMaps::TimeDependent {
  * \f}
  *
  * If Expansion and Translation are supplied, then the inverse is given by
- * equation 4, with no transpose of rotation applied.
+ * Eq. $\ref{eq:full_inverse}$, with no transpose of rotation applied.
  *
  * \note For all the maps with rotation, the inverse of rotation is the
  * transpose of the original rotation. For maps with translation, the inverse
@@ -206,7 +207,7 @@ namespace domain::CoordinateMaps::TimeDependent {
  * \f{equation}{
  * \vec{v} = \left\{\begin{array}{ll}(E_{a}(t)dR(t) +
  * dE_{a}(t)R(t))\vec{\xi} + d \vec{T}(t), & |\vec{\xi}| \leq R_{in},
- * \\ ((E_{a}(t)dR(t) + w_{E})dR(t) + (dE_{a}(t) + dw_{E})R(t))\vec{\xi} + (1 +
+ * \\ ((E_{a}(t) + w_{E})dR(t) + (dE_{a}(t) + dw_{E})R(t))\vec{\xi} + (1 +
  * w_{T})d \vec{T}(t), & R_{in} < |\vec{\xi}| \leq 0.9 R_{out},
  * \\ ((E_{b}(t) + w_{E})dR(t) + (dE_{b}(t) + dw_{E})R(t))\vec{\xi} + w_{T}d
  * \vec{T}(t), & 0.9 R_{out} < |\vec{\xi}| < R_{out}, \\ (E_{b}(t)dR(t) +
