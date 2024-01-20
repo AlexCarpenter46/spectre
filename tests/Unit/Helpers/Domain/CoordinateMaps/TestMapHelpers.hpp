@@ -136,7 +136,7 @@ void test_jacobian(
         return map(point, time, functions_of_time);
       };
   // Our default approx value is too stringent for this test
-  Approx local_approx = Approx::custom().epsilon(1e-9).scale(1.0);
+  Approx local_approx = Approx::custom().epsilon(1e-10).scale(1.0);
   const double dx = 1e-4;
   const auto jacobian = map.jacobian(test_point, time, functions_of_time);
   for (size_t i = 0; i < Map::dim; ++i) {
@@ -187,7 +187,7 @@ void test_jacobian(
         return map(point, time, functions_of_time);
       };
   // Our default approx value is too stringent for this test
-  Approx local_approx = Approx::custom().epsilon(1e-9).scale(1.0);
+  Approx local_approx = Approx::custom().epsilon(1e-10).scale(1.0);
   const double dx = 1e-4;
   const auto jacobian = map.jacobian(test_point, time, functions_of_time);
   std::array<std::array<double, Map::dim>, 5> dv_to_double_array{};
@@ -377,7 +377,7 @@ void test_frame_velocity(
     return map(test_point, time_point[0], functions_of_time);
   };
   // Our default approx value is too stringent for this test
-  Approx local_approx = Approx::custom().epsilon(1e-8).scale(1.0);
+  Approx local_approx = Approx::custom().epsilon(1e-10).scale(1.0);
   const double dt = 1e-4;
 
   const auto frame_velocity =

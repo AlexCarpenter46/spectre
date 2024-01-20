@@ -188,16 +188,17 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> RotScaleTrans<Dim>::operator()(
           }
         }
       }
+      ASSERT(max(magnitude(result)) <= outer_radius_ or
+                 equal_within_roundoff(max(magnitude(result)), outer_radius_),
+             "Coordinates translated outside outer radius, this should "
+             "not happen: "
+                 << max(magnitude(result))
+                 << " outer radius: " << outer_radius_);
       // Rigid translation
     } else {
       for (size_t i = 0; i < Dim; i++) {
         gsl::at(result, i) += gsl::at(trans_func_of_time, i);
       }
-    }
-    if (scale_f_of_t_a_.has_value()) {
-      ASSERT(max(magnitude(result)) <= outer_boundary,
-             "Coordinates translated outside outer radius, this should "
-             "not happen");
     }
   }
   return result;
