@@ -388,10 +388,12 @@ TimeDependentMapOptions<IsCylindrical>::distorted_to_inertial_map(
   if (block_has_shape_map) {
     if (rot_scale_trans_map_.has_value()) {
       return std::make_unique<detail::di_map<RotScaleTrans>>(rot_scale_trans);
-    } else if (expansion_map_.has_value() and rotation_map_.has_value()) {
-      return std::make_unique<detail::di_map<Expansion, Rotation>>(
-          expansion_map_.value(), rotation_map_.value());
-    } else {
+    }
+    // else if (expansion_map_.has_value() and rotation_map_.has_value()) {
+    //   return std::make_unique<detail::di_map<Expansion, Rotation>>(
+    //       expansion_map_.value(), rotation_map_.value());
+    // }
+    else {
       return std::make_unique<detail::di_map<Identity>>(Identity{});
     }
   } else {
