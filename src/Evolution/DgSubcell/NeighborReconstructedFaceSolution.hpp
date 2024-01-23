@@ -68,7 +68,7 @@ void neighbor_reconstructed_face_solution(
             VolumeDim,
             std::tuple<Mesh<VolumeDim>, Mesh<VolumeDim - 1>,
                        std::optional<DataVector>, std::optional<DataVector>,
-                       ::TimeStepId, int>>>*>
+                       ::UnsizedTimeStepId, int>>>*>
         received_temporal_id_and_data) {
   db::mutate<subcell::Tags::GhostDataForReconstruction<VolumeDim>,
              subcell::Tags::DataForRdmpTci>(

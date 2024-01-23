@@ -67,7 +67,7 @@ std::tuple<
     std::unordered_map<DirectionalId<Dim>,
                        std::array<Spectral::MortarSize, Dim - 1>,
                        boost::hash<DirectionalId<Dim>>>,
-    std::unordered_map<DirectionalId<Dim>, TimeStepId,
+    std::unordered_map<DirectionalId<Dim>, UnsizedTimeStepId,
                        boost::hash<DirectionalId<Dim>>>,
     DirectionMap<Dim, std::optional<Variables<tmpl::list<
                           evolution::dg::Tags::MagnitudeOfNormal,
@@ -196,7 +196,7 @@ struct ProjectMortars : tt::ConformsTo<amr::protocols::Projector> {
           ::dg::MortarMap<dim, std::array<Spectral::MortarSize, dim - 1>>*>
           mortar_size,
       const gsl::not_null<
-          ::dg::MortarMap<dim, TimeStepId>*> /*mortar_next_temporal_id*/,
+          ::dg::MortarMap<dim, UnsizedTimeStepId>*> /*mortar_next_temporal_id*/,
       const gsl::not_null<
           DirectionMap<dim, std::optional<Variables<tmpl::list<
                                 evolution::dg::Tags::MagnitudeOfNormal,
@@ -248,7 +248,7 @@ struct ProjectMortars : tt::ConformsTo<amr::protocols::Projector> {
           ::dg::MortarMap<dim, std::array<Spectral::MortarSize, dim - 1>>*>
       /*mortar_size*/,
       const gsl::not_null<
-          ::dg::MortarMap<dim, TimeStepId>*> /*mortar_next_temporal_id*/,
+          ::dg::MortarMap<dim, UnsizedTimeStepId>*> /*mortar_next_temporal_id*/,
       const gsl::not_null<
           DirectionMap<dim, std::optional<Variables<tmpl::list<
                                 evolution::dg::Tags::MagnitudeOfNormal,
@@ -272,7 +272,7 @@ struct ProjectMortars : tt::ConformsTo<amr::protocols::Projector> {
           ::dg::MortarMap<dim, std::array<Spectral::MortarSize, dim - 1>>*>
       /*mortar_size*/,
       const gsl::not_null<
-          ::dg::MortarMap<dim, TimeStepId>*> /*mortar_next_temporal_id*/,
+          ::dg::MortarMap<dim, UnsizedTimeStepId>*> /*mortar_next_temporal_id*/,
       const gsl::not_null<
           DirectionMap<dim, std::optional<Variables<tmpl::list<
                                 evolution::dg::Tags::MagnitudeOfNormal,

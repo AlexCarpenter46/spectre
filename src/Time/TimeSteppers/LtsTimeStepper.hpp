@@ -17,6 +17,7 @@
 /// \cond
 class TimeDelta;
 class TimeStepId;
+class UnsizedTimeStepId;
 /// \endcond
 
 /// \cond
@@ -90,10 +91,11 @@ class LtsTimeStepper : public virtual TimeStepper {
   /// @{
   virtual bool neighbor_data_required(
       const TimeStepId& next_substep_id,
-      const TimeStepId& neighbor_data_id) const = 0;
+      const UnsizedTimeStepId& neighbor_data_id) const = 0;
 
   virtual bool neighbor_data_required(
-      double dense_output_time, const TimeStepId& neighbor_data_id) const = 0;
+      double dense_output_time,
+      const UnsizedTimeStepId& neighbor_data_id) const = 0;
   /// @}
 
   /// \brief Compute the change in a boundary quantity due to the

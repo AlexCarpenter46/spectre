@@ -111,14 +111,15 @@ TimeStepId AdamsBashforth::next_time_id_for_error(
 
 bool AdamsBashforth::neighbor_data_required(
     const TimeStepId& next_substep_id,
-    const TimeStepId& neighbor_data_id) const {
+    const UnsizedTimeStepId& neighbor_data_id) const {
   return neighbor_data_id < next_substep_id;
 }
 
 bool AdamsBashforth::neighbor_data_required(
-    const double dense_output_time, const TimeStepId& neighbor_data_id) const {
+    const double dense_output_time,
+    const UnsizedTimeStepId& neighbor_data_id) const {
   return evolution_less<double>{neighbor_data_id.time_runs_forward()}(
-      neighbor_data_id.substep_time(), dense_output_time);
+      neighbor_data_id.step_time().value(), dense_output_time);
 }
 
 void AdamsBashforth::pup(PUP::er& p) {

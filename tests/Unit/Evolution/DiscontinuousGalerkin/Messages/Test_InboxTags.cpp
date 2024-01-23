@@ -56,8 +56,9 @@ void test_no_ghost_cells() {
   static constexpr size_t number_of_components = 1 + Dim;
   using bc_tag = Tags::BoundaryCorrectionAndGhostCellsInbox<Dim>;
   using bm_tag = Tags::BoundaryMessageInbox<Dim>;
-  using BcType = std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                            std::optional<DataVector>, ::TimeStepId, int>;
+  using BcType =
+      std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
+                 std::optional<DataVector>, ::UnsizedTimeStepId, int>;
   using BcInbox = typename bc_tag::type;
   using BmInbox = typename bm_tag::type;
 
@@ -135,10 +136,14 @@ void test_no_ghost_cells() {
                    << " BoundaryCorrectionAndGhostCellInbox:\n"
                    << "  Current time: " << time_step_id_a << "\n"
                    << "   Key: " << nhbr_key
-                   << ", next time: " << time_step_id_a << "\n"
+                   << ", next time: "
+                   << static_cast<const UnsizedTimeStepId&>(time_step_id_a)
+                   << "\n"
                    << "  Current time: " << time_step_id_b << "\n"
                    << "   Key: " << nhbr_key
-                   << ", next time: " << time_step_id_c << "\n";
+                   << ", next time: "
+                   << static_cast<const UnsizedTimeStepId&>(time_step_id_c)
+                   << "\n";
   CHECK(inbox_output == expected_inbox_output);
 
   CHECK((bc_inbox.at(time_step_id_a).at(nhbr_key) == send_data_a));
@@ -174,8 +179,9 @@ void test_with_ghost_cells() {
   static constexpr size_t number_of_components = 1 + Dim;
   using bc_tag = Tags::BoundaryCorrectionAndGhostCellsInbox<Dim>;
   using bm_tag = Tags::BoundaryMessageInbox<Dim>;
-  using BcType = std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                            std::optional<DataVector>, ::TimeStepId, int>;
+  using BcType =
+      std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
+                 std::optional<DataVector>, ::UnsizedTimeStepId, int>;
   using BcInbox = typename bc_tag::type;
   using BmInbox = typename bm_tag::type;
 

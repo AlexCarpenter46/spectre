@@ -708,7 +708,7 @@ void ComputeTimeDerivative<Dim, EvolutionSystem, DgStepChoosers,
             slice_extents, direction.dimension(), orientation);
       }
 
-      const TimeStepId& next_time_step_id = [&box]() {
+      const UnsizedTimeStepId& next_time_step_id = [&box]() {
         if (LocalTimeStepping) {
           return db::get<::Tags::Next<::Tags::TimeStepId>>(*box);
         } else {
@@ -718,7 +718,7 @@ void ComputeTimeDerivative<Dim, EvolutionSystem, DgStepChoosers,
 
       using SendData =
           std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                     std::optional<DataVector>, ::TimeStepId, int>;
+                     std::optional<DataVector>, ::UnsizedTimeStepId, int>;
       SendData data{};
 
       if (neighbor_count == total_neighbors) {

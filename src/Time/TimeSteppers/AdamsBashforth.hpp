@@ -233,11 +233,11 @@ class AdamsBashforth : public LtsTimeStepper {
 
   bool neighbor_data_required(
       const TimeStepId& next_substep_id,
-      const TimeStepId& neighbor_data_id) const override;
+      const UnsizedTimeStepId& neighbor_data_id) const override;
 
   bool neighbor_data_required(
       double dense_output_time,
-      const TimeStepId& neighbor_data_id) const override;
+      const UnsizedTimeStepId& neighbor_data_id) const override;
 
   WRAPPED_PUPable_decl_template(AdamsBashforth);  // NOLINT
 

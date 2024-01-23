@@ -100,8 +100,7 @@ struct PrintElementInfo {
 
       ss << "  MortarNextTemporalId\n";
       for (const auto& [key, next_id] : mortar_next_temporal_id) {
-        ss << "    Key: " << key << ", next time: " << next_id.substep_time()
-           << "\n";
+        ss << "    Key: " << key << ", next time: " << next_id << "\n";
       }
 
       if constexpr (Metavariables::local_time_stepping) {
