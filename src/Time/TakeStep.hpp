@@ -8,7 +8,6 @@
 
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "Time/Actions/ChangeStepSize.hpp"
-#include "Time/Actions/RecordTimeStepperData.hpp"
 #include "Time/Actions/UpdateU.hpp"
 #include "Time/AdaptiveSteppingDiagnostics.hpp"
 #include "Time/Tags/AdaptiveSteppingDiagnostics.hpp"
@@ -24,17 +23,12 @@ struct TimeStep;
 }  // namespace Tags
 /// \endcond
 
-/// Bundled method for recording the current system state in the history, and
-/// updating the evolved variables and step size.
-///
-/// This function is used to encapsulate any needed logic for updating the
-/// system, and in the case for which step parameters may need to be rejected
-/// and re-tried, looping until an acceptable step is performed.
-template <typename System, bool LocalTimeStepping,
+/// Update the evolved variables for one substep, possibly adjusting
+/// the step size in LTS mode.
+template <typename System, bool AdjustStepSize,
           typename StepChoosersToUse = AllStepChoosers, typename DbTags>
 void take_step(const gsl::not_null<db::DataBox<DbTags>*> box) {
-  record_time_stepper_data<System>(box);
-  if constexpr (LocalTimeStepping) {
+  if constexpr (AdjustStepSize) {
     uint64_t step_attempts = 0;
     const auto original_step = db::get<Tags::TimeStep>(*box);
     do {

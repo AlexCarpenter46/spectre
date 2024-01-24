@@ -48,6 +48,7 @@
 #include "NumericalAlgorithms/Spectral/Spectral.hpp"
 #include "Parallel/AlgorithmExecution.hpp"
 #include "Parallel/GlobalCache.hpp"
+#include "Time/Actions/RecordTimeStepperData.hpp"
 #include "Time/Actions/SelfStartActions.hpp"
 #include "Time/BoundaryHistory.hpp"
 #include "Time/Tags/HistoryEvolvedVariables.hpp"
@@ -623,6 +624,7 @@ ComputeTimeDerivative<Dim, EvolutionSystem, DgStepChoosers, LocalTimeStepping>::
       });
 
   if constexpr (LocalTimeStepping) {
+    record_time_stepper_data<EvolutionSystem>(make_not_null(&box));
     take_step<EvolutionSystem, LocalTimeStepping, DgStepChoosers>(
         make_not_null(&box));
   }
