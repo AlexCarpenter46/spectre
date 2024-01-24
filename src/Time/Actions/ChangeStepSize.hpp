@@ -6,11 +6,11 @@
 #include <limits>
 #include <optional>
 #include <tuple>
+#include <type_traits>
 
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataBox/Prefixes.hpp"  // IWYU pragma: keep  // for Tags::Next
 #include "Parallel/AlgorithmExecution.hpp"
-#include "Time/Actions/UpdateU.hpp"
 #include "Time/AdaptiveSteppingDiagnostics.hpp"
 #include "Time/ChooseLtsStepSize.hpp"
 #include "Time/Tags/AdaptiveSteppingDiagnostics.hpp"
@@ -24,6 +24,10 @@
 struct AllStepChoosers;
 class TimeDelta;
 class TimeStepId;
+namespace Actions {
+template <typename System, bool AdjustStepSize>
+struct TakeStep;
+}  // namespace Actions
 namespace Parallel {
 template <typename Metavariables>
 class GlobalCache;
@@ -42,6 +46,15 @@ struct TimeStepper;
 }  // namespace Tags
 // IWYU pragma: no_forward_declare db::DataBox
 /// \endcond
+
+namespace change_step_size_detail {
+template <typename T>
+struct is_take_step_action : std::false_type {};
+// Only AdjustStepSize=false makes sense to jump to.
+template <typename System>
+struct is_take_step_action<::Actions::TakeStep<System, false>>
+    : std::true_type {};
+}  // namespace change_step_size_detail
 
 /// \brief Adjust the step size for local time stepping, returning true if the
 /// step just completed is accepted, and false if it is rejected.
@@ -111,8 +124,8 @@ bool change_step_size(const gsl::not_null<db::DataBox<DbTags>*> box) {
         *next_step = new_step;
       },
       box);
-  // if step accepted, just proceed. Otherwise, change Time::Next and jump
-  // back to the first instance of `UpdateU`.
+  // if step accepted, just proceed. Otherwise, change Time::Next and
+  // try again.
   if (step_accepted) {
     return true;
   } else {
@@ -165,12 +178,13 @@ struct ChangeStepSize {
       const ArrayIndex& /*array_index*/, const ActionList /*meta*/,
       const ParallelComponent* const /*meta*/) {
     static_assert(
-        tmpl::any<ActionList, tt::is_a<Actions::UpdateU, tmpl::_1>>::value,
-        "The ChangeStepSize action requires that you also use the UpdateU "
-        "action to permit step-unwinding. If you are stepping within "
-        "an action that is not UpdateU, consider using the take_step function "
-        "to handle both stepping and step-choosing instead of the "
-        "ChangeStepSize action.");
+        tmpl::any<ActionList, change_step_size_detail::is_take_step_action<
+                                  tmpl::_1>>::value,
+        "The ChangeStepSize action requires that you also use the TakeStep "
+        "action without step-size adjustment to permit step-unwinding. If you "
+        "are stepping within an action that is not TakeStep, consider using "
+        "the take_step function to handle both stepping and step-choosing "
+        "instead of the ChangeStepSize action.");
     const bool step_successful =
         change_step_size<StepChoosersToUse>(make_not_null(&box));
     // We should update
@@ -186,9 +200,11 @@ struct ChangeStepSize {
             ++diags->number_of_step_rejections;
           },
           make_not_null(&box));
-      return {Parallel::AlgorithmExecution::Continue,
-              tmpl::index_if<ActionList,
-                             tt::is_a<Actions::UpdateU, tmpl::_1>>::value};
+      return {
+          Parallel::AlgorithmExecution::Continue,
+          tmpl::index_if<
+              ActionList,
+              change_step_size_detail::is_take_step_action<tmpl::_1>>::value};
     }
   }
 };

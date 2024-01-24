@@ -91,7 +91,7 @@
 #include "Time/Actions/ChangeSlabSize.hpp"
 #include "Time/Actions/RecordTimeStepperData.hpp"
 #include "Time/Actions/SelfStartActions.hpp"
-#include "Time/Actions/UpdateU.hpp"
+#include "Time/Actions/TakeStep.hpp"
 #include "Time/StepChoosers/Factory.hpp"
 #include "Time/StepChoosers/StepChooser.hpp"
 #include "Time/Tags/Time.hpp"
@@ -234,7 +234,7 @@ struct EvolutionMetavars {
                   system, volume_dim, false>,
               Actions::RecordTimeStepperData<system>,
               evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<>>,
-              Actions::UpdateU<system>>>,
+              Actions::TakeStep<system, false>>>,
       Limiters::Actions::SendData<EvolutionMetavars>,
       Limiters::Actions::Limit<EvolutionMetavars>>>;
 
@@ -250,7 +250,7 @@ struct EvolutionMetavars {
           tmpl::list<
               Actions::RecordTimeStepperData<system>,
               evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<>>,
-              Actions::UpdateU<system>>>,
+              Actions::TakeStep<system, false>>>,
       evolution::dg::subcell::Actions::TciAndRollback<
           Burgers::subcell::TciOnDgGrid>,
       Actions::Goto<evolution::dg::subcell::Actions::Labels::EndOfSolvers>,
@@ -264,7 +264,7 @@ struct EvolutionMetavars {
           Burgers::subcell::TimeDerivative>,
       Actions::RecordTimeStepperData<system>,
       evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<>>,
-      Actions::UpdateU<system>,
+      Actions::TakeStep<system, false>,
       evolution::dg::subcell::Actions::TciAndSwitchToDg<
           Burgers::subcell::TciOnFdGrid>,
       Actions::Label<evolution::dg::subcell::Actions::Labels::EndOfSolvers>>>;

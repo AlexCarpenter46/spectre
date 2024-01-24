@@ -29,7 +29,7 @@
 #include "Time/Actions/AdvanceTime.hpp"
 #include "Time/Actions/RecordTimeStepperData.hpp"
 #include "Time/Actions/SelfStartActions.hpp"
-#include "Time/Actions/UpdateU.hpp"
+#include "Time/Actions/TakeStep.hpp"
 #include "Time/SelfStart.hpp"
 #include "Utilities/System/ParallelInfo.hpp"
 
@@ -87,7 +87,7 @@ struct WorldtubeSingleton {
       tmpl::list<Actions::ChangeSlabSize, Actions::ReceiveElementData,
                  ::Actions::MutateApply<UpdateAcceleration>,
                  ::Actions::RecordTimeStepperData<worldtube_system>,
-                 ::Actions::UpdateU<worldtube_system>,
+                 ::Actions::TakeStep<worldtube_system, false>,
                  Actions::SendToElements<Metavariables>>;
   using phase_dependent_action_list = tmpl::list<
       Parallel::PhaseActions<Parallel::Phase::Initialization,

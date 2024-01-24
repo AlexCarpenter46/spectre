@@ -218,7 +218,7 @@
 #include "Time/Actions/RecordTimeStepperData.hpp"
 #include "Time/Actions/SelfStartActions.hpp"
 #include "Time/Actions/SelfStartActions.hpp"  // IWYU pragma: keep
-#include "Time/Actions/UpdateU.hpp"
+#include "Time/Actions/TakeStep.hpp"
 #include "Time/StepChoosers/Cfl.hpp"
 #include "Time/StepChoosers/Constant.hpp"
 #include "Time/StepChoosers/Factory.hpp"
@@ -713,7 +713,7 @@ struct GhValenciaDivCleanTemplateBase<
               evolution::dg::Actions::ApplyBoundaryCorrectionsToTimeDerivative<
                   system, volume_dim, false>,
               Actions::RecordTimeStepperData<system>,
-              Actions::UpdateU<system>>>,
+              Actions::TakeStep<system, false>>>,
       Limiters::Actions::SendData<derived_metavars>,
       Limiters::Actions::Limit<derived_metavars>,
       VariableFixing::Actions::FixVariables<
@@ -738,7 +738,7 @@ struct GhValenciaDivCleanTemplateBase<
                      evolution::Actions::RunEventsAndDenseTriggers<
                          events_and_dense_triggers_subcell_postprocessors>,
                      control_system::Actions::LimitTimeStep<control_systems>,
-                     Actions::UpdateU<system>>>,
+                     Actions::TakeStep<system, false>>>,
       // Note: The primitive variables are computed as part of the TCI.
       evolution::dg::subcell::Actions::TciAndRollback<
           grmhd::GhValenciaDivClean::subcell::TciOnDgGrid<
@@ -766,7 +766,7 @@ struct GhValenciaDivCleanTemplateBase<
       evolution::Actions::RunEventsAndDenseTriggers<
           events_and_dense_triggers_subcell_postprocessors>,
       control_system::Actions::LimitTimeStep<control_systems>,
-      Actions::UpdateU<system>,
+      Actions::TakeStep<system, false>,
       Actions::MutateApply<
           grmhd::GhValenciaDivClean::subcell::FixConservativesAndComputePrims<
               ordered_list_of_primitive_recovery_schemes>>,

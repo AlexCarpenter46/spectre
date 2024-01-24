@@ -129,7 +129,7 @@
 #include "Time/Actions/ChangeSlabSize.hpp"
 #include "Time/Actions/RecordTimeStepperData.hpp"
 #include "Time/Actions/SelfStartActions.hpp"
-#include "Time/Actions/UpdateU.hpp"
+#include "Time/Actions/TakeStep.hpp"
 #include "Time/StepChoosers/Cfl.hpp"
 #include "Time/StepChoosers/Constant.hpp"
 #include "Time/StepChoosers/Factory.hpp"
@@ -448,7 +448,7 @@ struct ScalarTensorTemplateBase {
               Actions::RecordTimeStepperData<system>,
               evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<>>,
               control_system::Actions::LimitTimeStep<ControlSystems>,
-              Actions::UpdateU<system>,
+              Actions::TakeStep<system, false>,
               // We allow for separate filtering of the system variables
               dg::Actions::Filter<Filters::Exponential<0>,
                                   system::gh_system::variables_tag::tags_list>,

@@ -50,6 +50,7 @@
 #include "ParallelAlgorithms/Interpolation/Protocols/InterpolationTargetTag.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/KerrHorizon.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/Sphere.hpp"
+#include "Time/Actions/TakeStep.hpp"
 #include "Time/Tags/TimeStepId.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
@@ -115,7 +116,7 @@ struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<3>,
                   system, volume_dim, false>,
               Actions::RecordTimeStepperData<system>,
               evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<>>,
-              Actions::UpdateU<system>,
+              Actions::TakeStep<system, false>,
               dg::Actions::Filter<
                   Filters::Exponential<0>,
                   tmpl::list<gr::Tags::SpacetimeMetric<DataVector, volume_dim>,

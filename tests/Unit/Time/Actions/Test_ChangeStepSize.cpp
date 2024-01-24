@@ -16,6 +16,7 @@
 #include "Parallel/PhaseDependentActionList.hpp"  // IWYU pragma: keep
 #include "ParallelAlgorithms/Actions/Goto.hpp"
 #include "Time/Actions/ChangeStepSize.hpp"
+#include "Time/Actions/TakeStep.hpp"
 #include "Time/AdaptiveSteppingDiagnostics.hpp"
 #include "Time/History.hpp"
 #include "Time/Slab.hpp"
@@ -102,9 +103,9 @@ struct Component {
           tmpl::list<Actions::ChangeStepSize<
                          typename Metavariables::step_choosers_to_use>,
                      ::Actions::Label<NoOpLabel>,
-                     /*UpdateU action is required to satisfy internal checks of
-                       `ChangeStepSize`. It is not used in the test.*/
-                     Actions::UpdateU<System>>>>;
+                     /*TakeStep action is required to satisfy internal checks of
+                       `ChangeStepSize`.*/
+                     Actions::TakeStep<System, false>>>>;
 };
 
 template <typename StepChoosersToUse = AllStepChoosers>
@@ -167,7 +168,7 @@ void check(const bool time_runs_forward,
   const size_t index =
       ActionTesting::get_next_action_index<component>(runner, 0);
   if (reject_step) {
-    // if the step is rejected, it should jump to the UpdateU action
+    // if the step is rejected, it should jump to the TakeStep action
     CHECK(index == 2_st);
     CHECK(db::get<Tags::AdaptiveSteppingDiagnostics>(box) ==
           AdaptiveSteppingDiagnostics{1, 2, 3, 4, 6});

@@ -77,7 +77,7 @@
 #include "Time/Actions/ChangeSlabSize.hpp"
 #include "Time/Actions/RecordTimeStepperData.hpp"
 #include "Time/Actions/SelfStartActions.hpp"
-#include "Time/Actions/UpdateU.hpp"
+#include "Time/Actions/TakeStep.hpp"
 #include "Time/StepChoosers/Factory.hpp"
 #include "Time/StepChoosers/StepChooser.hpp"
 #include "Time/Tags/Time.hpp"
@@ -216,7 +216,7 @@ struct EvolutionMetavars {
               evolution::Actions::RunEventsAndDenseTriggers<
                   tmpl::list<AlwaysReadyPostprocessor<
                       typename system::primitive_from_conservative>>>,
-              Actions::UpdateU<system>>>,
+              Actions::TakeStep<system, false>>>,
       Limiters::Actions::SendData<EvolutionMetavars>,
       Limiters::Actions::Limit<EvolutionMetavars>,
       VariableFixing::Actions::FixVariables<

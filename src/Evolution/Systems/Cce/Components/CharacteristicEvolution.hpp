@@ -38,7 +38,7 @@
 #include "Time/Actions/ChangeStepSize.hpp"
 #include "Time/Actions/RecordTimeStepperData.hpp"
 #include "Time/Actions/SelfStartActions.hpp"
-#include "Time/Actions/UpdateU.hpp"
+#include "Time/Actions/TakeStep.hpp"
 #include "Utilities/TMPL.hpp"
 
 namespace Cce {
@@ -194,7 +194,7 @@ struct CharacteristicEvolution {
                       tmpl::bind<::Actions::MutateApply,
                                  tmpl::bind<CalculateScriPlusValue, tmpl::_1>>>,
       ::Actions::RecordTimeStepperData<cce_system>,
-      ::Actions::UpdateU<cce_system>>;
+      ::Actions::TakeStep<cce_system, false>>;
 
   using extract_action_list = tmpl::list<
       Actions::RequestBoundaryData<
@@ -221,7 +221,7 @@ struct CharacteristicEvolution {
       Actions::FilterSwshVolumeQuantity<Tags::BondiH>,
       compute_scri_quantities_and_observe,
       ::Actions::RecordTimeStepperData<cce_system>,
-      ::Actions::UpdateU<cce_system>,
+      ::Actions::TakeStep<cce_system, false>,
       ::Actions::ChangeStepSize<typename Metavariables::cce_step_choosers>,
       // We cannot know our next step for certain until after we've performed
       // step size selection, as we may need to reject a step.

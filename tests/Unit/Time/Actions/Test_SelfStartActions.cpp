@@ -27,7 +27,7 @@
 #include "Parallel/PhaseDependentActionList.hpp"  // IWYU pragma: keep
 #include "Time/Actions/RecordTimeStepperData.hpp"  // IWYU pragma: keep
 #include "Time/Actions/SelfStartActions.hpp"
-#include "Time/Actions/UpdateU.hpp"  // IWYU pragma: keep
+#include "Time/Actions/TakeStep.hpp"
 #include "Time/Slab.hpp"
 #include "Time/Tags/AdaptiveSteppingDiagnostics.hpp"
 #include "Time/Tags/HistoryEvolvedVariables.hpp"
@@ -163,7 +163,7 @@ struct Component {
   using step_actions =
       tmpl::list<ComputeTimeDerivative,
                  Actions::RecordTimeStepperData<typename metavariables::system>,
-                 Actions::UpdateU<typename metavariables::system>,
+                 Actions::TakeStep<typename metavariables::system, false>,
                  tmpl::conditional_t<has_primitives, Actions::UpdatePrimitives,
                                      tmpl::list<>>>;
   using action_list = tmpl::flatten<
@@ -424,9 +424,10 @@ double error_in_step(const size_t order, const double step) {
 
   run_past<std::is_same<SelfStart::Actions::Cleanup, tmpl::_1>,
            tmpl::bool_<true>, MultipleHistories>(make_not_null(&runner));
-  run_past<std::is_same<tmpl::pin<Actions::UpdateU<System<TestPrimitives>>>,
-                        tmpl::_1>,
-           tmpl::bool_<true>, MultipleHistories>(make_not_null(&runner));
+  run_past<
+      std::is_same<tmpl::pin<Actions::TakeStep<System<TestPrimitives>, false>>,
+                   tmpl::_1>,
+      tmpl::bool_<true>, MultipleHistories>(make_not_null(&runner));
 
   const double exact = -log(exp(-initial_value) - step);
   return ActionTesting::get_databox_tag<component, Var>(runner, 0) - exact;
