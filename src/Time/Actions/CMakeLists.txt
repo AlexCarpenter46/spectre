@@ -16,5 +16,6 @@ spectre_target_headers(
   ChangeStepSize.hpp
   RecordTimeStepperData.hpp
   SelfStartActions.hpp
+  TakeStep.hpp
   UpdateU.hpp
   )
