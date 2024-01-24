@@ -8,5 +8,6 @@ spectre_target_headers(
   Initialization.hpp
   InitializeMeasurements.hpp
   LimitTimeStep.hpp
+  LimitTimeStepLts.hpp
   PrintCurrentMeasurement.hpp
   )
