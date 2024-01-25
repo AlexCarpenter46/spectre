@@ -4,18 +4,20 @@
 #pragma once
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <optional>
 
 #include "ControlSystem/CombinedName.hpp"
 #include "ControlSystem/Metafunctions.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "DataStructures/DataBox/Tag.hpp"
 #include "Domain/Structure/ElementId.hpp"
 #include "Parallel/AlgorithmExecution.hpp"
 #include "Parallel/ArrayComponentId.hpp"
 #include "Parallel/Callback.hpp"
 #include "Parallel/GlobalCache.hpp"
-#include "Time/ChooseLtsStepSize.hpp"
+#include "Time/StepChoosers/StepChooser.hpp"
 #include "Time/Tags/HistoryEvolvedVariables.hpp"
 #include "Time/Time.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
@@ -46,6 +48,13 @@ template <typename... Tags>
 class TaggedTuple;
 }  // namespace tuples
 /// \endcond
+
+namespace control_system::Tags {
+// FIXME move elsewhere
+struct StepLimit : db::SimpleTag {
+  using type = double;
+};
+}  // namespace control_system::Tags
 
 namespace control_system::Actions {
 // FIXME
@@ -83,6 +92,8 @@ struct LimitTimeStepLts {
   };
 
  public:
+  using simple_tags = tmpl::list<::control_system::Tags::StepLimit>;
+
   template <typename DbTagsList, typename... InboxTags, typename Metavariables,
             typename ActionList, typename ParallelComponent>
   static Parallel::iterable_action_return_t apply(
@@ -94,6 +105,12 @@ struct LimitTimeStepLts {
     static_assert(Metavariables::local_time_stepping,
                   "The control system LimitTimeStepLts action is only for "
                   "local time stepping.");
+
+    db::mutate<::control_system::Tags::StepLimit>(
+        [](const gsl::not_null<double*> limit) {
+          *limit = std::numeric_limits<double>::infinity();
+        },
+        make_not_null(&box));
 
     // FIXME this should use different regions for different control systems
     const auto& block =
@@ -254,32 +271,69 @@ struct LimitTimeStepLts {
     // GTS does:
     // const double new_step_end =
     //     std::clamp(preferred_step_time, last_update_time, latest_valid_step);
-    const TimeDelta new_step_size = choose_lts_step_size(
-        time_step_id.step_time(),
-        // FIXME refactor so step size is variable
-        latest_valid_step - time_step_id.step_time().value());
-    if (new_step_size == db::get<::Tags::TimeStep>(box)) {
-      return {Parallel::AlgorithmExecution::Continue, std::nullopt};
-    }
+    db::mutate<::control_system::Tags::StepLimit>(
+        [&latest_valid_step](const gsl::not_null<double*> limit) {
+          *limit = latest_valid_step;
+        },
+        make_not_null(&box));
 
-    if (not time_stepper.can_change_step_size(
+    // const TimeDelta new_step_size = choose_lts_step_size(
+    //     time_step_id.step_time(),
+    //     // FIXME refactor so step size is variable
+    //     latest_valid_step - time_step_id.step_time().value());
+    // if (new_step_size == db::get<::Tags::TimeStep>(box)) {
+    //   return {Parallel::AlgorithmExecution::Continue, std::nullopt};
+    // }
+
+    if (latest_valid_step < orig_step_end and
+        not time_stepper.can_change_step_size(
             time_step_id, db::get<::Tags::HistoryEvolvedVariables<>>(box))) {
       ERROR(
           "Step must be decreased to avoid control-system deadlock, but "
           "time-stepper requires a fixed step size.");
     }
 
-    db::mutate<::Tags::Next<::Tags::TimeStepId>, ::Tags::TimeStep>(
-        [&new_step_size, &time_step_id, &time_stepper](
-            const gsl::not_null<TimeStepId*> local_next_time_id,
-            const gsl::not_null<TimeDelta*> local_time_step) {
-          *local_time_step = new_step_size;
-          *local_next_time_id =
-              time_stepper.next_time_id(time_step_id, new_step_size);
-        },
-        make_not_null(&box));
+    // db::mutate<::Tags::Next<::Tags::TimeStepId>, ::Tags::TimeStep>(
+    //     [&new_step_size, &time_step_id, &time_stepper](
+    //         const gsl::not_null<TimeStepId*> local_next_time_id,
+    //         const gsl::not_null<TimeDelta*> local_time_step) {
+    //       *local_time_step = new_step_size;
+    //       *local_next_time_id =
+    //           time_stepper.next_time_id(time_step_id, new_step_size);
+    //     },
+    //     make_not_null(&box));
 
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
 };
 }  // namespace control_system::Actions
+
+// FIXME move elsewhere, inject?
+namespace control_system::StepChoosers {
+class LimitTimeStepLts : public StepChooser<StepChooserUse::LtsStep> {
+ public:
+  /// \cond
+  explicit LimitTimeStepLts(CkMigrateMessage* /*unused*/) {}
+  using PUP::able::register_constructor;
+  WRAPPED_PUPable_decl_template(LimitTimeStepLts);  // NOLINT
+  /// \endcond
+
+  static constexpr Options::String help{"Enforces control system limits."};
+  using options = tmpl::list<>;
+
+  LimitTimeStepLts() = default;
+
+  using argument_tags = tmpl::list<::control_system::Tags::StepLimit>;
+
+  std::pair<double, bool> operator()(const double control_system_limit,
+                                     const double last_step_magnitude) const {
+    return std::make_pair(control_system_limit,
+                          last_step_magnitude <= control_system_limit);
+  }
+
+  bool uses_local_data() const override { return false; }
+
+  // NOLINTNEXTLINE(google-runtime-references)
+  void pup(PUP::er& /*p*/) override {}
+};
+}  // namespace control_system::StepChoosers

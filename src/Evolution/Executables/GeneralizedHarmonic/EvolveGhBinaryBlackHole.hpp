@@ -8,6 +8,7 @@
 
 #include "ControlSystem/Actions/InitializeMeasurements.hpp"
 #include "ControlSystem/Actions/LimitTimeStep.hpp"
+#include "ControlSystem/Actions/LimitTimeStepLts.hpp"
 #include "ControlSystem/Actions/PrintCurrentMeasurement.hpp"
 #include "ControlSystem/Component.hpp"
 #include "ControlSystem/Measurements/BothHorizons.hpp"
@@ -484,8 +485,10 @@ struct EvolutionMetavars {
             tmpl::list<gh::gauges::DampedHarmonic, gh::gauges::Harmonic>>,
         tmpl::pair<LtsTimeStepper, TimeSteppers::lts_time_steppers>,
         tmpl::pair<PhaseChange, PhaseControl::factory_creatable_classes>,
-        tmpl::pair<StepChooser<StepChooserUse::LtsStep>,
-                   StepChoosers::standard_step_choosers<system>>,
+        tmpl::pair<
+            StepChooser<StepChooserUse::LtsStep>,
+            tmpl::push_back<StepChoosers::standard_step_choosers<system>,
+                            control_system::StepChoosers::LimitTimeStepLts>>,
         tmpl::pair<
             StepChooser<StepChooserUse::Slab>,
             StepChoosers::standard_slab_choosers<system, local_time_stepping>>,
@@ -536,6 +539,7 @@ struct EvolutionMetavars {
                          ::domain::CheckFunctionsOfTimeAreReadyPostprocessor,
                          evolution::dg::ApplyBoundaryCorrections<
                              local_time_stepping, system, volume_dim, true>>>,
+                     control_system::Actions::LimitTimeStepLts<control_systems>,
                      Actions::TakeStep<system, true>,
                      evolution::dg::Actions::ApplyLtsBoundaryCorrections<
                          system, volume_dim, false>>,
