@@ -430,10 +430,12 @@ struct ScalarTensorTemplateBase {
       tmpl::conditional_t<
           local_time_stepping,
           tmpl::list<
+              Actions::RecordTimeStepperData<system>,
               evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<
                   ::domain::CheckFunctionsOfTimeAreReadyPostprocessor,
                   evolution::dg::ApplyBoundaryCorrections<
                       local_time_stepping, system, volume_dim, true>>>,
+              Actions::TakeStep<system, true>,
               evolution::dg::Actions::ApplyLtsBoundaryCorrections<
                   system, volume_dim, false>,
               // We allow for separate filtering of the system variables
