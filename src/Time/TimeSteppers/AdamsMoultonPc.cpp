@@ -148,6 +148,12 @@ bool AdamsMoultonPc::neighbor_data_required(
     const TimeStepId& next_substep_id,
     const UnsizedTimeStepId& neighbor_data_id) const {
   const evolution_less<Time> before{neighbor_data_id.time_runs_forward()};
+
+  // FIXME self-start - can this be combined somehow?
+  if (neighbor_data_id.slab_number() < next_substep_id.slab_number()) {
+    return neighbor_data_id.slab_number() < next_substep_id.slab_number();
+  }
+
   if (next_substep_id.substep() == 1) {
     // predictor
     return before(neighbor_data_id.step_time(), next_substep_id.step_time()) or
