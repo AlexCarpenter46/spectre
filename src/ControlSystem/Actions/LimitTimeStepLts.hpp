@@ -27,6 +27,7 @@
 
 /// \cond
 namespace Tags {
+struct Time;
 struct TimeStep;
 struct TimeStepId;
 template <typename StepperInterface>
@@ -271,6 +272,8 @@ struct LimitTimeStepLts {
     // GTS does:
     // const double new_step_end =
     //     std::clamp(preferred_step_time, last_update_time, latest_valid_step);
+
+    // FIXME refactor so step size is stored?
     db::mutate<::control_system::Tags::StepLimit>(
         [&latest_valid_step](const gsl::not_null<double*> limit) {
           *limit = latest_valid_step;
@@ -323,12 +326,14 @@ class LimitTimeStepLts : public StepChooser<StepChooserUse::LtsStep> {
 
   LimitTimeStepLts() = default;
 
-  using argument_tags = tmpl::list<::control_system::Tags::StepLimit>;
+  using argument_tags =
+      tmpl::list<::control_system::Tags::StepLimit, ::Tags::Time>;
 
   std::pair<double, bool> operator()(const double control_system_limit,
+                                     const double now,
                                      const double last_step_magnitude) const {
-    return std::make_pair(control_system_limit,
-                          last_step_magnitude <= control_system_limit);
+    const double max_step = control_system_limit - now;
+    return std::make_pair(max_step, last_step_magnitude <= max_step);
   }
 
   bool uses_local_data() const override { return false; }
