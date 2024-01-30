@@ -75,6 +75,7 @@ struct PrintElementInfo {
       const auto& step = db::get<::Tags::TimeStep>(box);
       // The time step only prints a slab (beginning/end) and a fraction so we
       // also print the approx numerical value of the step for easier reading
+      ss << " Step id: " << db::get<::Tags::TimeStepId>(box) << "\n";
       ss << " Time step: " << step << ":" << step.value() << "\n";
       ss << " Next time: "
          << db::get<::Tags::Next<::Tags::TimeStepId>>(box).substep_time()
