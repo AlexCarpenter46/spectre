@@ -334,8 +334,15 @@ class LimitTimeStepLts : public StepChooser<StepChooserUse::LtsStep> {
                                      const double last_step_magnitude) const {
     const double max_step = control_system_limit - now;
     // Avoid potential problems from roundoff error
-    return std::make_pair(0.98 * max_step,
-                          last_step_magnitude <= 0.99 * max_step);
+    const bool accept_step = last_step_magnitude <= 0.99 * max_step;
+    if (accept_step) {
+      // Don't limit the next step, only the current step if it will
+      // be redone.  Retries for other reasons should only reduce the
+      // step size.
+      return std::make_pair(std::numeric_limits<double>::infinity(), true);
+    } else {
+      return std::make_pair(0.98 * max_step, false);
+    }
   }
 
   bool uses_local_data() const override { return false; }
