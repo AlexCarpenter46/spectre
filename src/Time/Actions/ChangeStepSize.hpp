@@ -47,16 +47,6 @@ struct TimeStepper;
 // IWYU pragma: no_forward_declare db::DataBox
 /// \endcond
 
-#include <sstream>
-#include "Parallel/Printf.hpp"
-namespace Parallel::Tags {
-struct Metavariables;
-}  // namespace Parallel::Tags
-namespace domain::Tags {
-template <size_t>
-struct Element;
-}  // namespace domain::Tags
-
 namespace change_step_size_detail {
 template <typename T>
 struct is_take_step_action : std::false_type {};
@@ -107,19 +97,10 @@ bool change_step_size(const gsl::not_null<db::DataBox<DbTags>*> box) {
   // the final answer if time is running backwards.
   double desired_step = std::numeric_limits<double>::infinity();
   bool step_accepted = true;
-  std::ostringstream debug_output;
-  constexpr auto volume_dim = std::decay_t<decltype(
-      db::get<Parallel::Tags::Metavariables>(*box))>::volume_dim;
-  debug_output << db::get<domain::Tags::Element<volume_dim>>(*box).id();
   for (const auto& step_chooser : step_choosers) {
     const auto [step_choice, step_choice_accepted] =
         step_chooser->template desired_step<StepChoosersToUse>(
             last_step_size, *box);
-    if (step_choice_accepted) {
-      debug_output << " (" << step_choice << ")";
-    } else {
-      debug_output << "  " << step_choice << " ";
-    }
     desired_step = std::min(desired_step, step_choice);
     step_accepted = step_accepted and step_choice_accepted;
   }
@@ -138,10 +119,6 @@ bool change_step_size(const gsl::not_null<db::DataBox<DbTags>*> box) {
   const auto& next_time_id = db::get<Tags::Next<Tags::TimeStepId>>(*box);
   const auto new_step =
       choose_lts_step_size(next_time_id.step_time(), desired_step);
-  if (desired_step < 1e-6) {
-    debug_output << ": " << desired_step << " " << new_step;
-    Parallel::printf("%s\n", debug_output.str());
-  }
   db::mutate<Tags::Next<Tags::TimeStep>>(
       [&new_step](const gsl::not_null<TimeDelta*> next_step) {
         *next_step = new_step;
