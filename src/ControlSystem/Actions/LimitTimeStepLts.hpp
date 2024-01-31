@@ -223,7 +223,7 @@ struct LimitTimeStepLts {
     const double latest_valid_step =
         tmpl::as_pack<control_system_groups>([&](auto... groups) {
           return std::min(
-              {orig_step_end,
+              {std::numeric_limits<double>::infinity(),
                get<GroupExpiration<tmpl::type_from<decltype(groups)>>>(
                    group_expiration_times)...});
         });
