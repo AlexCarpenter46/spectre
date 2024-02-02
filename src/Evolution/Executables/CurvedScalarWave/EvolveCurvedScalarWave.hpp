@@ -95,6 +95,7 @@
 #include "Time/Actions/TakeStep.hpp"
 #include "Time/StepChoosers/ByBlock.hpp"
 #include "Time/StepChoosers/Factory.hpp"
+#include "Time/StepChoosers/Random.hpp"
 #include "Time/StepChoosers/StepChooser.hpp"
 #include "Time/Tags/Time.hpp"
 #include "Time/Tags/TimeStepId.hpp"
@@ -211,10 +212,12 @@ struct EvolutionMetavars {
         tmpl::pair<MathFunction<1, Frame::Inertial>,
                    MathFunctions::all_math_functions<1, Frame::Inertial>>,
         tmpl::pair<PhaseChange, PhaseControl::factory_creatable_classes>,
-        tmpl::pair<StepChooser<StepChooserUse::LtsStep>,
-                   tmpl::push_back<StepChoosers::standard_step_choosers<system>,
-                                   StepChoosers::ByBlock<
-                                       StepChooserUse::LtsStep, volume_dim>>>,
+        tmpl::pair<
+            StepChooser<StepChooserUse::LtsStep>,
+            tmpl::push_back<
+                StepChoosers::standard_step_choosers<system>,
+                StepChoosers::ByBlock<StepChooserUse::LtsStep, volume_dim>,
+                StepChoosers::Random<StepChooserUse::LtsStep, volume_dim>>>,
         tmpl::pair<StepChooser<StepChooserUse::Slab>,
                    tmpl::push_back<StepChoosers::standard_slab_choosers<
                                        system, local_time_stepping>,
@@ -246,9 +249,11 @@ struct EvolutionMetavars {
           volume_dim, system, AllStepChoosers, local_time_stepping>,
       tmpl::conditional_t<
           local_time_stepping,
-          tmpl::list<evolution::Actions::RunEventsAndDenseTriggers<
+          tmpl::list<Actions::RecordTimeStepperData<system>,
+                     evolution::Actions::RunEventsAndDenseTriggers<
                          tmpl::list<evolution::dg::ApplyBoundaryCorrections<
                              local_time_stepping, system, volume_dim, true>>>,
+                     Actions::TakeStep<system, true>,
                      evolution::dg::Actions::ApplyLtsBoundaryCorrections<
                          system, volume_dim, false>>,
           tmpl::list<
