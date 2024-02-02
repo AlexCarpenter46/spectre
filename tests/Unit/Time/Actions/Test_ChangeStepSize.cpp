@@ -32,6 +32,7 @@
 #include "Time/Time.hpp"
 #include "Time/TimeStepId.hpp"
 #include "Time/TimeSteppers/AdamsBashforth.hpp"
+#include "Time/TimeSteppers/AdamsMoultonPc.hpp"
 #include "Time/TimeSteppers/LtsTimeStepper.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/MakeVector.hpp"
@@ -179,10 +180,43 @@ void check(const bool time_runs_forward,
   }
   CHECK(db::get<Tags::Next<Tags::TimeStep>>(box) == expected_step);
 }
+
+void check_substeps() {
+  using component = Component<Metavariables<AllStepChoosers>>;
+  using MockRuntimeSystem =
+      ActionTesting::MockRuntimeSystem<Metavariables<AllStepChoosers>>;
+  using Constant = StepChoosers::Constant<StepChooserUse::LtsStep>;
+  MockRuntimeSystem runner{{std::make_unique<TimeSteppers::AdamsMoultonPc>(2)}};
+
+  const Slab slab(0.0, 1.0);
+  const auto initial_step_size = slab.duration() / 8;
+  const TimeStepId time_step_id(true, 0, slab.start() + initial_step_size);
+  const TimeStepId initial_next_time_step_id =
+      time_step_id.next_substep(initial_step_size, 1);
+
+  // Initialize the component
+  ActionTesting::emplace_component_and_initialize<component>(
+      &runner, 0,
+      {time_step_id, initial_next_time_step_id, initial_step_size,
+       initial_step_size,
+       make_vector<std::unique_ptr<StepChooser<StepChooserUse::LtsStep>>>(
+           std::make_unique<Constant>(2.0)),
+       false, AdaptiveSteppingDiagnostics{1, 2, 3, 4, 5},
+       TimeSteppers::History<double>{}, 1.});
+
+  ActionTesting::set_phase(make_not_null(&runner), Parallel::Phase::Testing);
+  runner.template next_action<component>(0);
+  const auto& box = ActionTesting::get_databox<component>(runner, 0);
+
+  CHECK(db::get<::Tags::Next<::Tags::TimeStepId>>(box) ==
+        initial_next_time_step_id);
+  CHECK(db::get<::Tags::Next<::Tags::TimeStep>>(box) == slab.duration() / 4);
+}
 }  // namespace
 
 SPECTRE_TEST_CASE("Unit.Time.Actions.ChangeStepSize", "[Unit][Time][Actions]") {
-  register_classes_with_charm<TimeSteppers::AdamsBashforth>();
+  register_classes_with_charm<TimeSteppers::AdamsBashforth,
+                              TimeSteppers::AdamsMoultonPc>();
   register_factory_classes_with_charm<Metavariables<>>();
   const Slab slab(-5., -2.);
   const double slab_length = slab.duration().value();
@@ -219,4 +253,5 @@ SPECTRE_TEST_CASE("Unit.Time.Actions.ChangeStepSize", "[Unit][Time][Actions]") {
             slab.duration() / 8, true);
       })(),
       Catch::Matchers::ContainsSubstring("is not registered"));
+  check_substeps();
 }
