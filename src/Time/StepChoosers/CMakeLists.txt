@@ -20,6 +20,7 @@ spectre_target_headers(
   Factory.hpp
   Increase.hpp
   PreventRapidIncrease.hpp
+  Random.hpp
   StepChooser.hpp
   StepToTimes.hpp
   )
