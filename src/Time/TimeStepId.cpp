@@ -141,6 +141,37 @@ bool operator!=(const TimeStepId& a, const TimeStepId& b) {
   return not(a == b);
 }
 
+bool operator<(const TimeStepId& a, const TimeStepId& b) {
+  ASSERT(a.time_runs_forward() == b.time_runs_forward(),
+         "Time is not running in a consistent direction");
+  if (a.slab_number() != b.slab_number()) {
+    return a.slab_number() < b.slab_number();
+  }
+  if (a.step_time() != b.step_time()) {
+    return evolution_less<Time>{a.time_runs_forward()}(a.step_time(),
+                                                       b.step_time());
+  }
+  if (a.substep() != b.substep()) {
+    return a.substep() < b.substep();
+  }
+  if (a.substep() == 0) {
+    // Objects are equal.
+    return false;
+  }
+  // Arbitrary, but need a total ordering of TimeStepId to use it as a
+  // std::map key.
+  return a.step_size() < b.step_size();
+}
+bool operator<=(const TimeStepId& a, const TimeStepId& b) {
+  return not(b < a);
+}
+bool operator>(const TimeStepId& a, const TimeStepId& b) {
+  return b < a;
+}
+bool operator>=(const TimeStepId& a, const TimeStepId& b) {
+  return not(a < b);
+}
+
 std::ostream& operator<<(std::ostream& s, const UnsizedTimeStepId& id) {
   return s << id.slab_number() << ':' << id.step_time() << ':' << id.substep();
 }

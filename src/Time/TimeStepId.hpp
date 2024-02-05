@@ -92,6 +92,10 @@ bool operator>=(const UnsizedTimeStepId& a, const UnsizedTimeStepId& b);
 
 bool operator==(const TimeStepId& a, const TimeStepId& b);
 bool operator!=(const TimeStepId& a, const TimeStepId& b);
+bool operator<(const TimeStepId& a, const TimeStepId& b);
+bool operator<=(const TimeStepId& a, const TimeStepId& b);
+bool operator>(const TimeStepId& a, const TimeStepId& b);
+bool operator>=(const TimeStepId& a, const TimeStepId& b);
 
 std::ostream& operator<<(std::ostream& s, const UnsizedTimeStepId& id);
 std::ostream& operator<<(std::ostream& s, const TimeStepId& id);
