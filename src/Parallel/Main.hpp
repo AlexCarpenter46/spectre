@@ -277,7 +277,7 @@ void AtSyncIndicator<Metavariables>::ResumeFromSync() {
 
 template <typename Metavariables>
 Main<Metavariables>::Main(CkArgMsg* msg) {
-  Informer::print_startup_info(msg);
+  Parallel::printf("%s", Informer::startup_info(msg));
 
   /// \todo detail::register_events_to_trace();
 
@@ -735,8 +735,8 @@ void Main<Metavariables>::execute_next_phase() {
     }
 
     if (current_phase_ == Parallel::Phase::PostFailureCleanup) {
-      Parallel::printf("PostFailureCleanup phase complete. Aborting.\n");
-      Informer::print_exit_info();
+      Parallel::printf("PostFailureCleanup phase complete. Aborting.\n%s",
+                       Informer::exit_info());
       sys::abort("");
     }
 
@@ -936,7 +936,7 @@ void Main<Metavariables>::check_if_component_terminated_correctly() {
 
 template <typename Metavariables>
 void Main<Metavariables>::post_deadlock_analysis_termination() {
-  Informer::print_exit_info();
+  Parallel::printf("%s", Informer::exit_info());
   if (not components_that_did_not_terminate_.empty()) {
     sys::abort("");
   } else {

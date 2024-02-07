@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <string>
+
 /// \cond
 class CkArgMsg;
 /// \endcond
@@ -14,7 +16,7 @@ class CkArgMsg;
 /// The Informer manages textual output regarding the status of a simulation.
 class Informer {
  public:
-  /// Print useful information at the beginning of a simulation.
+  /// Useful information to print at the beginning of a simulation.
   ///
   /// This includes the command used to start the executable such as
   ///
@@ -31,8 +33,8 @@ class Informer {
   /// ```
   ///
   /// only `MyExecutable` and onwards will be printed.
-  static void print_startup_info(CkArgMsg* msg);
+  static std::string startup_info(CkArgMsg* msg);
 
-  /// Print useful information at the end of a simulation.
-  static void print_exit_info();
+  /// Useful information to print at the end of a simulation.
+  static std::string exit_info();
 };
