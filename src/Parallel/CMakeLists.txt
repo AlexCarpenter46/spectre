@@ -3,6 +3,7 @@
 
 add_charm_module(GlobalCache)
 add_charm_module(Main)
+add_charm_module(Printf)
 
 set(LIBRARY Parallel)
 
@@ -16,6 +17,7 @@ spectre_target_sources(
   InitializationFunctions.cpp
   NodeLock.cpp
   Phase.cpp
+  Printf.cpp
   Reduction.cpp
   )
 
@@ -80,6 +82,7 @@ add_dependencies(
   ${LIBRARY}
   module_GlobalCache
   module_Main          # GlobalCache module depends on Main module
+  module_Printf
   )
 
 add_subdirectory(Algorithms)
