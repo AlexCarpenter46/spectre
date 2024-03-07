@@ -215,13 +215,15 @@ void AdamsBashforth::add_boundary_delta_impl(
     const TimeSteppers::MutableBoundaryHistoryTimes& remote_times,
     const TimeSteppers::BoundaryHistoryEvaluator<T>& coupling,
     const TimeDelta& time_step) const {
-  adams_lts::clean_boundary_history(
-      local_times, remote_times,
-      local_times.integration_order(local_times.size() - 1));
+  const auto current_order =
+      local_times.integration_order(local_times.size() - 1);
+  adams_lts::clean_boundary_history(local_times, remote_times, current_order);
 
-  const auto lts_coefficients = adams_lts::lts_coefficients(
-      local_times, remote_times, local_times.back().step_time() + time_step,
-      adams_lts::StepType::Explicit);
+  const adams_lts::AdamsScheme scheme{adams_lts::SchemeType::Explicit,
+                                      current_order};
+  const auto lts_coefficients = adams_lts::lts_coefficients2(
+      local_times, remote_times, local_times.back().step_time(),
+      local_times.back().step_time() + time_step, scheme, scheme, scheme);
   adams_lts::apply_coefficients(result, lts_coefficients, coupling);
 }
 
@@ -238,9 +240,18 @@ void AdamsBashforth::boundary_dense_output_impl(
     return;
   }
 
-  const auto lts_coefficients = adams_lts::lts_coefficients(
-      local_times, remote_times, ApproximateTime{time},
-      adams_lts::StepType::Explicit);
+  const auto current_order =
+      local_times.integration_order(local_times.size() - 1);
+  const adams_lts::AdamsScheme scheme{adams_lts::SchemeType::Explicit,
+                                      current_order};
+  const auto small_step_start =
+      std::max(local_times.back(), remote_times.back()).step_time();
+  auto lts_coefficients = adams_lts::lts_coefficients2(
+      local_times, remote_times, local_times.back().step_time(),
+      small_step_start, scheme, scheme, scheme);
+  lts_coefficients += adams_lts::lts_coefficients2(
+      local_times, remote_times, small_step_start, ApproximateTime{time},
+      scheme, scheme, scheme);
   adams_lts::apply_coefficients(result, lts_coefficients, coupling);
 }
 

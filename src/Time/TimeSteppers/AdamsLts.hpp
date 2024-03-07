@@ -6,6 +6,7 @@
 #include <boost/container/small_vector.hpp>
 #include <cstddef>
 #include <tuple>
+#include <utility>
 
 #include "Time/TimeStepId.hpp"
 #include "Time/TimeSteppers/AdamsCoefficients.hpp"
@@ -26,7 +27,7 @@ class not_null;
 /// Shared LTS implementation for the two Adams-based methods.
 namespace TimeSteppers::adams_lts {
 /// Storage for LTS coefficients that should not allocate in typical
-/// cases.
+/// cases.  The contents should be kept sorted.
 /// @{
 
 // For order-k 2:1 stepping, in each small step, half the points will
@@ -36,10 +37,17 @@ namespace TimeSteppers::adams_lts {
 // round k/2 in different directions and the effect cancels out.)
 constexpr size_t lts_coefficients_static_size =
     adams_coefficients::maximum_order * (adams_coefficients::maximum_order + 1);
-using LtsCoefficients =
-    boost::container::small_vector<std::tuple<TimeStepId, TimeStepId, double>,
-                                   lts_coefficients_static_size>;
+struct LtsCoefficients
+    : boost::container::small_vector<std::tuple<TimeStepId, TimeStepId, double>,
+                                     lts_coefficients_static_size> {
+  using boost::container::small_vector<
+      std::tuple<TimeStepId, TimeStepId, double>,
+      lts_coefficients_static_size>::small_vector;
+};
 /// @}
+
+LtsCoefficients& operator+=(LtsCoefficients& a, const LtsCoefficients& b);
+LtsCoefficients& operator-=(LtsCoefficients& a, const LtsCoefficients& b);
 
 /// Add the LTS boundary terms for to \p result for the given set of
 /// coefficients.
@@ -72,6 +80,26 @@ LtsCoefficients lts_coefficients(const ConstBoundaryHistoryTimes& local_times,
 #pragma GCC diagnostic pop
 #endif
 
+// FIXME docs, remove unused stuff
+enum class SchemeType { Explicit, Implicit };
+
+struct AdamsScheme {
+  SchemeType type;
+  size_t order;
+};
+
+bool operator==(const AdamsScheme& a, const AdamsScheme& b);
+bool operator!=(const AdamsScheme& a, const AdamsScheme& b);
+
+template <typename TimeType>
+LtsCoefficients lts_coefficients2(const ConstBoundaryHistoryTimes& local_times,
+                                  const ConstBoundaryHistoryTimes& remote_times,
+                                  const Time& start_time,
+                                  const TimeType& end_time,
+                                  const AdamsScheme& local_scheme,
+                                  const AdamsScheme& remote_scheme,
+                                  const AdamsScheme& small_step_scheme);
+
 /// Remove old entries from the BoundaryHistory.
 ///
 /// Removes any entries that are unnecessary for taking explicit steps
@@ -85,4 +113,9 @@ LtsCoefficients lts_coefficients(const ConstBoundaryHistoryTimes& local_times,
 void clean_boundary_history(const MutableBoundaryHistoryTimes& local_times,
                             const MutableBoundaryHistoryTimes& remote_times,
                             const size_t integration_order);
+
+// FIXME doc
+void clean_boundary_history2(const MutableBoundaryHistoryTimes& times,
+                             const Time& first_needed_time,
+                             const size_t steps_to_keep);
 }  // namespace TimeSteppers::adams_lts

@@ -254,20 +254,35 @@ void AdamsMoultonPc::add_boundary_delta_impl(
     const TimeDelta& time_step) const {
   ASSERT(not local_times.empty(), "No local data provided.");
   ASSERT(not remote_times.empty(), "No remote data provided.");
-  const auto step_type =
-      local_times.number_of_substeps(local_times.size() - 1) == 1
-          ? adams_lts::StepType::Predictor
-          : adams_lts::StepType::Corrector;
+  const auto current_order =
+      local_times.integration_order(local_times.size() - 1);
+  adams_lts::AdamsScheme scheme{adams_lts::SchemeType::Implicit, current_order};
+  auto remote_scheme = scheme;
 
-  if (step_type == adams_lts::StepType::Predictor) {
-    adams_lts::clean_boundary_history(
-        local_times, remote_times,
-        local_times.integration_order(local_times.size() - 1) - 1);
+  if (local_times.number_of_substeps(local_times.size() - 1) == 1) {
+    // Predictor
+    adams_lts::clean_boundary_history(local_times, remote_times,
+                                      current_order - 1);
+
+    scheme = {adams_lts::SchemeType::Explicit, current_order - 1};
+    ASSERT(remote_times.back() <= local_times.back(),
+           "Unexpected remote values available.");
+    // If the sides are not aligned, we use the predictor data
+    // available from the neighbor.  If they are, that data has not
+    // been received.
+    if (remote_times.back() == local_times.back()) {
+      remote_scheme = scheme;
+    } else {
+      // FIXME do we want to do this?  If so, clearer ways to write code.
+      // Change the interpolation order to the predictor order.
+      remote_scheme.order = current_order - 1;
+    }
   }
 
-  const auto lts_coefficients = adams_lts::lts_coefficients(
-      local_times, remote_times, local_times.back().step_time() + time_step,
-      step_type);
+  const auto lts_coefficients = adams_lts::lts_coefficients2(
+      local_times, remote_times, local_times.back().step_time(),
+      local_times.back().step_time() + time_step, scheme, remote_scheme,
+      scheme);
   adams_lts::apply_coefficients(result, lts_coefficients, coupling);
 }
 
@@ -286,9 +301,18 @@ void AdamsMoultonPc::boundary_dense_output_impl(
   ASSERT(local_times.number_of_substeps(local_times.size() - 1) == 2,
          "Dense output must be done after predictor evaluation.");
 
-  const auto lts_coefficients = adams_lts::lts_coefficients(
-      local_times, remote_times, ApproximateTime{time},
-      adams_lts::StepType::Corrector);
+  const auto current_order =
+      local_times.integration_order(local_times.size() - 1);
+  const adams_lts::AdamsScheme scheme{adams_lts::SchemeType::Implicit,
+                                      current_order};
+  const auto small_step_start =
+      std::max(local_times.back(), remote_times.back()).step_time();
+  auto lts_coefficients = adams_lts::lts_coefficients2(
+      local_times, remote_times, local_times.back().step_time(),
+      small_step_start, scheme, scheme, scheme);
+  lts_coefficients += adams_lts::lts_coefficients2(
+      local_times, remote_times, small_step_start, ApproximateTime{time},
+      scheme, scheme, scheme);
   adams_lts::apply_coefficients(result, lts_coefficients, coupling);
 }
 

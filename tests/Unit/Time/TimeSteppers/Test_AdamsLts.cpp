@@ -189,6 +189,40 @@ class StepChecker {
     const auto& history = histories_.at(side);
     const auto coefficients = TimeSteppers::adams_lts::lts_coefficients(
         history.local(), history.remote(), time, step_type);
+    {
+      const TimeSteppers::adams_lts::AdamsScheme scheme{
+          step_type == TimeSteppers::adams_lts::StepType::Corrector
+              ? TimeSteppers::adams_lts::SchemeType::Implicit
+              : TimeSteppers::adams_lts::SchemeType::Explicit,
+          history.local().integration_order(history.local().size() - 1) -
+              (step_type == TimeSteppers::adams_lts::StepType::Predictor ? 1
+                                                                         : 0)};
+      const auto remote_scheme =
+          step_type == TimeSteppers::adams_lts::StepType::Predictor and
+                  history.remote().back() < history.local().back()
+              ? TimeSteppers::adams_lts::
+                    AdamsScheme{TimeSteppers::adams_lts::SchemeType::Implicit,
+                                scheme.order}
+              : scheme;
+      if constexpr (std::is_same_v<TimeType, Time>) {
+        REQUIRE(TimeSteppers::adams_lts::lts_coefficients2(
+                    history.local(), history.remote(),
+                    history.local().back().step_time(), time, scheme,
+                    remote_scheme, scheme) == coefficients);
+      } else {
+        const Time dense_start =
+            std::max(history.local().back(), history.remote().back())
+                .step_time();
+        auto coefficients2 = TimeSteppers::adams_lts::lts_coefficients2(
+            history.local(), history.remote(),
+            history.local().back().step_time(), dense_start, scheme,
+            remote_scheme, scheme);
+        coefficients2 += TimeSteppers::adams_lts::lts_coefficients2(
+            history.local(), history.remote(), dense_start, time, scheme,
+            remote_scheme, scheme);
+        REQUIRE(coefficients2 == coefficients);
+      }
+    }
 
     {
       const auto& alt_history = alt_histories_.at(side);
