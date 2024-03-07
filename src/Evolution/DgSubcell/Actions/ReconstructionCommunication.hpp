@@ -244,7 +244,7 @@ struct SendDataForReconstruction {
                                 rdmp_tci_data.min_variables_values.size())));
 
         std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                   std::optional<DataVector>, ::UnsizedTimeStepId, int>
+                   std::optional<DataVector>, ::TimeStepId, int>
             data{subcell_mesh,
                  dg_mesh.slice_away(direction.dimension()),
                  std::move(subcell_data_to_send),
@@ -319,12 +319,11 @@ struct ReceiveDataForReconstruction {
     using ::operator<<;
     using Key = DirectionalId<Dim>;
     const auto& current_time_step_id = db::get<::Tags::TimeStepId>(box);
-    std::map<
-        TimeStepId,
-        DirectionalIdMap<
-            Dim, std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                            std::optional<DataVector>, ::UnsizedTimeStepId,
-                            int>>>& inbox =
+    std::map<TimeStepId,
+             DirectionalIdMap<Dim, std::tuple<Mesh<Dim>, Mesh<Dim - 1>,
+                                              std::optional<DataVector>,
+                                              std::optional<DataVector>,
+                                              ::TimeStepId, int>>>& inbox =
         tuples::get<evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<
             Metavariables::volume_dim>>(inboxes);
     const auto& received = inbox.find(current_time_step_id);
@@ -338,7 +337,7 @@ struct ReceiveDataForReconstruction {
     // Now that we have received all the data, copy it over as needed.
     DirectionalIdMap<
         Dim, std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                        std::optional<DataVector>, ::UnsizedTimeStepId, int>>
+                        std::optional<DataVector>, ::TimeStepId, int>>
         received_data = std::move(inbox[current_time_step_id]);
     inbox.erase(current_time_step_id);
 
@@ -361,7 +360,7 @@ struct ReceiveDataForReconstruction {
                 Key, evolution::dg::MortarData<Dim>, boost::hash<Key>>*>
                 mortar_data,
             const gsl::not_null<
-                std::unordered_map<Key, UnsizedTimeStepId, boost::hash<Key>>*>
+                std::unordered_map<Key, TimeStepId, boost::hash<Key>>*>
                 mortar_next_time_step_id,
             const gsl::not_null<DirectionalIdMap<Dim, Mesh<Dim>>*>
                 neighbor_mesh,

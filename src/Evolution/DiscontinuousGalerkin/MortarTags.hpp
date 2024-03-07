@@ -80,7 +80,7 @@ struct MortarSize : db::SimpleTag {
 template <size_t Dim>
 struct MortarNextTemporalId : db::SimpleTag {
   using Key = DirectionalId<Dim>;
-  using type = std::unordered_map<Key, UnsizedTimeStepId, boost::hash<Key>>;
+  using type = std::unordered_map<Key, TimeStepId, boost::hash<Key>>;
 };
 
 /// \brief The BoundaryMessage received from the inbox

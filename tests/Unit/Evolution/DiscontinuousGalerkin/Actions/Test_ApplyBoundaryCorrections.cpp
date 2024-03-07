@@ -670,7 +670,7 @@ void test_impl(const Spectral::Quadrature quadrature,
                     10 * static_cast<unsigned long>(direction.side()) +
                     100 * count);
       std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                 std::optional<DataVector>, ::UnsizedTimeStepId, int>
+                 std::optional<DataVector>, ::TimeStepId, int>
           data{
               mesh,    face_mesh, {}, {flux_data}, {neighbor_next_time_step_id},
               decision};

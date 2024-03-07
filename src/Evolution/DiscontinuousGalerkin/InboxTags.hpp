@@ -105,7 +105,7 @@ template <size_t Dim>
 struct BoundaryCorrectionAndGhostCellsInbox {
   using stored_type =
       std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                 std::optional<DataVector>, ::UnsizedTimeStepId, int>;
+                 std::optional<DataVector>, ::TimeStepId, int>;
 
  public:
   using temporal_id = TimeStepId;

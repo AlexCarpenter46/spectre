@@ -77,7 +77,7 @@ void neighbor_reconstructed_face_solution(
             VolumeDim,
             std::tuple<Mesh<VolumeDim>, Mesh<VolumeDim - 1>,
                        std::optional<DataVector>, std::optional<DataVector>,
-                       ::UnsizedTimeStepId, int>>>*>
+                       ::TimeStepId, int>>>*>
         received_temporal_id_and_data);
 template <size_t Dim, typename DbTagsList>
 void neighbor_tci_decision(
@@ -86,8 +86,8 @@ void neighbor_tci_decision(
         const TimeStepId,
         DirectionalIdMap<
             Dim, std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                            std::optional<DataVector>, ::UnsizedTimeStepId,
-                            int>>>& received_temporal_id_and_data);
+                            std::optional<DataVector>, ::TimeStepId, int>>>&
+        received_temporal_id_and_data);
 }  // namespace evolution::dg::subcell
 /// \endcond
 
@@ -107,7 +107,7 @@ bool receive_boundary_data_global_time_stepping(
                volume_dim,
                std::tuple<Mesh<volume_dim>, Mesh<volume_dim - 1>,
                           std::optional<DataVector>, std::optional<DataVector>,
-                          ::UnsizedTimeStepId, int>>>& inbox =
+                          ::TimeStepId, int>>>& inbox =
       tuples::get<evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<
           volume_dim>>(*inboxes);
   const auto received_temporal_id_and_data = inbox.find(temporal_id);
@@ -145,7 +145,7 @@ bool receive_boundary_data_global_time_stepping(
               Key, evolution::dg::MortarData<volume_dim>, boost::hash<Key>>*>
               mortar_data,
           const gsl::not_null<
-              std::unordered_map<Key, UnsizedTimeStepId, boost::hash<Key>>*>
+              std::unordered_map<Key, TimeStepId, boost::hash<Key>>*>
               mortar_next_time_step_id,
           const gsl::not_null<DirectionalIdMap<volume_dim, Mesh<volume_dim>>*>
               neighbor_mesh) {
@@ -205,7 +205,7 @@ bool receive_boundary_data_local_time_stepping(
                Dim,
                std::tuple<Mesh<Dim>, Mesh<Dim - 1>,
                           std::optional<DataVector>, std::optional<DataVector>,
-                          ::UnsizedTimeStepId, int>>>& inbox =
+                          ::TimeStepId, int>>>& inbox =
       tuples::get<evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<
           Dim>>(*inboxes);
 
@@ -214,13 +214,13 @@ bool receive_boundary_data_local_time_stepping(
         db::get<::Tags::TimeStepper<LtsTimeStepper>>(*box);
     if constexpr (DenseOutput) {
       const auto& dense_output_time = db::get<::Tags::Time>(*box);
-      return [&dense_output_time, &time_stepper](const UnsizedTimeStepId& id) {
+      return [&dense_output_time, &time_stepper](const TimeStepId& id) {
         return time_stepper.neighbor_data_required(dense_output_time, id);
       };
     } else {
       const auto& next_temporal_id =
           db::get<::Tags::Next<::Tags::TimeStepId>>(*box);
-      return [&next_temporal_id, &time_stepper](const UnsizedTimeStepId& id) {
+      return [&next_temporal_id, &time_stepper](const TimeStepId& id) {
         return time_stepper.neighbor_data_required(next_temporal_id, id);
       };
     }
@@ -241,7 +241,7 @@ bool receive_boundary_data_local_time_stepping(
                                  boost::hash<Key>>*>
               boundary_data_history,
           const gsl::not_null<
-              std::unordered_map<Key, UnsizedTimeStepId, boost::hash<Key>>*>
+              std::unordered_map<Key, TimeStepId, boost::hash<Key>>*>
               mortar_next_time_step_id,
           const gsl::not_null<DirectionalIdMap<Dim, Mesh<Dim>>*>
               neighbor_mesh,
@@ -309,8 +309,8 @@ bool receive_boundary_data_local_time_stepping(
 
   return alg::all_of(
       db::get<evolution::dg::Tags::MortarNextTemporalId<Dim>>(*box),
-      [&needed_time](const std::pair<Key, UnsizedTimeStepId>&
-                         mortar_id_and_next_temporal_id) {
+      [&needed_time](
+          const std::pair<Key, TimeStepId>& mortar_id_and_next_temporal_id) {
         return mortar_id_and_next_temporal_id.first.id ==
                    ElementId<Dim>::external_boundary_id() or
                not needed_time(mortar_id_and_next_temporal_id.second);

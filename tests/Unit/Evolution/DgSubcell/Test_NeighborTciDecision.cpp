@@ -27,7 +27,7 @@ void test() {
   auto box = db::create<db::AddSimpleTags<tag>>(Type{});
   using StorageType =
       std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                 std::optional<DataVector>, ::UnsizedTimeStepId, int>;
+                 std::optional<DataVector>, ::TimeStepId, int>;
   std::pair<const TimeStepId, DirectionalIdMap<Dim, StorageType>>
       neighbor_data{};
   const DirectionalId<Dim> id_xi{Direction<Dim>::lower_xi(), ElementId<Dim>{0}};

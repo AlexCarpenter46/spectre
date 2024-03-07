@@ -354,7 +354,7 @@ void test_p_refine(
     ::dg::MortarMap<Dim, Mesh<Dim - 1>>& mortar_mesh,
     ::dg::MortarMap<Dim, std::array<Spectral::MortarSize, Dim - 1>>&
         mortar_size,
-    ::dg::MortarMap<Dim, UnsizedTimeStepId>& mortar_next_temporal_id,
+    ::dg::MortarMap<Dim, TimeStepId>& mortar_next_temporal_id,
     DirectionMap<Dim, std::optional<Variables<tmpl::list<
                           evolution::dg::Tags::MagnitudeOfNormal,
                           evolution::dg::Tags::NormalCovector<Dim>>>>>&
@@ -368,8 +368,7 @@ void test_p_refine(
     const ::dg::MortarMap<Dim, Mesh<Dim - 1>>& expected_mortar_mesh,
     const ::dg::MortarMap<Dim, std::array<Spectral::MortarSize, Dim - 1>>&
         expected_mortar_size,
-    const ::dg::MortarMap<Dim, UnsizedTimeStepId>&
-        expected_mortar_next_temporal_id,
+    const ::dg::MortarMap<Dim, TimeStepId>& expected_mortar_next_temporal_id,
     const DirectionMap<Dim, std::optional<Variables<tmpl::list<
                                 evolution::dg::Tags::MagnitudeOfNormal,
                                 evolution::dg::Tags::NormalCovector<Dim>>>>>&
@@ -474,7 +473,7 @@ void test_p_refine_gts() {
       normal_covector_and_magnitude{};
   mortar_data_history_type<Dim> mortar_data_history{};
 
-  ::dg::MortarMap<Dim, UnsizedTimeStepId> mortar_next_temporal_ids{};
+  ::dg::MortarMap<Dim, TimeStepId> mortar_next_temporal_ids{};
   std::unordered_map<ElementId<Dim>, amr::Info<Dim>> neighbor_info{};
   for (const auto& [direction, neighbors] : old_element.neighbors()) {
     for (const auto& neighbor : neighbors) {
@@ -490,7 +489,7 @@ void test_p_refine_gts() {
   ::dg::MortarMap<Dim, Mesh<Dim - 1>> expected_mortar_mesh{};
   ::dg::MortarMap<Dim, std::array<Spectral::MortarSize, Dim - 1>>
       expected_mortar_size{};
-  ::dg::MortarMap<Dim, UnsizedTimeStepId> expected_mortar_next_temporal_ids{};
+  ::dg::MortarMap<Dim, TimeStepId> expected_mortar_next_temporal_ids{};
   DirectionMap<Dim, std::optional<Variables<
                         tmpl::list<evolution::dg::Tags::MagnitudeOfNormal,
                                    evolution::dg::Tags::NormalCovector<Dim>>>>>

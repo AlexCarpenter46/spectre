@@ -39,7 +39,7 @@ std::tuple<
     std::unordered_map<DirectionalId<Dim>,
                        std::array<Spectral::MortarSize, Dim - 1>,
                        boost::hash<DirectionalId<Dim>>>,
-    std::unordered_map<DirectionalId<Dim>, UnsizedTimeStepId,
+    std::unordered_map<DirectionalId<Dim>, TimeStepId,
                        boost::hash<DirectionalId<Dim>>>,
     DirectionMap<Dim, std::optional<Variables<tmpl::list<
                           evolution::dg::Tags::MagnitudeOfNormal,
@@ -52,7 +52,7 @@ mortars_apply_impl(const std::vector<std::array<size_t, Dim>>& initial_extents,
   MortarMap<evolution::dg::MortarData<Dim>, Dim> mortar_data{};
   MortarMap<Mesh<Dim - 1>, Dim> mortar_meshes{};
   MortarMap<std::array<Spectral::MortarSize, Dim - 1>, Dim> mortar_sizes{};
-  MortarMap<UnsizedTimeStepId, Dim> mortar_next_temporal_ids{};
+  MortarMap<TimeStepId, Dim> mortar_next_temporal_ids{};
   DirectionMap<Dim, std::optional<Variables<
                         tmpl::list<evolution::dg::Tags::MagnitudeOfNormal,
                                    evolution::dg::Tags::NormalCovector<Dim>>>>>
@@ -101,7 +101,7 @@ mortars_apply_impl(const std::vector<std::array<size_t, Dim>>& initial_extents,
       std::unordered_map<DirectionalId<DIM(data)>,                           \
                          std::array<Spectral::MortarSize, DIM(data) - 1>,    \
                          boost::hash<DirectionalId<DIM(data)>>>,             \
-      std::unordered_map<DirectionalId<DIM(data)>, UnsizedTimeStepId,        \
+      std::unordered_map<DirectionalId<DIM(data)>, TimeStepId,               \
                          boost::hash<DirectionalId<DIM(data)>>>,             \
       DirectionMap<DIM(data),                                                \
                    std::optional<Variables<tmpl::list<                       \

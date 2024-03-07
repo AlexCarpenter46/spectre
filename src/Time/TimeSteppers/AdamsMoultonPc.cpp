@@ -146,7 +146,7 @@ TimeStepId AdamsMoultonPc::next_time_id_for_error(
 
 bool AdamsMoultonPc::neighbor_data_required(
     const TimeStepId& next_substep_id,
-    const UnsizedTimeStepId& neighbor_data_id) const {
+    const TimeStepId& neighbor_data_id) const {
   const evolution_less<Time> before{neighbor_data_id.time_runs_forward()};
 
   // FIXME self-start - can this be combined somehow?
@@ -166,8 +166,7 @@ bool AdamsMoultonPc::neighbor_data_required(
 }
 
 bool AdamsMoultonPc::neighbor_data_required(
-    const double dense_output_time,
-    const UnsizedTimeStepId& neighbor_data_id) const {
+    const double dense_output_time, const TimeStepId& neighbor_data_id) const {
   const evolution_less<double> before{neighbor_data_id.time_runs_forward()};
   return before(neighbor_data_id.step_time().value(), dense_output_time);
 }

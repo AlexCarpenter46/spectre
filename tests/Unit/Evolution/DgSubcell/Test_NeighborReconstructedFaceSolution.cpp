@@ -39,7 +39,7 @@ using NeighborReconstructionMap = DirectionalIdMap<Dim, DataVector>;
 template <size_t Dim>
 using MortarData =
     std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-               std::optional<DataVector>, ::UnsizedTimeStepId, int>;
+               std::optional<DataVector>, ::TimeStepId, int>;
 
 template <size_t Dim>
 using MortarDataMap = DirectionalIdMap<Dim, MortarData<Dim>>;

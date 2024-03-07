@@ -32,8 +32,8 @@ void neighbor_tci_decision(
         const TimeStepId,
         DirectionalIdMap<
             Dim, std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                            std::optional<DataVector>, ::UnsizedTimeStepId,
-                            int>>>& received_temporal_id_and_data) {
+                            std::optional<DataVector>, ::TimeStepId, int>>>&
+        received_temporal_id_and_data) {
   db::mutate<subcell::Tags::NeighborTciDecisions<Dim>>(
       [&received_temporal_id_and_data](const auto neighbor_tci_decisions_ptr) {
         for (const auto& [directional_element_id, neighbor_data] :
