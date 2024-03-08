@@ -60,8 +60,6 @@
 /// \cond
 namespace Tags {
 struct TimeStepId;
-template <typename StepperInterface>
-struct TimeStepper;
 }  // namespace Tags
 /// \endcond
 
@@ -626,13 +624,9 @@ ComputeTimeDerivative<Dim, EvolutionSystem, DgStepChoosers, LocalTimeStepping>::
       });
 
   if constexpr (LocalTimeStepping) {
-    if (db::get<::Tags::TimeStepper<LtsTimeStepper>>(box)
-            .number_of_substeps() == 1) {
-      ERROR("FIXME testing code breaks LTS AB");
-      record_time_stepper_data<EvolutionSystem>(make_not_null(&box));
-      take_step<EvolutionSystem, LocalTimeStepping, DgStepChoosers>(
-          make_not_null(&box));
-    }
+    record_time_stepper_data<EvolutionSystem>(make_not_null(&box));
+    take_step<EvolutionSystem, LocalTimeStepping, DgStepChoosers>(
+        make_not_null(&box));
   }
 
   send_data_for_fluxes<ParallelComponent>(make_not_null(&cache),
