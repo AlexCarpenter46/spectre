@@ -19,6 +19,9 @@
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/Gsl.hpp"
 
+// FIXME make both available
+#define MONOTONIC
+
 namespace TimeSteppers {
 
 // Don't include AdamsCoefficients.hpp in the header just to get one
@@ -27,8 +30,20 @@ static_assert(adams_coefficients::maximum_order ==
               AdamsMoultonPc::maximum_order);
 
 namespace {
+// FIXME copied from AdamsLts.cpp
+Time exact_substep_time(const TimeStepId& id) {
+  ASSERT(id.substep() == 0 or id.substep() == 1,
+         "Implemented Adams-based methods have no more than one substep.");
+  if (id.substep() == 0) {
+    return id.step_time();
+  } else {
+    return id.step_time() + id.step_size();
+  }
+}
+
 template <typename T>
 void clean_history(const MutableUntypedHistory<T>& history) {
+#ifndef MONOTONIC
   ASSERT(history.integration_order() > 1, "Cannot run below second order.");
   const auto required_points = history.integration_order() - 1;
   ASSERT(history.size() >= required_points,
@@ -46,6 +61,28 @@ void clean_history(const MutableUntypedHistory<T>& history) {
   } else {
     history.discard_value(history.substeps().back().time_step_id);
   }
+#endif
+}
+
+template <typename T>
+void clean_history2(const MutableUntypedHistory<T>& history) {
+#ifdef MONOTONIC
+  ASSERT(history.integration_order() > 1, "Cannot run below second order.");
+  const auto required_points = history.integration_order() - 2;
+  ASSERT(history.size() >= required_points,
+         "Insufficient data to take an order-" << history.integration_order()
+         << " step.  Have " << history.size() << " times, need "
+         << required_points);
+  if (not history.at_step_start()) {
+    history.clear_substeps();
+    while (history.size() > required_points) {
+      history.pop_front();
+    }
+    if (not history.empty()) {
+      history.discard_value(history.back().time_step_id);
+    }
+  }
+#endif
 }
 
 template <typename T, typename TimeType>
@@ -154,6 +191,13 @@ bool AdamsMoultonPc::neighbor_data_required(
     return neighbor_data_id.slab_number() < next_substep_id.slab_number();
   }
 
+#ifdef MONOTONIC
+  const auto next_time = exact_substep_time(next_substep_id);
+  const auto neighbor_time = exact_substep_time(neighbor_data_id);
+  return before(neighbor_time, next_time) or
+         (neighbor_time == next_time and neighbor_data_id.substep() == 1 and
+          next_substep_id.substep() == 0);
+#else
   if (next_substep_id.substep() == 1) {
     // predictor
     return before(neighbor_data_id.step_time(), next_substep_id.step_time()) or
@@ -163,12 +207,20 @@ bool AdamsMoultonPc::neighbor_data_required(
     // corrector
     return before(neighbor_data_id.step_time(), next_substep_id.step_time());
   }
+#endif
 }
 
 bool AdamsMoultonPc::neighbor_data_required(
     const double dense_output_time, const TimeStepId& neighbor_data_id) const {
   const evolution_less<double> before{neighbor_data_id.time_runs_forward()};
+#ifdef MONOTONIC
+  return before(exact_substep_time(neighbor_data_id).value(),
+                dense_output_time) or
+         (neighbor_data_id.substep() == 1 and
+          exact_substep_time(neighbor_data_id).value() == dense_output_time);
+#else
   return before(neighbor_data_id.step_time().value(), dense_output_time);
+#endif
 }
 
 void AdamsMoultonPc::pup(PUP::er& p) {
@@ -185,6 +237,8 @@ void AdamsMoultonPc::update_u_impl(const gsl::not_null<T*> u,
   *u = *history.back().value;
   update_u_common(u, history, next_time, history.integration_order(),
                   not history.at_step_start());
+  // FIXME can we clean at end?  document step redoing guarantees
+  clean_history2(history);
 }
 
 template <typename T>
@@ -205,6 +259,7 @@ bool AdamsMoultonPc::update_u_impl(const gsl::not_null<T*> u,
   update_u_common(u_error, history, next_time, history.integration_order() - 1,
                   true);
   *u_error = *u - *u_error;
+  clean_history2(history);
   return true;
 }
 
@@ -216,11 +271,19 @@ bool AdamsMoultonPc::dense_update_u_impl(const gsl::not_null<T*> u,
   if (time == history.back().time_step_id.step_time().value()) {
     return true;
   }
+#ifdef MONOTONIC
+  if (not history.at_step_start()) {
+    return false;
+  }
+  update_u_common(u, history, ApproximateTime{time},
+                  history.integration_order(), false);
+#else
   if (history.at_step_start()) {
     return false;
   }
   update_u_common(u, history, ApproximateTime{time},
                   history.integration_order(), true);
+#endif
   return true;
 }
 
@@ -255,6 +318,69 @@ void AdamsMoultonPc::add_boundary_delta_impl(
   ASSERT(not remote_times.empty(), "No remote data provided.");
   const auto current_order =
       local_times.integration_order(local_times.size() - 1);
+#ifdef MONOTONIC
+  const adams_lts::AdamsScheme predictor_scheme{adams_lts::SchemeType::Explicit,
+                                                current_order - 1};
+  const adams_lts::AdamsScheme corrector_scheme{adams_lts::SchemeType::Implicit,
+                                                current_order};
+  const auto step_start = local_times.back().step_time();
+  const auto step_end = step_start + time_step;
+  const auto small_step_start =
+      std::max(local_times.back(), remote_times.back()).step_time();
+  const auto synchronization_time =
+      std::min(local_times.back(), remote_times.back()).step_time();
+  const auto is_synchronization_time = [&](const TimeStepId& id) {
+    return id.step_time() == synchronization_time;
+  };
+  ASSERT(alg::any_of(local_times, is_synchronization_time) and
+             alg::any_of(remote_times, is_synchronization_time),
+         "Only nested step patterns (N:1) are supported.");
+
+  if (local_times.number_of_substeps(local_times.size() - 1) == 1) {
+    // Predictor
+    adams_lts::clean_boundary_history2(local_times, synchronization_time,
+                                       current_order - 1);
+    adams_lts::clean_boundary_history2(remote_times, synchronization_time,
+                                       current_order - 1);
+
+    auto lts_coefficients = adams_lts::lts_coefficients2(
+        local_times, remote_times, small_step_start, step_end, predictor_scheme,
+        predictor_scheme, predictor_scheme);
+    if (not is_synchronization_time(remote_times.back())) {
+      lts_coefficients += adams_lts::lts_coefficients2(
+          local_times, remote_times, synchronization_time, small_step_start,
+          predictor_scheme, corrector_scheme, corrector_scheme);
+    }
+    adams_lts::apply_coefficients(result, lts_coefficients, coupling);
+  } else {
+    // Corrector
+    if (remote_times.number_of_substeps(remote_times.size() - 1) == 2) {
+      // Aligned corrector
+      ASSERT(exact_substep_time(remote_times[{remote_times.size() - 1, 1}]) ==
+             step_end,
+             "Have remote substep data, but it isn't aligned with the local "
+             "data.");
+      const auto lts_coefficients =
+          adams_lts::lts_coefficients2(local_times, remote_times,
+                                       synchronization_time, step_end,
+                                       corrector_scheme, corrector_scheme,
+                                       corrector_scheme) -
+          adams_lts::lts_coefficients2(local_times, remote_times,
+                                       synchronization_time, step_start,
+                                       corrector_scheme, predictor_scheme,
+                                       corrector_scheme);
+      adams_lts::apply_coefficients(result, lts_coefficients, coupling);
+    } else {
+      // Unaligned corrector
+      ASSERT(step_start == small_step_start,
+             "Trying to take unaligned step, but remote side is smaller.");
+      const auto lts_coefficients = adams_lts::lts_coefficients2(
+          local_times, remote_times, step_start, step_end, corrector_scheme,
+          predictor_scheme, corrector_scheme);
+      adams_lts::apply_coefficients(result, lts_coefficients, coupling);
+    }
+  }
+#else
   adams_lts::AdamsScheme scheme{adams_lts::SchemeType::Implicit, current_order};
   auto remote_scheme = scheme;
 
@@ -283,6 +409,7 @@ void AdamsMoultonPc::add_boundary_delta_impl(
       local_times.back().step_time() + time_step, scheme, remote_scheme,
       scheme);
   adams_lts::apply_coefficients(result, lts_coefficients, coupling);
+#endif
 }
 
 template <typename T>
@@ -292,6 +419,37 @@ void AdamsMoultonPc::boundary_dense_output_impl(
     const TimeSteppers::ConstBoundaryHistoryTimes& remote_times,
     const TimeSteppers::BoundaryHistoryEvaluator<T>& coupling,
     const double time) const {
+#ifdef MONOTONIC
+  ASSERT(local_times.number_of_substeps(local_times.size() - 1) == 1,
+         "Dense output must be done before predictor evaluation.");
+
+  const auto current_order =
+      local_times.integration_order(local_times.size() - 1);
+  const adams_lts::AdamsScheme predictor_scheme{adams_lts::SchemeType::Explicit,
+                                                current_order - 1};
+  const adams_lts::AdamsScheme corrector_scheme{adams_lts::SchemeType::Implicit,
+                                                current_order};
+  const auto small_step_start =
+      std::max(local_times.back(), remote_times.back()).step_time();
+  const auto synchronization_time =
+      std::min(local_times.back(), remote_times.back()).step_time();
+  const auto is_synchronization_time = [&](const TimeStepId& id) {
+    return id.step_time() == synchronization_time;
+  };
+  ASSERT(alg::any_of(local_times, is_synchronization_time) and
+             alg::any_of(remote_times, is_synchronization_time),
+         "Only nested step patterns (N:1) are supported.");
+
+  auto lts_coefficients = adams_lts::lts_coefficients2(
+      local_times, remote_times, small_step_start, ApproximateTime{time},
+      predictor_scheme, predictor_scheme, predictor_scheme);
+  if (not is_synchronization_time(remote_times.back())) {
+    lts_coefficients += adams_lts::lts_coefficients2(
+        local_times, remote_times, synchronization_time, small_step_start,
+        predictor_scheme, corrector_scheme, corrector_scheme);
+  }
+  adams_lts::apply_coefficients(result, lts_coefficients, coupling);
+#else
   if (local_times.back().step_time().value() == time) {
     // Nothing to do.  The requested time is the start of the step,
     // which is the input value of `result`.
@@ -314,6 +472,7 @@ void AdamsMoultonPc::boundary_dense_output_impl(
                                    ApproximateTime{time}, scheme, scheme,
                                    scheme);
   adams_lts::apply_coefficients(result, lts_coefficients, coupling);
+#endif
 }
 
 bool operator==(const AdamsMoultonPc& lhs, const AdamsMoultonPc& rhs) {
