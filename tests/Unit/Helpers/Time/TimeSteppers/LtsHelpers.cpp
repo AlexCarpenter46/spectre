@@ -243,6 +243,11 @@ struct Lts2to1 {
   static Rational y(const Rational& /*time*/) { return {1}; }
 };
 
+struct Lts4to1 {
+  static Rational x(const Rational& /*time*/) { return {1, 4}; }
+  static Rational y(const Rational& /*time*/) { return {1}; }
+};
+
 struct Lts3and1to2 {
   static Rational x(const Rational& time) {
     if (time == 0) {
@@ -426,12 +431,12 @@ void test_dense_output(const LtsTimeStepper& stepper) {
 #define PATTERN(data) BOOST_PP_TUPLE_ELEM(0, data)
 
 #define INSTANTIATE(_, data)                                               \
-  template void test_convergence<PATTERN(data)>(                           \
+  template void test_convergence<patterns::PATTERN(data)>(                 \
       const LtsTimeStepper& stepper,                                       \
       const std::pair<int32_t, int32_t>& step_range, const int32_t stride, \
       const bool output);
 
-GENERATE_INSTANTIATIONS(INSTANTIATE, (patterns::Lts2to1, patterns::Lts3and1to2))
+GENERATE_INSTANTIATIONS(INSTANTIATE, (Lts2to1, Lts4to1, Lts3and1to2))
 
 #undef INSTANTIATE
 #undef PATTERN

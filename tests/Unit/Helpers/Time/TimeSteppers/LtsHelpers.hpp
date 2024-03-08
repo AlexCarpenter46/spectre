@@ -12,6 +12,7 @@ class LtsTimeStepper;
 namespace TimeStepperTestUtils::lts {
 namespace patterns {
 struct Lts2to1;
+struct Lts4to1;
 struct Lts3and1to2;
 }  // namespace patterns
 
