@@ -20,7 +20,6 @@ Evolution:
   InitialTimeStep: 0.0002
   InitialSlabSize: 0.25
   StepChoosers:
-    - LimitTimeStepLts
     - Increase:
         Factor: 2
     - ElementSizeCfl:
