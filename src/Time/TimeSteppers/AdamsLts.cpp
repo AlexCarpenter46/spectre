@@ -89,6 +89,28 @@ LtsCoefficients& operator-=(LtsCoefficients& a, const LtsCoefficients& b) {
   return add_assign_impl(a, b, [](const double x) { return -x; });
 }
 
+LtsCoefficients operator+(LtsCoefficients&& a, LtsCoefficients&& b) {
+  return std::move(a += b);
+}
+LtsCoefficients operator+(LtsCoefficients&& a, const LtsCoefficients& b) {
+  return std::move(a += b);
+}
+LtsCoefficients operator+(const LtsCoefficients& a, LtsCoefficients&& b) {
+  return std::move(b += a);
+}
+LtsCoefficients operator+(const LtsCoefficients& a, const LtsCoefficients& b) {
+  auto a2 = a;
+  return std::move(a2 += b);
+}
+
+LtsCoefficients operator-(LtsCoefficients&& a, const LtsCoefficients& b) {
+  return std::move(a -= b);
+}
+LtsCoefficients operator-(const LtsCoefficients& a, const LtsCoefficients& b) {
+  auto a2 = a;
+  return std::move(a2 -= b);
+}
+
 template <typename T>
 void apply_coefficients(const gsl::not_null<T*> result,
                         const LtsCoefficients& coefficients,
@@ -174,11 +196,6 @@ OrderVector<TimeStepId> find_relevant_ids2(
          "Insufficient past data.");
   std::copy(used_range_end - number_of_past_steps, used_range_end,
             std::back_inserter(ids));
-  ASSERT(scheme.type == SchemeType::Implicit or
-             times.number_of_substeps(
-                 static_cast<size_t>(used_range_end - times.begin() - 1)) == 1,
-         "Taking an explicit step with substep data available.  This is "
-         "probably not intended.");
   if (scheme.type == SchemeType::Implicit) {
     const auto last_step =
         static_cast<size_t>(used_range_end - times.begin() - 1);
@@ -264,9 +281,6 @@ OrderVector<Time> merge_to_small_steps2(const OrderVector<Time>& local,
                                         const AdamsScheme& local_scheme,
                                         const AdamsScheme& remote_scheme,
                                         const AdamsScheme& small_step_scheme) {
-  ASSERT(small_step_scheme.order <= local.size() and
-             small_step_scheme.order <= remote.size(),
-         "Insufficient data supplied.");
   OrderVector<Time> small_steps(small_step_scheme.order);
   auto local_it = local.rbegin();
   auto remote_it = remote.rbegin();

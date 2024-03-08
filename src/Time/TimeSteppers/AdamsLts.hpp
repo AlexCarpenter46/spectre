@@ -49,6 +49,14 @@ struct LtsCoefficients
 LtsCoefficients& operator+=(LtsCoefficients& a, const LtsCoefficients& b);
 LtsCoefficients& operator-=(LtsCoefficients& a, const LtsCoefficients& b);
 
+LtsCoefficients operator+(LtsCoefficients&& a, LtsCoefficients&& b);
+LtsCoefficients operator+(LtsCoefficients&& a, const LtsCoefficients& b);
+LtsCoefficients operator+(const LtsCoefficients& a, LtsCoefficients&& b);
+LtsCoefficients operator+(const LtsCoefficients& a, const LtsCoefficients& b);
+
+LtsCoefficients operator-(LtsCoefficients&& a, const LtsCoefficients& b);
+LtsCoefficients operator-(const LtsCoefficients& a, const LtsCoefficients& b);
+
 /// Add the LTS boundary terms for to \p result for the given set of
 /// coefficients.
 template <typename T>

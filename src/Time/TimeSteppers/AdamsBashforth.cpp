@@ -245,12 +245,13 @@ void AdamsBashforth::boundary_dense_output_impl(
                                       current_order};
   const auto small_step_start =
       std::max(local_times.back(), remote_times.back()).step_time();
-  auto lts_coefficients = adams_lts::lts_coefficients2(
-      local_times, remote_times, local_times.back().step_time(),
-      small_step_start, scheme, scheme, scheme);
-  lts_coefficients += adams_lts::lts_coefficients2(
-      local_times, remote_times, small_step_start, ApproximateTime{time},
-      scheme, scheme, scheme);
+  const auto lts_coefficients =
+      adams_lts::lts_coefficients2(local_times, remote_times,
+                                   local_times.back().step_time(),
+                                   small_step_start, scheme, scheme, scheme) +
+      adams_lts::lts_coefficients2(local_times, remote_times, small_step_start,
+                                   ApproximateTime{time}, scheme, scheme,
+                                   scheme);
   adams_lts::apply_coefficients(result, lts_coefficients, coupling);
 }
 
