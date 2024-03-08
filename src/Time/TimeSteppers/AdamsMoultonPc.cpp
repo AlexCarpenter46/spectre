@@ -68,7 +68,10 @@ template <typename T>
 void clean_history2(const MutableUntypedHistory<T>& history) {
 #ifdef MONOTONIC
   ASSERT(history.integration_order() > 1, "Cannot run below second order.");
-  const auto required_points = history.integration_order() - 2;
+  // FIXME Steady-state only needs -2, but self-start needs -1.  Make
+  // conditional?
+  //const auto required_points = history.integration_order() - 2;
+  const auto required_points = history.integration_order() - 1;
   ASSERT(history.size() >= required_points,
          "Insufficient data to take an order-" << history.integration_order()
          << " step.  Have " << history.size() << " times, need "
