@@ -168,6 +168,8 @@ void test_neighbor_data_required() {
     const auto test_ordering = [&](const std::vector<TimeStepId>& ids) {
       for (size_t goal = 0; goal < ids.size(); ++goal) {
         for (size_t data = 0; data < ids.size(); ++data) {
+          CAPTURE(ids[goal]);
+          CAPTURE(ids[data]);
           CHECK(stepper.neighbor_data_required(ids[goal], ids[data]) ==
                 (goal > data));
         }
@@ -178,6 +180,31 @@ void test_neighbor_data_required() {
     test_ordering({step_id(0, 0, 1), step_id(0, 1, 1), step_id(1, 0, 1),
                    step_id(1, 1, 1)});
 
+#if 1  // FIXME monotonic
+    // LTS
+    // 0 1 2   4
+    // 0       4
+    // step_id(2, 1, 2) and step_id(0, 1, 4) are unsequenced, so we
+    // check the sequence with each and then check against each other
+    test_ordering({step_id(0, 0, 1), step_id(0, 1, 1), step_id(1, 0, 1),
+                   step_id(1, 1, 1), step_id(2, 0, 2), step_id(2, 1, 2),
+                   step_id(4, 0, 1)});
+    test_ordering({step_id(0, 0, 1), step_id(0, 1, 1), step_id(1, 0, 1),
+                   step_id(1, 1, 1), step_id(2, 0, 2), step_id(0, 1, 4),
+                   step_id(4, 0, 1)});
+    CHECK(
+        not stepper.neighbor_data_required(step_id(2, 1, 2), step_id(0, 1, 4)));
+    CHECK(
+        not stepper.neighbor_data_required(step_id(0, 1, 4), step_id(2, 1, 2)));
+
+    const double dense_time = time_runs_forward ? 0.15 : 1.0 - 0.15;
+    CHECK(stepper.neighbor_data_required(dense_time, step_id(0, 1, 1)));
+    CHECK(stepper.neighbor_data_required(dense_time, step_id(1, 0, 1)));
+    CHECK(not stepper.neighbor_data_required(dense_time, step_id(1, 1, 1)));
+    CHECK(not stepper.neighbor_data_required(dense_time, step_id(2, 0, 1)));
+    CHECK(stepper.neighbor_data_required(0.5, step_id(4, 1, 1)));
+    CHECK(not stepper.neighbor_data_required(0.5, step_id(5, 0, 1)));
+#else
     // LTS
     // 0 1   3
     // 0   2 3
@@ -193,6 +220,7 @@ void test_neighbor_data_required() {
         not stepper.neighbor_data_required(step_id(0, 1, 1), step_id(0, 1, 2)));
     CHECK(
         not stepper.neighbor_data_required(step_id(0, 1, 2), step_id(0, 1, 1)));
+#endif
   }
 }
 
@@ -398,9 +426,9 @@ SPECTRE_TEST_CASE("Unit.Time.TimeSteppers.AdamsMoultonPc", "[Unit][Time]") {
   test_equality_and_serialization();
   test_creation();
   test_stability();
-  // FIXME
-  //test_neighbor_data_required();
+  test_neighbor_data_required();
   test_boundary_gts();
+  // FIXME
   //test_boundary_lts();
 }
 }  // namespace
