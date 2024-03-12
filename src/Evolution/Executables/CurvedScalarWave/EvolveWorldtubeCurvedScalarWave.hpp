@@ -50,7 +50,6 @@
 #include "NumericalAlgorithms/DiscontinuousGalerkin/Formulation.hpp"
 #include "NumericalAlgorithms/DiscontinuousGalerkin/Tags.hpp"
 #include "NumericalAlgorithms/LinearOperators/ExponentialFilter.hpp"
-#include "NumericalAlgorithms/LinearOperators/FilterAction.hpp"
 #include "Options/Protocols/FactoryCreation.hpp"
 #include "Options/String.hpp"
 #include "Parallel/Local.hpp"
@@ -63,6 +62,7 @@
 #include "Parallel/Reduction.hpp"
 #include "ParallelAlgorithms/Actions/AddComputeTags.hpp"
 #include "ParallelAlgorithms/Actions/AddSimpleTags.hpp"
+#include "ParallelAlgorithms/Actions/FilterAction.hpp"
 #include "ParallelAlgorithms/Actions/InitializeItems.hpp"
 #include "ParallelAlgorithms/Actions/MutateApply.hpp"
 #include "ParallelAlgorithms/Actions/TerminatePhase.hpp"
@@ -269,6 +269,9 @@ struct EvolutionMetavars {
       Tags::AnalyticData<InitialData>,
       CurvedScalarWave::Worldtube::Tags::ExcisionSphere<volume_dim>,
       CurvedScalarWave::Worldtube::Tags::ExpansionOrder,
+      CurvedScalarWave::Worldtube::Tags::Charge,
+      CurvedScalarWave::Worldtube::Tags::Mass,
+      CurvedScalarWave::Worldtube::Tags::ApplySelfForce,
       CurvedScalarWave::Worldtube::Tags::ObserveCoefficientsTrigger>;
 
   using dg_registration_list =

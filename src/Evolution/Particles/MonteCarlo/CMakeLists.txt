@@ -8,16 +8,21 @@ add_spectre_library(${LIBRARY})
 spectre_target_sources(
   ${LIBRARY}
   PRIVATE
-  EvolveMonteCarloPackets.cpp
-  MonteCarloPacket.cpp
+  EvolvePackets.cpp
+  InverseJacobianInertialToFluidCompute.cpp
+  TemplatedLocalFunctions.cpp
+  Packet.cpp
   )
 
 spectre_target_headers(
   ${LIBRARY}
   INCLUDE_DIRECTORY ${CMAKE_SOURCE_DIR}/src
   HEADERS
-  EvolveMonteCarloPackets.hpp
-  MonteCarloPacket.hpp
+  EmitPackets.tpp
+  EvolvePackets.hpp
+  InverseJacobianInertialToFluidCompute.hpp
+  TemplatedLocalFunctions.hpp
+  Packet.hpp
   )
 
 target_link_libraries(

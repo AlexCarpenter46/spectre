@@ -31,6 +31,7 @@
 #include "Utilities/EqualWithinRoundoff.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/Serialization/Serialize.hpp"
+#include "Utilities/TaggedTuple.hpp"
 
 /// \cond
 namespace Tags {
@@ -51,6 +52,47 @@ namespace OptionTags {
  */
 struct Worldtube {
   static constexpr Options::String help = {"Options for the Worldtube"};
+};
+
+/*!
+ * \brief The value of the scalar charge in units of the black hole mass M.
+ */
+struct Charge {
+  using type = double;
+  static constexpr Options::String help{
+      "The value of the scalar charge in units of the black hole mass M."};
+  using group = Worldtube;
+};
+
+/*!
+ * \brief Options for the scalar self-force
+ */
+struct SelfForceOptions {
+  static constexpr Options::String help = {"Options for the scalar self-force"};
+  using group = Worldtube;
+};
+
+/*!
+ * \brief The mass of the scalar particle in units of the black hole mass M.
+ */
+struct Mass {
+  using type = double;
+  static constexpr Options::String help{
+      "The mass of the scalar particlein units of the black hole mass M."};
+  static double lower_bound() { return 0.; }
+  using group = SelfForceOptions;
+};
+
+/*!
+ * \brief Whether to apply the acceleration due to the scalar self-force to the
+ * particle
+ */
+struct ApplySelfForce {
+  using type = bool;
+  static constexpr Options::String help{
+      "Whether to apply the acceleration due to the scalar self-force to the "
+      "particle"};
+  using group = SelfForceOptions;
 };
 
 /*!
@@ -193,6 +235,39 @@ struct ObserveCoefficientsTrigger : db::SimpleTag {
 };
 
 /*!
+ * \brief The value of the scalar charge
+ */
+struct Charge : db::SimpleTag {
+  using type = double;
+  using option_tags = tmpl::list<OptionTags::Charge>;
+  static constexpr bool pass_metavariables = false;
+  static double create_from_options(const double charge) { return charge; };
+};
+
+/*!
+ * \brief The mass of the particle.
+ */
+struct Mass : db::SimpleTag {
+  using type = double;
+  using option_tags = tmpl::list<OptionTags::Mass>;
+  static constexpr bool pass_metavariables = false;
+  static double create_from_options(const double mass) { return mass; };
+};
+
+/*!
+ * \brief Whether to apply the acceleration due to the scalar self-force to the
+ * particle
+ */
+struct ApplySelfForce : db::SimpleTag {
+  using type = bool;
+  using option_tags = tmpl::list<OptionTags::ApplySelfForce>;
+  static constexpr bool pass_metavariables = false;
+  static bool create_from_options(const bool apply_self_force) {
+    return apply_self_force;
+  };
+};
+
+/*!
  * \brief The initial position and velocity of the scalar charge in inertial
  * coordinates.
  */
@@ -310,6 +385,46 @@ struct GeodesicAccelerationCompute : GeodesicAcceleration<Dim>, db::ComputeTag {
 };
 /// @}
 
+/*!
+ * \brief The coordinate time dilation factor of the scalar charge, i.e. the 0th
+ * component of its 4-velocity.
+ */
+struct TimeDilationFactor : db::SimpleTag {
+  using type = Scalar<double>;
+};
+
+/// @{
+/*!
+ * \brief A tuple of Tensors evaluated at the charge depending only the
+ * background and the particle's position and velocity. These values are
+ * effectively cached between different iterations of the worldtube scheme.
+ */
+template <size_t Dim>
+struct BackgroundQuantities : db::SimpleTag {
+  using type =
+      tuples::TaggedTuple<gr::Tags::SpacetimeMetric<double, Dim>,
+                          gr::Tags::InverseSpacetimeMetric<double, Dim>,
+                          Tags::TimeDilationFactor>;
+};
+
+template <size_t Dim>
+struct BackgroundQuantitiesCompute : BackgroundQuantities<Dim>, db::ComputeTag {
+  using base = BackgroundQuantities<Dim>;
+  using return_type =
+      tuples::TaggedTuple<gr::Tags::SpacetimeMetric<double, Dim>,
+                          gr::Tags::InverseSpacetimeMetric<double, Dim>,
+                          Tags::TimeDilationFactor>;
+
+  using argument_tags = tmpl::list<
+      ParticlePositionVelocity<Dim>,
+      CurvedScalarWave::Tags::BackgroundSpacetime<gr::Solutions::KerrSchild>>;
+  static void function(gsl::not_null<return_type*> result,
+                       const std::array<tnsr::I<double, Dim, Frame::Inertial>,
+                                        2>& position_velocity,
+                       const gr::Solutions::KerrSchild& background_spacetime);
+};
+/// @}
+
 /// @{
 /*!
  * \brief An optional that holds the coordinates of an element face abutting the
@@ -383,9 +498,10 @@ struct PunctureField : db::SimpleTag {
 template <size_t Dim>
 struct PunctureFieldCompute : PunctureField<Dim>, db::ComputeTag {
   using base = PunctureField<Dim>;
-  using argument_tags = tmpl::list<FaceCoordinates<Dim, Frame::Inertial, true>,
-                                   ParticlePositionVelocity<Dim>,
-                                   GeodesicAcceleration<Dim>, ExpansionOrder>;
+  using argument_tags =
+      tmpl::list<FaceCoordinates<Dim, Frame::Inertial, true>,
+                 ParticlePositionVelocity<Dim>, GeodesicAcceleration<Dim>,
+                 Charge, ExpansionOrder>;
   using return_type = std::optional<Variables<tmpl::list<
       CurvedScalarWave::Tags::Psi, ::Tags::dt<CurvedScalarWave::Tags::Psi>,
       ::Tags::deriv<CurvedScalarWave::Tags::Psi, tmpl::size_t<3>,
@@ -396,7 +512,7 @@ struct PunctureFieldCompute : PunctureField<Dim>, db::ComputeTag {
           inertial_face_coords_centered,
       const std::array<tnsr::I<double, Dim, ::Frame::Inertial>, 2>&
           particle_position_velocity,
-      const tnsr::I<double, Dim>& particle_acceleration,
+      const tnsr::I<double, Dim>& particle_acceleration, double charge,
       const size_t expansion_order);
 };
 /// @}

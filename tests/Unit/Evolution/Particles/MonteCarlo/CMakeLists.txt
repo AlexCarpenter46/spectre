@@ -4,7 +4,9 @@
 set(LIBRARY "Test_MonteCarlo")
 
 set(LIBRARY_SOURCES
-  Test_MonteCarloPacket.cpp
+  Test_InverseJacobianInertialToFluid.cpp
+  Test_EmitPackets.cpp
+  Test_Packet.cpp
   )
 
 add_test_library(
@@ -15,5 +17,10 @@ add_test_library(
 target_link_libraries(
   ${LIBRARY}
   PRIVATE
+  DataStructures
+  GeneralRelativity
+  GeneralRelativityHelpers
+  Hydro
+  HydroHelpers
   MonteCarlo
   )
