@@ -118,10 +118,6 @@ bool operator<(const TimeStepId& a, const TimeStepId& b) {
   if (a.slab_number() != b.slab_number()) {
     return a.slab_number() < b.slab_number();
   }
-  if (a.substep_time() != b.substep_time()) {
-    return evolution_less<double>{a.time_runs_forward()}(a.substep_time(),
-                                                         b.substep_time());
-  }
   if (a.step_time() != b.step_time()) {
     return evolution_less<Time>{a.time_runs_forward()}(a.step_time(),
                                                        b.step_time());
