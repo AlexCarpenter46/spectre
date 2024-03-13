@@ -116,6 +116,11 @@ bool change_step_size(const gsl::not_null<db::DataBox<DbTags>*> box) {
         "that the simulation can proceed");
   }
 
+  if (time_step_id.substep() != 0) {
+    // Can't reject on a substep.  Already committed.
+    step_accepted = true;
+  }
+
   const auto new_step = choose_lts_step_size(
       time_step_id.step_time() + current_step, desired_step);
   db::mutate<Tags::Next<Tags::TimeStep>>(

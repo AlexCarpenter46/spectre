@@ -104,7 +104,7 @@ void test_can_change_step_size() {
     TimeSteppers::History<double> history(2);
     history.insert(TimeStepId(true, 1, slab.start()), 0., 0.);
     history.insert(step_id, 0., 0.);
-    CHECK_FALSE(stepper.can_change_step_size(
+    CHECK(stepper.can_change_step_size(
         step_id.next_substep(time_step, 1.0), history));
   }
 }
