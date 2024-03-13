@@ -658,7 +658,7 @@ struct EvolutionMetavars {
             Parallel::get_parallel_component<component>(cache));
       });
 
-      Parallel::simple_action<deadlock::PrintElementInfo>(
+      Parallel::simple_action<deadlock::PrintElementInfo<3>>(
           Parallel::get_parallel_component<gh_dg_element_array>(cache));
     }
   }

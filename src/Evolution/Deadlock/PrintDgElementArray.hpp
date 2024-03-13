@@ -35,11 +35,11 @@ namespace deadlock {
  *
  * \details This will print the contents of the following inbox or DataBox tags:
  *
- * - `evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<3>`
+ * - `evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<Dim>`
  * - `ChangeSlabSize_detail::NewSlabSizeInbox`
- * - `evolution::dg::Tags::MortarNextTemporalId<3>`
+ * - `evolution::dg::Tags::MortarNextTemporalId<Dim>`
  * - `evolution::dg::Tags::MortarDataHistory` (for LTS only)
- * - `evolution::dg::Tags::MortarData<3>` (for GTS only)
+ * - `evolution::dg::Tags::MortarData<Dim>` (for GTS only)
  *
  * Inbox tags are printed using the `Parallel::output_inbox` function. The
  * DataBox tags are printed with nice indenting for easy readability in the
@@ -47,6 +47,7 @@ namespace deadlock {
  *
  * This can be generalized in the future to other dimensions if needed.
  */
+template <size_t Dim>
 struct PrintElementInfo {
   template <typename ParallelComponent, typename DbTags, typename Metavariables,
             typename ArrayIndex>
@@ -86,8 +87,8 @@ struct PrintElementInfo {
       const auto& inboxes = local_object.get_inboxes();
 
       const std::string mortar_inbox = Parallel::output_inbox<
-          evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<3>>(inboxes,
-                                                                        2_st);
+          evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<Dim>>(
+          inboxes, 2_st);
       const std::string slab_size_inbox =
           Parallel::output_inbox<ChangeSlabSize_detail::NewSlabSizeInbox>(
               inboxes, 2_st);
@@ -97,7 +98,7 @@ struct PrintElementInfo {
       ss << " Mortars:\n";
 
       const auto& mortar_next_temporal_id =
-          db::get<evolution::dg::Tags::MortarNextTemporalId<3>>(box);
+          db::get<evolution::dg::Tags::MortarNextTemporalId<Dim>>(box);
 
       ss << "  MortarNextTemporalId\n";
       for (const auto& [key, next_id] : mortar_next_temporal_id) {
@@ -108,9 +109,9 @@ struct PrintElementInfo {
       if constexpr (Metavariables::local_time_stepping) {
         const auto& mortar_data_history =
             db::get<evolution::dg::Tags::MortarDataHistory<
-                3, typename db::add_tag_prefix<
-                       ::Tags::dt,
-                       typename Metavariables::system::variables_tag>::type>>(
+                Dim, typename db::add_tag_prefix<
+                         ::Tags::dt,
+                         typename Metavariables::system::variables_tag>::type>>(
                 box);
         ss << "  MortarDataHistory:\n";
 
@@ -120,7 +121,7 @@ struct PrintElementInfo {
         }
       } else {
         const auto& mortar_data =
-            db::get<evolution::dg::Tags::MortarData<3>>(box);
+            db::get<evolution::dg::Tags::MortarData<Dim>>(box);
         ss << "  MortarData:\n";
 
         for (const auto& [key, single_mortar_data] : mortar_data) {
