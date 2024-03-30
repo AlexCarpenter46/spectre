@@ -89,6 +89,9 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
                         const double time,
                         const std::string& /*function_of_time_name*/,
                         const tuples::TaggedTuple<TupleTags...>& measurements) {
+    // if (time < 50.0) {
+    //     return {0.0, 0.0, 0.0};
+    // } else {
     const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
 
     using quat = boost::math::quaternion<double>;
@@ -100,6 +103,8 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
 
     using center_A =
         control_system::QueueTags::Center<::domain::ObjectLabel::A>;
+    using center_B =
+        control_system::QueueTags::Center<::domain::ObjectLabel::B>;
 
     const tnsr::I<double, 3, Frame::Grid>& grid_position_of_A_tnsr =
         Parallel::get<domain::Tags::ObjectCenter<domain::ObjectLabel::A>>(
@@ -109,21 +114,77 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
                                          grid_position_of_A_tnsr[2]}};
     const DataVector& current_position_of_A = get<center_A>(measurements);
 
+    const tnsr::I<double, 3, Frame::Grid>& grid_position_of_B_tnsr =
+        Parallel::get<domain::Tags::ObjectCenter<domain::ObjectLabel::B>>(
+            cache);
+    const DataVector grid_position_of_B{{grid_position_of_B_tnsr[0],
+                                         grid_position_of_B_tnsr[1],
+                                         grid_position_of_B_tnsr[2]}};
+    const DataVector& current_position_of_B = get<center_B>(measurements);
+
+    const DataVector& grid_position_average =
+        0.5 * (grid_position_of_A + grid_position_of_B);
+    const DataVector& current_position_average =
+        0.5 * (current_position_of_A + current_position_of_B);
+
+    const DataVector& grid_separation = grid_position_of_A - grid_position_of_B;
+    const DataVector& current_separation =
+        current_position_of_A - current_position_of_B;
+
+    // pMdotcM = current_separation_dot_grid_separation
+    // pMdotcP = current_separation_dot_grid_average
+    // cMdotcP = grid_separation_dot_grid_average
+    // cMdotcM = grid_separation_dot_grid_separation
+    // double current_separation_dot_grid_separation = 0.0;
+    // double current_separation_dot_grid_average = 0.0;
+    // double grid_separation_dot_grid_average = 0.0;
+    // double grid_separation_dot_grid_separation = 0.0;
+    // for (size_t i = 0; i < 3; i++) {
+    //   current_separation_dot_grid_separation +=
+    //       current_separation[i] * grid_separation[i];
+    //   current_separation_dot_grid_average +=
+    //       current_separation[i] * grid_position_average[i];
+    //   grid_separation_dot_grid_average +=
+    //       grid_separation[i] * grid_position_average[i];
+    //   grid_separation_dot_grid_separation +=
+    //       grid_separation[i] * grid_separation[i];
+    // }
+
     const DataVector rotation_error =
         rotation_control_error_(tuner, cache, time, "Rotation", measurements);
     // Use A because it's on the positive x-axis, however, B would work as well.
     // Just so long as we are consistent.
     const DataVector rotation_error_cross_grid_pos_A =
         cross(rotation_error, grid_position_of_A);
+    const DataVector rotation_error_cross_grid_pos_average =
+        cross(rotation_error, grid_position_average);
 
     const double expansion_error = expansion_control_error_(
         tuner, cache, time, "Expansion", measurements)[0];
 
+    // DataVector translation_control =
+    //     make_with_value<DataVector>(grid_position_of_A, 0.0);
+    // for (size_t i = 0; i < 3; i++) {
+    //   translation_control[i] =
+    //       expansion_factor *
+    //       (grid_separation_dot_grid_separation * current_position_average[i]
+    //       -
+    //        current_separation_dot_grid_separation * grid_position_average[i]
+    //        - grid_separation_dot_grid_average * current_separation[i] +
+    //        current_separation_dot_grid_average * grid_separation[i]) /
+    //        grid_separation_dot_grid_separation;
+    // }
     // From eq. 42 in 1304.3067
     const quat middle_expression = datavector_to_quaternion(
         current_position_of_A -
         (1.0 + expansion_error / expansion_factor) * grid_position_of_A -
         rotation_error_cross_grid_pos_A);
+    // const quat middle_expression = datavector_to_quaternion(
+    //     current_position_average -
+    //     (1.0 + expansion_error / expansion_factor) * grid_position_average -
+    //     rotation_error_cross_grid_pos_average);
+    // const quat middle_expression =
+    // datavector_to_quaternion(translation_control);
 
     // Because we are converting from a quaternion to a DataVector, there will
     // be four components in the DataVector. However, translation control only
@@ -140,6 +201,7 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
 
     return {result_with_four_components[1], result_with_four_components[2],
             result_with_four_components[3]};
+    //   }
   }
 
  private:
