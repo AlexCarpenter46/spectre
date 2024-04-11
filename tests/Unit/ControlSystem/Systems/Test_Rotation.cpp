@@ -14,6 +14,7 @@
 #include "DataStructures/DataVector.hpp"
 #include "Domain/CoordinateMaps/CoordinateMap.hpp"
 #include "Domain/CoordinateMaps/CoordinateMap.tpp"
+#include "Domain/CoordinateMaps/TimeDependent/RotScaleTrans.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/Rotation.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Domain/FunctionsOfTime/Tags.hpp"
@@ -35,9 +36,11 @@ struct BothHorizons;
 namespace control_system {
 namespace {
 using RotationMap = domain::CoordinateMaps::TimeDependent::Rotation<3>;
+using RotScaleTransMap =
+    domain::CoordinateMaps::TimeDependent::RotScaleTrans<3>;
 
 using CoordMap =
-    domain::CoordinateMap<Frame::Distorted, Frame::Inertial, RotationMap>;
+    domain::CoordinateMap<Frame::Distorted, Frame::Inertial, RotScaleTransMap>;
 
 template <size_t DerivOrder>
 void test_rotation_control_system(const bool newtonian) {
@@ -133,9 +136,16 @@ void test_rotation_control_system(const bool newtonian) {
 
   // Create coordinate map for mapping the PN rotation to the "grid" frame
   // where the control system does its calculations
-  RotationMap rotation_map{rotation_name};
+  RotScaleTransMap rot_scale_trans_map{
+      std::nullopt,
+      rotation_name,
+      std::nullopt,
+      100.0,
+      1000.0,
+      domain::CoordinateMaps::TimeDependent::RotScaleTrans<
+          3>::BlockRegion::Inner};
 
-  CoordMap coord_map{rotation_map};
+  CoordMap coord_map{rot_scale_trans_map};
 
   // Get the functions of time from the cache to use in the maps
   const auto& cache = ActionTesting::cache<element_component>(runner, 0);

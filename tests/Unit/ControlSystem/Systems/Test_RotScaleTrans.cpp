@@ -17,6 +17,7 @@
 #include "Domain/CoordinateMaps/CoordinateMap.hpp"
 #include "Domain/CoordinateMaps/CoordinateMap.tpp"
 #include "Domain/CoordinateMaps/TimeDependent/CubicScale.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/RotScaleTrans.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/Rotation.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/Translation.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
@@ -40,10 +41,11 @@ namespace {
 using TranslationMap = domain::CoordinateMaps::TimeDependent::Translation<3>;
 using RotationMap = domain::CoordinateMaps::TimeDependent::Rotation<3>;
 using ExpansionMap = domain::CoordinateMaps::TimeDependent::CubicScale<3>;
+using RotScaleTransMap =
+    domain::CoordinateMaps::TimeDependent::RotScaleTrans<3>;
 
 using CoordMap =
-    domain::CoordinateMap<Frame::Distorted, Frame::Inertial, ExpansionMap,
-                          RotationMap, TranslationMap>;
+    domain::CoordinateMap<Frame::Distorted, Frame::Inertial, RotScaleTransMap>;
 
 std::string create_input_string(const std::string& name) {
   const std::string name_str = "  "s + name + ":\n"s;
@@ -195,8 +197,15 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
   // The outer boundary is at 1000.0 so that we don't have to worry about it.
   ExpansionMap expansion_map{1000.0, expansion_name,
                              expansion_name + "OuterBoundary"s};
-
-  CoordMap coord_map{expansion_map, rotation_map, translation_map};
+  RotScaleTransMap rot_scale_trans_map{
+      std::make_pair(expansion_name, expansion_name + "OuterBoundary"s),
+      rotation_name,
+      translation_name,
+      100.0,
+      1000.0,
+      domain::CoordinateMaps::TimeDependent::RotScaleTrans<
+          3>::BlockRegion::Inner};
+  CoordMap coord_map{rot_scale_trans_map};
 
   // Get the functions of time from the cache to use in the maps
   const auto& cache = ActionTesting::cache<element_component>(runner, 0);

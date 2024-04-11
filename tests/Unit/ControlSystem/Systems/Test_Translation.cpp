@@ -16,6 +16,7 @@
 #include "DataStructures/DataVector.hpp"
 #include "Domain/CoordinateMaps/CoordinateMap.hpp"
 #include "Domain/CoordinateMaps/CoordinateMap.tpp"
+#include "Domain/CoordinateMaps/TimeDependent/RotScaleTrans.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/Translation.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
@@ -37,9 +38,11 @@ struct Inertial;
 namespace control_system {
 namespace {
 using TranslationMap = domain::CoordinateMaps::TimeDependent::Translation<3>;
+using RotScaleTransMap =
+    domain::CoordinateMaps::TimeDependent::RotScaleTrans<3>;
 
 using CoordMap =
-    domain::CoordinateMap<Frame::Distorted, Frame::Inertial, TranslationMap>;
+    domain::CoordinateMap<Frame::Distorted, Frame::Inertial, RotScaleTransMap>;
 
 template <size_t DerivOrder>
 void test_translation_control_system() {
@@ -134,7 +137,16 @@ void test_translation_control_system() {
   // where the control system does its calculations
   TranslationMap translation_map{translation_name};
 
-  CoordMap coord_map{translation_map};
+  RotScaleTransMap rot_scale_trans_map{
+      std::nullopt,
+      std::nullopt,
+      translation_name,
+      100.0,
+      1000.0,
+      domain::CoordinateMaps::TimeDependent::RotScaleTrans<
+          3>::BlockRegion::Inner};
+
+  CoordMap coord_map{rot_scale_trans_map};
 
   // Get the functions of time from the cache to use in the maps
   const auto& cache = ActionTesting::cache<element_component>(runner, 0);

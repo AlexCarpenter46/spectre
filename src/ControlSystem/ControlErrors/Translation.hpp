@@ -5,6 +5,7 @@
 
 #include <boost/math/quaternion.hpp>
 #include <cstddef>
+#include <iostream>
 #include <pup.h>
 
 #include "ControlSystem/ControlErrors/Expansion.hpp"
@@ -95,6 +96,8 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
     const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
 
     using quat = boost::math::quaternion<double>;
+    std::cout << "rotation function of time: "
+              << functions_of_time.at("Rotation")->func(time)[0] << std::endl;
 
     const quat quaternion = datavector_to_quaternion(
         functions_of_time.at("Rotation")->func(time)[0]);
@@ -135,20 +138,20 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
     // pMdotcP = current_separation_dot_grid_average
     // cMdotcP = grid_separation_dot_grid_average
     // cMdotcM = grid_separation_dot_grid_separation
-    // double current_separation_dot_grid_separation = 0.0;
-    // double current_separation_dot_grid_average = 0.0;
-    // double grid_separation_dot_grid_average = 0.0;
-    // double grid_separation_dot_grid_separation = 0.0;
-    // for (size_t i = 0; i < 3; i++) {
-    //   current_separation_dot_grid_separation +=
-    //       current_separation[i] * grid_separation[i];
-    //   current_separation_dot_grid_average +=
-    //       current_separation[i] * grid_position_average[i];
-    //   grid_separation_dot_grid_average +=
-    //       grid_separation[i] * grid_position_average[i];
-    //   grid_separation_dot_grid_separation +=
-    //       grid_separation[i] * grid_separation[i];
-    // }
+    double current_separation_dot_grid_separation = 0.0;
+    double current_separation_dot_grid_average = 0.0;
+    double grid_separation_dot_grid_average = 0.0;
+    double grid_separation_dot_grid_separation = 0.0;
+    for (size_t i = 0; i < 3; i++) {
+      current_separation_dot_grid_separation +=
+          current_separation[i] * grid_separation[i];
+      current_separation_dot_grid_average +=
+          current_separation[i] * grid_position_average[i];
+      grid_separation_dot_grid_average +=
+          grid_separation[i] * grid_position_average[i];
+      grid_separation_dot_grid_separation +=
+          grid_separation[i] * grid_separation[i];
+    }
 
     const DataVector rotation_error =
         rotation_control_error_(tuner, cache, time, "Rotation", measurements);
@@ -162,29 +165,36 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
     const double expansion_error = expansion_control_error_(
         tuner, cache, time, "Expansion", measurements)[0];
 
-    // DataVector translation_control =
-    //     make_with_value<DataVector>(grid_position_of_A, 0.0);
-    // for (size_t i = 0; i < 3; i++) {
-    //   translation_control[i] =
-    //       expansion_factor *
-    //       (grid_separation_dot_grid_separation * current_position_average[i]
-    //       -
-    //        current_separation_dot_grid_separation * grid_position_average[i]
-    //        - grid_separation_dot_grid_average * current_separation[i] +
-    //        current_separation_dot_grid_average * grid_separation[i]) /
-    //        grid_separation_dot_grid_separation;
-    // }
+    DataVector translation_control =
+        make_with_value<DataVector>(grid_position_of_A, 0.0);
+    for (size_t i = 0; i < 3; i++) {
+      translation_control[i] =
+          expansion_factor *
+          (grid_separation_dot_grid_separation * current_position_average[i] -
+           current_separation_dot_grid_separation * grid_position_average[i] -
+           grid_separation_dot_grid_average * current_separation[i] +
+           current_separation_dot_grid_average * grid_separation[i]) /
+          grid_separation_dot_grid_separation;
+    }
     // From eq. 42 in 1304.3067
-    const quat middle_expression = datavector_to_quaternion(
-        current_position_of_A -
-        (1.0 + expansion_error / expansion_factor) * grid_position_of_A -
-        rotation_error_cross_grid_pos_A);
     // const quat middle_expression = datavector_to_quaternion(
-    //     current_position_average -
-    //     (1.0 + expansion_error / expansion_factor) * grid_position_average -
-    //     rotation_error_cross_grid_pos_average);
-    // const quat middle_expression =
-    // datavector_to_quaternion(translation_control);
+    //     current_position_of_A -
+    //     (1.0 + expansion_error / expansion_factor) * grid_position_of_A -
+    //     rotation_error_cross_grid_pos_A);
+    const quat middle_expression_2 = datavector_to_quaternion(
+        current_position_average -
+        (1.0 + expansion_error / expansion_factor) * grid_position_average -
+        rotation_error_cross_grid_pos_average);
+    const quat middle_expression =
+        datavector_to_quaternion(translation_control);
+    std::cout << "Excision separation: " << current_separation << std::endl;
+    std::cout << "AH separation: " << grid_separation << std::endl;
+    std::cout << "Excision average: " << current_position_average << std::endl;
+    std::cout << "AH average: " << grid_position_average << std::endl;
+    std::cout << "Quaternion: " << quaternion << std::endl;
+    std::cout << "SpEC way: " << middle_expression << std::endl;
+    std::cout << "Average/control error version: " << middle_expression_2
+              << std::endl;
 
     // Because we are converting from a quaternion to a DataVector, there will
     // be four components in the DataVector. However, translation control only
