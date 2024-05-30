@@ -22,6 +22,7 @@ spectre_python_add_module(
   PlotSlice.py
   plots.mplstyle
   ReadH5.py
+  RenderBBH.py
   ReadInputFile.py
   Render1D.py
   TransformVolumeData.py

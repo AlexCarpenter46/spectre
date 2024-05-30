@@ -21,6 +21,12 @@ spectre_add_python_bindings_test(
   "unit;visualization;python;paraview"
   None)
 
+spectre_add_python_bindings_test(
+  "Unit.Visualization.Python.Render3D.BBH"
+  Test_RenderBBH.py
+  "unit;visualization;python;paraview"
+  None)
+
 if (BUILD_PYTHON_BINDINGS)
   set_tests_properties(
     "Unit.Visualization.Python.Render3D.Clip"
@@ -29,6 +35,11 @@ if (BUILD_PYTHON_BINDINGS)
     )
   set_tests_properties(
     "Unit.Visualization.Python.Render3D.Domain"
+    PROPERTIES
+    TIMEOUT 30
+    )
+  set_tests_properties(
+    "Unit.Visualization.Python.Render3D.BBH"
     PROPERTIES
     TIMEOUT 30
     )

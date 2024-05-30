@@ -31,6 +31,7 @@ class Cli(click.MultiCommand):
             "interpolate-to-mesh",
             "interpolate-to-points",
             "plot",
+            "render-bbh",
             "render-1d",
             "render-3d",
             "resubmit",
@@ -95,6 +96,10 @@ class Cli(click.MultiCommand):
             from spectre.Visualization import plot_command
 
             return plot_command
+        elif name == "render-bbh":
+            from spectre.Visualization.RenderBBH import render_bbh_command
+
+            return render_bbh_command
         elif name == "render-1d":
             from spectre.Visualization.Render1D import render_1d_command
 
