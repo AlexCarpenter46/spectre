@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <iostream>
 #include <iterator>
 #include <limits>
 #include <map>
@@ -334,6 +335,29 @@ QuaternionFunctionOfTime<MaxDeriv>::quat_func_and_2_derivs(
   return std::array<DataVector, 3>{quaternion_to_datavector(quat),
                                    quaternion_to_datavector(dtquat),
                                    quaternion_to_datavector(dt2quat)};
+}
+
+template <size_t MaxDeriv>
+double QuaternionFunctionOfTime<MaxDeriv>::full_angle(const double t) const {
+  double angle = 0.0;
+  auto it_2 = stored_quaternions_and_times_.begin();
+  if (it_2 == stored_quaternions_and_times_.end()) {
+    return 0.0;
+  }
+  auto it = stored_quaternions_and_times_.begin();
+  it_2++;
+  angle += std::abs(
+      2.0 * (acos(quat_func(t)[0][0]) - acos(it->data.R_component_1())));
+  while (it_2 != stored_quaternions_and_times_.end()) {
+    angle += std::abs(2.0 * (acos(it->data.R_component_1()) -
+                             acos(it_2->data.R_component_1())));
+    it++;
+    it_2++;
+  }
+  std::cout << "angle at time t only: " << 2.0 * acos(quat_func(t)[0][0])
+            << std::endl;
+  std::cout << "total angle: " << angle << std::endl;
+  return angle;
 }
 
 template <size_t MaxDeriv>
