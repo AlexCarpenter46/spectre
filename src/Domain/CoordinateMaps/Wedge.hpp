@@ -308,8 +308,9 @@ class Wedge {
    * unless each Wedge has the same size along both angular directions.
    */
   Wedge(double radius_inner, double radius_outer, double sphericity_inner,
-        double sphericity_outer, OrientationMap<Dim> orientation_of_wedge,
-        bool with_equiangular_map,
+        double sphericity_outer, double cube_half_length,
+        std::array<double, Dim> focal_offset,
+        OrientationMap<Dim> orientation_of_wedge, bool with_equiangular_map,
         WedgeHalves halves_to_use = WedgeHalves::Both,
         Distribution radial_distribution = Distribution::Linear,
         const std::array<double, Dim - 1>& opening_angles =
@@ -366,8 +367,13 @@ class Wedge {
 
   // factors out calculation of z needed for mapping and jacobian
   template <typename T>
-  tt::remove_cvref_wrap_t<T> default_physical_z(const T& zeta,
-                                                const T& one_over_rho) const;
+  tt::remove_cvref_wrap_t<T> lifting_factor_lambda(const T& zeta,
+                                                   const T& one_over_rho) const;
+  template <typename T>
+  tt::remove_cvref_wrap_t<T> get_s_factor(const T& zeta) const;
+  template <typename T>
+  tt::remove_cvref_wrap_t<T> get_s_factor_deriv(const T& zeta,
+                                                const T& s_factor) const;
 
   template <size_t LocalDim>
   // NOLINTNEXTLINE(readability-redundant-declaration)
@@ -378,6 +384,9 @@ class Wedge {
   double radius_outer_{std::numeric_limits<double>::signaling_NaN()};
   double sphericity_inner_{std::numeric_limits<double>::signaling_NaN()};
   double sphericity_outer_{std::numeric_limits<double>::signaling_NaN()};
+  double cube_half_length_{std::numeric_limits<double>::signaling_NaN()};
+  std::array<double, Dim> focal_offset_{
+      make_array<Dim>(std::numeric_limits<double>::signaling_NaN())};
   OrientationMap<Dim> orientation_of_wedge_{};
   bool with_equiangular_map_ = false;
   WedgeHalves halves_to_use_ = WedgeHalves::Both;

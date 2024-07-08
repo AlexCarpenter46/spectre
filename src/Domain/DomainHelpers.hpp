@@ -178,7 +178,8 @@ size_t which_wedge_index(const ShellWedges& which_wedges);
  */
 std::vector<domain::CoordinateMaps::Wedge<3>> sph_wedge_coordinate_maps(
     double inner_radius, double outer_radius, double inner_sphericity,
-    double outer_sphericity, bool use_equiangular_map,
+    double outer_sphericity, double radius_bounding_cube,
+    std::array<double, 3> focal_offset, bool use_equiangular_map,
     bool use_half_wedges = false,
     const std::vector<double>& radial_partitioning = {},
     const std::vector<domain::CoordinateMaps::Distribution>&

@@ -346,6 +346,13 @@ class BinaryCompactObject : public DomainCreator<3> {
         " outer shell into six Blocks of equal angular size."};
   };
 
+  struct CubeScalingFactor {
+    using type = double;
+    static constexpr Options::String help = {
+        "Specify the desired ratio of the cube length to the separation "
+        "length, where the cube is that which surrounds the object."};
+  };
+
   struct InitialRefinement {
     using type =
         std::variant<size_t, std::array<size_t, 3>,
@@ -411,9 +418,9 @@ class BinaryCompactObject : public DomainCreator<3> {
   template <typename Metavariables>
   using options = tmpl::append<
       tmpl::list<ObjectA, ObjectB, EnvelopeRadius, OuterRadius,
-                 InitialRefinement, InitialGridPoints, UseEquiangularMap,
-                 RadialDistributionEnvelope, RadialDistributionOuterShell,
-                 OpeningAngle, TimeDependentMaps>,
+                 CubeScalingFactor, InitialRefinement, InitialGridPoints,
+                 UseEquiangularMap, RadialDistributionEnvelope,
+                 RadialDistributionOuterShell, OpeningAngle, TimeDependentMaps>,
       tmpl::conditional_t<
           domain::BoundaryConditions::has_boundary_conditions_base_v<
               typename Metavariables::system>,
@@ -449,7 +456,7 @@ class BinaryCompactObject : public DomainCreator<3> {
 
   BinaryCompactObject(
       typename ObjectA::type object_A, typename ObjectB::type object_B,
-      double envelope_radius, double outer_radius,
+      double envelope_radius, double outer_radius, double cube_scaling_factor,
       const typename InitialRefinement::type& initial_refinement,
       const typename InitialGridPoints::type& initial_number_of_grid_points,
       bool use_equiangular_map = true,
@@ -528,6 +535,8 @@ class BinaryCompactObject : public DomainCreator<3> {
       block_groups_{};
   std::unordered_map<std::string, tnsr::I<double, 3, Frame::Grid>>
       grid_anchors_{};
+  double offset_x_coord_a_{};
+  double offset_x_coord_b_{};
 
   // Variables to handle std::variant on Object A and B
   double x_coord_a_{};

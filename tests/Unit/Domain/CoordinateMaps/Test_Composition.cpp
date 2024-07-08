@@ -156,7 +156,7 @@ void test_3d() {
       element_to_block_logical_map(element_id),
       std::make_unique<
           CoordinateMap<Frame::BlockLogical, Frame::Inertial, Wedge<3>>>(
-          Wedge<3>{1., 3., 1., 1., {}, true})};
+          Wedge<3>{1., 3., 1., 1., 6.0, {{0., 0., 0.}}, {}, true})};
   CHECK(map.function_of_time_names().empty());
 
   // Check some points that are easy to calculate
