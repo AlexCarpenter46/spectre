@@ -32,7 +32,6 @@ void test_wedge2d_all_orientations(const bool with_equiangular_map) {
   std::uniform_real_distribution<> unit_dis(0, 1);
   std::uniform_real_distribution<> inner_dis(1, 3);
   std::uniform_real_distribution<> outer_dis(4, 7);
-  std::uniform_real_distribution<> offset_dis(0.0, 2.0);
 
   // Check that points on the corners of the reference square map to the correct
   // corners of the wedge.
@@ -59,30 +58,28 @@ void test_wedge2d_all_orientations(const bool with_equiangular_map) {
   CAPTURE(random_outer_radius_lower_xi);
   const double random_outer_radius_lower_eta = outer_dis(gen);
   CAPTURE(random_outer_radius_lower_eta);
-  const double x_offset = offset_dis(gen);
-  CAPTURE(x_offset);
 
   const Wedge2D map_upper_xi(
       random_inner_radius_upper_xi, random_outer_radius_upper_xi, 0.0, 1.0, 6.0,
-      {{x_offset, 0.}},
+      {{0., 0.}},
       OrientationMap<2>{std::array<Direction<2>, 2>{
           {Direction<2>::upper_xi(), Direction<2>::upper_eta()}}},
       with_equiangular_map);
   const Wedge2D map_upper_eta(
       random_inner_radius_upper_eta, random_outer_radius_upper_eta, 0.0, 1.0,
-      6.0, {{x_offset, 0.}},
+      6.0, {{0., 0.}},
       OrientationMap<2>{std::array<Direction<2>, 2>{
           {Direction<2>::upper_eta(), Direction<2>::lower_xi()}}},
       with_equiangular_map);
   const Wedge2D map_lower_xi(
       random_inner_radius_lower_xi, random_outer_radius_lower_xi, 0.0, 1.0, 6.0,
-      {{x_offset, 0.}},
+      {{0., 0.}},
       OrientationMap<2>{std::array<Direction<2>, 2>{
           {Direction<2>::lower_xi(), Direction<2>::lower_eta()}}},
       with_equiangular_map);
   const Wedge2D map_lower_eta(
       random_inner_radius_lower_eta, random_outer_radius_lower_eta, 0.0, 1.0,
-      6.0, {{x_offset, 0.}},
+      6.0, {{0., 0.}},
       OrientationMap<2>{std::array<Direction<2>, 2>{
           {Direction<2>::lower_eta(), Direction<2>::upper_xi()}}},
       with_equiangular_map);
@@ -139,9 +136,6 @@ void test_wedge2d_all_orientations(const bool with_equiangular_map) {
     }
     // first slot is where +0 got map and second slot is +1 got mapped
     // so +0 +1 is default
-    // ++map_i; // TODO : remove
-    // ++map_i; // TODO : remove
-    // ++map_i; // TODO : remove
     const auto& orientation = map_i();
     CAPTURE(orientation);
     for (const auto& halves : possible_halves) {
@@ -161,14 +155,13 @@ void test_wedge2d_all_orientations(const bool with_equiangular_map) {
                         ? outer_circularity
                         : 1.0,
                     6.0,
-                    {{x_offset, 0.0}},
+                    {{0.0, 0.0}},
                     orientation,
                     with_equiangular_map,
                     halves,
                     radial_distribution});
       }
     }
-    // break; // TODO : remove
   }
 }
 

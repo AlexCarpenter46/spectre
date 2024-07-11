@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <iostream>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -72,7 +73,7 @@ bool BinaryCompactObject::Object::is_excised() const {
 BinaryCompactObject::BinaryCompactObject(
     typename ObjectA::type object_A, typename ObjectB::type object_B,
     const double envelope_radius, const double outer_radius,
-    const double cube_scaling_factor,
+    const double cube_length,
     const typename InitialRefinement::type& initial_refinement,
     const typename InitialGridPoints::type& initial_number_of_grid_points,
     const bool use_equiangular_map,
@@ -111,7 +112,7 @@ BinaryCompactObject::BinaryCompactObject(
   // Determination of parameters for domain construction:
   const double tan_half_opening_angle = tan(0.5 * opening_angle_);
   translation_ = 0.5 * (x_coord_a_ + x_coord_b_);
-  length_inner_cube_ = cube_scaling_factor * abs(x_coord_a_ - x_coord_b_);
+  length_inner_cube_ = cube_length;
   length_outer_cube_ =
       2.0 * envelope_radius_ / sqrt(2.0 + square(tan_half_opening_angle));
   offset_x_coord_a_ =
@@ -157,12 +158,11 @@ BinaryCompactObject::BinaryCompactObject(
         "malformed. A recommended radius is:\n"
             << suggested_value);
   }
-  if (cube_scaling_factor < 1.0) {
+  if (cube_length < (x_coord_a_ - x_coord_b_)) {
     PARSE_ERROR(
         context,
-        "The cube scaling factor should be greater than 1.0 with 1.0 meaning "
-        "the length of the inner cube is as long as the initial separation "
-        "between the two objects.");
+        "The cube length should be greater than or equal to the initial "
+        "separation of between the two objects.");
   }
   // The following options are irrelevant if the inner regions are covered
   // with simple blocks, so we only check them if object_A_ uses the first

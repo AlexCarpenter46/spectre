@@ -346,11 +346,12 @@ class BinaryCompactObject : public DomainCreator<3> {
         " outer shell into six Blocks of equal angular size."};
   };
 
-  struct CubeScalingFactor {
+  struct CubeLength {
     using type = double;
     static constexpr Options::String help = {
-        "Specify the desired ratio of the cube length to the separation "
-        "length, where the cube is that which surrounds the object."};
+        "Specify the desired cube length that must be greater than or equal to "
+        "the separation length, where the cube is that which surrounds the "
+        "object."};
   };
 
   struct InitialRefinement {
@@ -417,10 +418,10 @@ class BinaryCompactObject : public DomainCreator<3> {
 
   template <typename Metavariables>
   using options = tmpl::append<
-      tmpl::list<ObjectA, ObjectB, EnvelopeRadius, OuterRadius,
-                 CubeScalingFactor, InitialRefinement, InitialGridPoints,
-                 UseEquiangularMap, RadialDistributionEnvelope,
-                 RadialDistributionOuterShell, OpeningAngle, TimeDependentMaps>,
+      tmpl::list<ObjectA, ObjectB, EnvelopeRadius, OuterRadius, CubeLength,
+                 InitialRefinement, InitialGridPoints, UseEquiangularMap,
+                 RadialDistributionEnvelope, RadialDistributionOuterShell,
+                 OpeningAngle, TimeDependentMaps>,
       tmpl::conditional_t<
           domain::BoundaryConditions::has_boundary_conditions_base_v<
               typename Metavariables::system>,
@@ -456,7 +457,7 @@ class BinaryCompactObject : public DomainCreator<3> {
 
   BinaryCompactObject(
       typename ObjectA::type object_A, typename ObjectB::type object_B,
-      double envelope_radius, double outer_radius, double cube_scaling_factor,
+      double envelope_radius, double outer_radius, double cube_length,
       const typename InitialRefinement::type& initial_refinement,
       const typename InitialGridPoints::type& initial_number_of_grid_points,
       bool use_equiangular_map = true,

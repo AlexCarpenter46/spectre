@@ -106,8 +106,8 @@ void test_connectivity() {
   // Outer shell:
   constexpr double outer_radius = 32.4;
 
-  // Cube scaling factor:
-  constexpr double cube_scaling_factor = 1.0;
+  // Cube length:
+  constexpr double cube_length = xcoord_objectA - xcoord_objectB;
 
   // Misc.:
   constexpr size_t grid_points = 3;
@@ -163,7 +163,7 @@ void test_connectivity() {
                false},
         envelope_radius,
         outer_radius,
-        cube_scaling_factor,
+        cube_length,
         refinement,
         grid_points,
         use_equiangular_map,
@@ -280,7 +280,7 @@ void test_connectivity() {
                                          create_inner_boundary_condition()})
                                    : std::nullopt,
                   false},
-              envelope_radius, outer_radius, cube_scaling_factor, refinement,
+              envelope_radius, outer_radius, cube_length, refinement,
               grid_points, use_equiangular_map, radial_distribution_envelope,
               radial_distribution_outer_shell, opening_angle, std::nullopt,
               std::make_unique<PeriodicBc>(),
@@ -303,7 +303,7 @@ void test_connectivity() {
                                               std::make_unique<PeriodicBc>()})
                                         : std::nullopt,
                        false},
-                envelope_radius, outer_radius, cube_scaling_factor, refinement,
+                envelope_radius, outer_radius, cube_length, refinement,
                 grid_points, use_equiangular_map, radial_distribution_envelope,
                 radial_distribution_outer_shell, opening_angle, std::nullopt,
                 create_outer_boundary_condition(),
@@ -325,7 +325,7 @@ void test_connectivity() {
                                            create_inner_boundary_condition()})
                                      : std::nullopt,
                     false},
-                envelope_radius, outer_radius, cube_scaling_factor, refinement,
+                envelope_radius, outer_radius, cube_length, refinement,
                 grid_points, use_equiangular_map, radial_distribution_envelope,
                 radial_distribution_outer_shell, opening_angle, std::nullopt,
                 nullptr, Options::Context{false, {}, 1, 1}),
@@ -344,7 +344,7 @@ void test_connectivity() {
                        excise_interiorB ? std::make_optional(Excision{nullptr})
                                         : std::nullopt,
                        false},
-                envelope_radius, outer_radius, cube_scaling_factor, refinement,
+                envelope_radius, outer_radius, cube_length, refinement,
                 grid_points, use_equiangular_map, radial_distribution_envelope,
                 radial_distribution_outer_shell, opening_angle, std::nullopt,
                 create_outer_boundary_condition(),
@@ -455,7 +455,7 @@ std::string create_option_string(
          std::to_string(1 + additional_refinement_outer) +
          "]\n"
          "  InitialGridPoints: 3\n"
-         "  CubeScalingFactor: 1.0\n"
+         "  CubeLength: 5.0\n"
          "  UseEquiangularMap: " +
          stringize(use_equiangular_map) + "\n" + time_dependence;
 }
@@ -479,8 +479,8 @@ void test_bns_domain_with_cubes() {
   constexpr double outer_radius = 32.4;
   constexpr double opening_angle = 90.0;
 
-  // Cube scaling factor:
-  constexpr double cube_scaling_factor = 1.0;
+  // Cube length:
+  constexpr double cube_length = xcoord_objectA - xcoord_objectB;
 
   // Misc.:
   constexpr size_t grid_points = 3;
@@ -498,7 +498,7 @@ void test_bns_domain_with_cubes() {
       CartesianCubeAtXCoord{xcoord_objectB},
       envelope_radius,
       outer_radius,
-      cube_scaling_factor,
+      cube_length,
       refinement,
       grid_points,
       use_equiangular_map,
@@ -572,13 +572,9 @@ void test_bbh_time_dependent_factory(const bool with_boundary_conditions,
     }
   }();
 
-  std::cout << "here is fine 575" << std::endl;
-
   const std::vector<double> times_to_check{{1., 2.3}};
   const auto domain = TestHelpers::domain::creators::test_domain_creator(
       *binary_compact_object, with_boundary_conditions, false, times_to_check);
-
-  std::cout << "here is fine 581" << std::endl;
 
   const auto& blocks = domain.blocks();
   const auto& final_envelope_block = excise_B ? blocks[33] : blocks[21];
@@ -620,12 +616,8 @@ void test_bbh_time_dependent_factory(const bool with_boundary_conditions,
     }
   }
 
-  std::cout << "here is fine 623" << std::endl;
-
   const auto& excision_spheres = domain.excision_spheres();
   CHECK(excision_spheres == expected_excision_spheres);
-
-  std::cout << "here is fine 628" << std::endl;
 
   const auto check_excision_sphere_map =
       [&binary_compact_object](const ExcisionSphere<3>& excision_sphere) {
@@ -645,13 +637,9 @@ void test_bbh_time_dependent_factory(const bool with_boundary_conditions,
       };
 
   if (with_time_dependence) {
-    std::cout << "here is fine 648" << std::endl;
     check_excision_sphere_map(excision_spheres.at("ExcisionSphereA"));
-    std::cout << "here is fine 650" << std::endl;
     if (excise_B) {
-      std::cout << "here is fine 652" << std::endl;
       check_excision_sphere_map(excision_spheres.at("ExcisionSphereB"));
-      std::cout << "here is fine 654" << std::endl;
     }
   }
 }
@@ -723,7 +711,7 @@ void test_parse_errors() {
       domain::creators::BinaryCompactObject(
           Object{0.3, 1.0, 8.0, {{create_inner_boundary_condition()}}, false},
           Object{0.5, 1.0, -7.0, {{create_inner_boundary_condition()}}, false},
-          25.5, 32.4, 1.0, 2_st, 6_st, true, Distribution::Projective,
+          25.5, 32.4, 15.0, 2_st, 6_st, true, Distribution::Projective,
           Distribution::Linear, 120.0, std::nullopt,
           create_outer_boundary_condition(), Options::Context{false, {}, 1, 1}),
       Catch::Matchers::ContainsSubstring(
@@ -731,9 +719,19 @@ void test_parse_errors() {
           "small! The Frustums will be malformed."));
   CHECK_THROWS_WITH(
       domain::creators::BinaryCompactObject(
+          Object{0.3, 1.0, 8.0, {{create_inner_boundary_condition()}}, false},
+          Object{0.5, 1.0, -7.0, {{create_inner_boundary_condition()}}, false},
+          25.5, 32.4, 10.0, 2_st, 6_st, true, Distribution::Projective,
+          Distribution::Linear, 120.0, std::nullopt,
+          create_outer_boundary_condition(), Options::Context{false, {}, 1, 1}),
+      Catch::Matchers::ContainsSubstring(
+          "The cube length should be greater than or equal to the initial "
+          "separation of between the two objects."));
+  CHECK_THROWS_WITH(
+      domain::creators::BinaryCompactObject(
           Object{0.3, 1.0, 1.0, {{create_inner_boundary_condition()}}, false},
           Object{1.5, 1.0, -1.0, {{create_inner_boundary_condition()}}, false},
-          25.5, 32.4, 1.0, 2_st, 6_st, true, Distribution::Projective,
+          25.5, 32.4, 2.0, 2_st, 6_st, true, Distribution::Projective,
           Distribution::Linear, 120.0, std::nullopt,
           create_outer_boundary_condition(), Options::Context{false, {}, 1, 1}),
       Catch::Matchers::ContainsSubstring(
@@ -742,7 +740,7 @@ void test_parse_errors() {
       domain::creators::BinaryCompactObject(
           Object{3.3, 1.0, 1.0, {{create_inner_boundary_condition()}}, false},
           Object{0.5, 1.0, -1.0, {{create_inner_boundary_condition()}}, false},
-          25.5, 32.4, 1.0, 2_st, 6_st, true, Distribution::Projective,
+          25.5, 32.4, 2.0, 2_st, 6_st, true, Distribution::Projective,
           Distribution::Linear, 120.0, std::nullopt,
           create_outer_boundary_condition(), Options::Context{false, {}, 1, 1}),
       Catch::Matchers::ContainsSubstring(
@@ -750,7 +748,7 @@ void test_parse_errors() {
   CHECK_THROWS_WITH(
       domain::creators::BinaryCompactObject(
           Object{0.3, 1.0, 1.0, {{create_inner_boundary_condition()}}, false},
-          Object{0.5, 1.0, -1.0, std::nullopt, true}, 25.5, 32.4, 1.0, 2_st,
+          Object{0.5, 1.0, -1.0, std::nullopt, true}, 25.5, 32.4, 2.0, 2_st,
           6_st, true, Distribution::Projective, Distribution::Linear, 120.0,
           std::nullopt, create_outer_boundary_condition(),
           Options::Context{false, {}, 1, 1}),
@@ -762,7 +760,7 @@ void test_parse_errors() {
       domain::creators::BinaryCompactObject(
           Object{0.3, 1.0, 1.0, std::nullopt, true},
           Object{0.5, 1.0, -1.0, {{create_inner_boundary_condition()}}, false},
-          25.5, 32.4, 1.0, 2_st, 6_st, true, Distribution::Projective,
+          25.5, 32.4, 2.0, 2_st, 6_st, true, Distribution::Projective,
           Distribution::Linear, 120.0, std::nullopt,
           create_outer_boundary_condition(), Options::Context{false, {}, 1, 1}),
       Catch::Matchers::ContainsSubstring(
@@ -773,7 +771,7 @@ void test_parse_errors() {
       domain::creators::BinaryCompactObject(
           Object{0.3, 1.0, 1.0, {{create_inner_boundary_condition()}}, false},
           Object{0.5, 1.0, -1.0, {{create_inner_boundary_condition()}}, false},
-          25.5, 32.4, 1.0, std::vector<std::array<size_t, 3>>{}, 6_st, true,
+          25.5, 32.4, 2.0, std::vector<std::array<size_t, 3>>{}, 6_st, true,
           Distribution::Projective, Distribution::Linear, 120.0, std::nullopt,
           create_outer_boundary_condition(), Options::Context{false, {}, 1, 1}),
       Catch::Matchers::ContainsSubstring("Invalid 'InitialRefinement'"));
@@ -781,7 +779,7 @@ void test_parse_errors() {
       domain::creators::BinaryCompactObject(
           Object{0.3, 1.0, 1.0, {{create_inner_boundary_condition()}}, false},
           Object{0.5, 1.0, -1.0, {{create_inner_boundary_condition()}}, false},
-          25.5, 32.4, 1.0, 2_st, std::vector<std::array<size_t, 3>>{}, true,
+          25.5, 32.4, 2.0, 2_st, std::vector<std::array<size_t, 3>>{}, true,
           Distribution::Projective, Distribution::Linear, 120.0, std::nullopt,
           create_outer_boundary_condition(), Options::Context{false, {}, 1, 1}),
       Catch::Matchers::ContainsSubstring("Invalid 'InitialGridPoints'"));
@@ -807,7 +805,7 @@ void test_kerr_horizon_conforming() {
       Object{inner_radius_B, 4., x_pos_B, true, true},
       40.,
       200.,
-      1.0,
+      16.0,
       0_st,
       6_st,
       true,

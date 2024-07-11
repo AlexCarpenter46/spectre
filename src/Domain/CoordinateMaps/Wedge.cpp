@@ -268,8 +268,7 @@ std::optional<std::array<double, Dim>> Wedge<Dim>::inverse(
   // Radial coordinate
   double zeta = std::numeric_limits<double>::signaling_NaN();
   if (radial_distribution_ == Distribution::Linear) {
-    const double one_over_rho =
-        generalized_z / magnitude(physical_coords - rotated_focus);
+    const double one_over_rho = generalized_z / radius;
     const double zeta_coefficient =
         (scaled_frustum_rate_ + sphere_rate_ * one_over_rho);
     // If -sphere_rate_/scaled_frustum_rate_ > 1, then
@@ -427,17 +426,10 @@ tnsr::Ij<tt::remove_cvref_wrap_t<T>, Dim, Frame::NoFrame> Wedge<Dim>::jacobian(
   std::array<ReturnType, Dim> dxyz_dxi{};
   dxyz_dxi[radial_coord] =
       gamma[radial_coord] * d_lifting_factor_lambda[polar_coord];
-  if (radial_distribution_ == Distribution::Linear) {
-    dxyz_dxi[polar_coord] =
-        gamma[polar_coord] * d_lifting_factor_lambda[polar_coord] +
-        cap_deriv[0] * lambda_lifting_factor;
-  } else {
-    dxyz_dxi[polar_coord] =
-        square(one_over_rho) * cap_deriv[0] * lambda_lifting_factor;
-    if constexpr (Dim == 3) {
-      dxyz_dxi[polar_coord] *= 1.0 + square(cap[1]);
-    }
-  }
+  dxyz_dxi[polar_coord] =
+      gamma[polar_coord] * d_lifting_factor_lambda[polar_coord] +
+      cap_deriv[0] * lambda_lifting_factor;
+
   if constexpr (Dim == 3) {
     dxyz_dxi[azimuth_coord] =
         gamma[azimuth_coord] * d_lifting_factor_lambda[polar_coord];
@@ -485,16 +477,8 @@ tnsr::Ij<tt::remove_cvref_wrap_t<T>, Dim, Frame::NoFrame> Wedge<Dim>::jacobian(
 
   // Derivative by radial coordinate
   std::array<ReturnType, Dim> dxyz_dzeta{};
-  if (radial_distribution_ == Distribution::Linear) {
-    dxyz_dzeta[radial_coord] =
-        gamma[radial_coord] * d_lifting_factor_lambda[radial_coord];
-  } else if (radial_distribution_ == Distribution::Logarithmic) {
-    dxyz_dzeta[radial_coord] = s_factor * sphere_rate_ * one_over_rho;
-  } else {
-    const double sphere_rate =
-        0.5 * (1.0 / radius_outer_ - 1.0 / radius_inner_);
-    dxyz_dzeta[radial_coord] = -square(s_factor) * sphere_rate * one_over_rho;
-  }
+  dxyz_dzeta[radial_coord] =
+      gamma[radial_coord] * d_lifting_factor_lambda[radial_coord];
   dxyz_dzeta[polar_coord] =
       gamma[polar_coord] * d_lifting_factor_lambda[radial_coord];
 

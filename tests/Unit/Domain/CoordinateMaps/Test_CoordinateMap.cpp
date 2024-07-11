@@ -1523,9 +1523,11 @@ void test_coords_frame_velocity_jacobians() {
               cubic_scale_jac.get(2, 1) * velocity_affine_map_frame[1] +
               cubic_scale_jac.get(2, 2) * velocity_affine_map_frame[2]}}};
 
-    CHECK(std::get<3>(composed_map_3d.coords_frame_velocity_jacobians(
-              tnsr::I<double, 3, Frame::BlockLogical>{source_pt}, time,
-              functions_of_time)) == expected_velocity);
+    CHECK_ITERABLE_APPROX(
+        std::get<3>(composed_map_3d.coords_frame_velocity_jacobians(
+            tnsr::I<double, 3, Frame::BlockLogical>{source_pt}, time,
+            functions_of_time)),
+        expected_velocity);
   }
   {
     MAKE_GENERATOR(generator);
