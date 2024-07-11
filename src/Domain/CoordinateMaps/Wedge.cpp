@@ -184,7 +184,6 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> Wedge<Dim>::operator()(
 
   // Polar angle
   ReturnType xi = source_coords[polar_coord];
-  // focal_offset_[polar_coord] / cube_half_length_;
   if (halves_to_use_ == WedgeHalves::UpperOnly) {
     xi += 1.0;
     xi *= 0.5;
@@ -204,11 +203,10 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> Wedge<Dim>::operator()(
                : xi;
   ReturnType one_over_rho =
       square(1.0 - rotated_focus[radial_coord] / cube_half_length_) +
-      square(cap[0] - rotated_focus[0] / cube_half_length_);
+      square(cap[0] - rotated_focus[polar_coord] / cube_half_length_);
   if constexpr (Dim == 3) {
     // Azimuthal angle
     const ReturnType& eta = source_coords[azimuth_coord];
-    // focal_offset_[azimuth_coord] / cube_half_length_;
     cap[1] = with_equiangular_map_
                  ? tan(0.5 * opening_angles_[1]) *
                        tan(0.5 * opening_angles_distribution_[1] * eta) /
@@ -226,18 +224,17 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> Wedge<Dim>::operator()(
           (1.0 - rotated_focus[radial_coord] / cube_half_length_) +
       rotated_focus[radial_coord];
   physical_coords[polar_coord] =
-      lambda_lifting_factor * (cap[0] - rotated_focus[0] / cube_half_length_) +
+      lambda_lifting_factor *
+          (cap[0] - rotated_focus[polar_coord] / cube_half_length_) +
       rotated_focus[polar_coord];
   if constexpr (Dim == 3) {
     physical_coords[azimuth_coord] =
         lambda_lifting_factor *
-            (cap[1] - rotated_focus[1] / cube_half_length_) +
+            (cap[1] - rotated_focus[azimuth_coord] / cube_half_length_) +
         rotated_focus[azimuth_coord];
   }
-  auto result =
-      discrete_rotation(orientation_of_wedge_, std::move(physical_coords));
 
-  return result;
+  return discrete_rotation(orientation_of_wedge_, std::move(physical_coords));
 }
 
 template <size_t Dim>
@@ -251,25 +248,28 @@ std::optional<std::array<double, Dim>> Wedge<Dim>::inverse(
     return std::nullopt;
   }
 
+  auto rotated_focus =
+      discrete_rotation(orientation_of_wedge_.inverse_map(), focal_offset_);
+
   const double generalized_z =
-      (physical_coords[radial_coord] - focal_offset_[radial_coord]) /
-      (1.0 - focal_offset_[radial_coord] / cube_half_length_);
+      (physical_coords[radial_coord] - rotated_focus[radial_coord]) /
+      (1.0 - rotated_focus[radial_coord] / cube_half_length_);
   const double one_over_generalized_z = 1.0 / generalized_z;
   std::array<double, Dim - 1> cap{};
-  cap[0] = (physical_coords[polar_coord] - focal_offset_[polar_coord]) *
+  cap[0] = (physical_coords[polar_coord] - rotated_focus[polar_coord]) *
                one_over_generalized_z +
-           focal_offset_[polar_coord] / cube_half_length_;
+           rotated_focus[polar_coord] / cube_half_length_;
   if constexpr (Dim == 3) {
-    cap[1] = (physical_coords[azimuth_coord] - focal_offset_[azimuth_coord]) *
+    cap[1] = (physical_coords[azimuth_coord] - rotated_focus[azimuth_coord]) *
                  one_over_generalized_z +
-             focal_offset_[azimuth_coord] / cube_half_length_;
+             rotated_focus[azimuth_coord] / cube_half_length_;
   }
-  const double radius = magnitude(physical_coords);
+  const double radius = magnitude(physical_coords - rotated_focus);
   // Radial coordinate
   double zeta = std::numeric_limits<double>::signaling_NaN();
   if (radial_distribution_ == Distribution::Linear) {
     const double one_over_rho =
-        generalized_z / magnitude(physical_coords - focal_offset_);
+        generalized_z / magnitude(physical_coords - rotated_focus);
     const double zeta_coefficient =
         (scaled_frustum_rate_ + sphere_rate_ * one_over_rho);
     // If -sphere_rate_/scaled_frustum_rate_ > 1, then

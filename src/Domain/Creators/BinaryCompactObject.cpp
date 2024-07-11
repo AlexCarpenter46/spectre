@@ -7,7 +7,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <iostream>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -119,9 +118,6 @@ BinaryCompactObject::BinaryCompactObject(
       x_coord_a_ - (x_coord_a_ + x_coord_b_ + length_inner_cube_) / 2.0;
   offset_x_coord_b_ =
       x_coord_b_ - (x_coord_a_ + x_coord_b_ - length_inner_cube_) / 2.0;
-
-  std::cout << "offset A: " << offset_x_coord_a_ << std::endl;
-  std::cout << "offset B: " << offset_x_coord_b_ << std::endl;
 
   // Calculate number of blocks
   // Object cubes and shells have 6 blocks each, for a total for 24 blocks.
@@ -338,6 +334,7 @@ BinaryCompactObject::BinaryCompactObject(
                          sqrt(3.0) * 0.5 * length_inner_cube_};
   }
 
+  // Note change this to center of excision (add offset)
   if (time_dependent_options_.has_value()) {
     time_dependent_options_->build_maps(
         std::array{std::array{x_coord_a_, 0.0, 0.0},
@@ -371,12 +368,12 @@ Domain<3> BinaryCompactObject::create_domain() const {
 
   // ObjectA/B is on the right/left, respectively.
   const Translation translation_A{
-      Affine{-1.0, 1.0, -1.0 + length_inner_cube_ / 2.0,
-             1.0 + length_inner_cube_ / 2.0},
+      Affine{-1.0, 1.0, -1.0 + x_coord_a_ + offset_x_coord_a_,
+             1.0 + x_coord_a_ + offset_x_coord_a_},
       Identity2D{}};
   const Translation translation_B{
-      Affine{-1.0, 1.0, -1.0 - length_inner_cube_ / 2.0,
-             1.0 - length_inner_cube_ / 2.0},
+      Affine{-1.0, 1.0, -1.0 + x_coord_b_ + offset_x_coord_b_,
+             1.0 + x_coord_b_ + offset_x_coord_b_},
       Identity2D{}};
 
   // Two blocks covering the compact objects and their immediate neighborhood

@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <iostream>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -571,9 +572,13 @@ void test_bbh_time_dependent_factory(const bool with_boundary_conditions,
     }
   }();
 
+  std::cout << "here is fine 575" << std::endl;
+
   const std::vector<double> times_to_check{{1., 2.3}};
   const auto domain = TestHelpers::domain::creators::test_domain_creator(
       *binary_compact_object, with_boundary_conditions, false, times_to_check);
+
+  std::cout << "here is fine 581" << std::endl;
 
   const auto& blocks = domain.blocks();
   const auto& final_envelope_block = excise_B ? blocks[33] : blocks[21];
@@ -615,8 +620,12 @@ void test_bbh_time_dependent_factory(const bool with_boundary_conditions,
     }
   }
 
+  std::cout << "here is fine 623" << std::endl;
+
   const auto& excision_spheres = domain.excision_spheres();
   CHECK(excision_spheres == expected_excision_spheres);
+
+  std::cout << "here is fine 628" << std::endl;
 
   const auto check_excision_sphere_map =
       [&binary_compact_object](const ExcisionSphere<3>& excision_sphere) {
@@ -636,9 +645,13 @@ void test_bbh_time_dependent_factory(const bool with_boundary_conditions,
       };
 
   if (with_time_dependence) {
+    std::cout << "here is fine 648" << std::endl;
     check_excision_sphere_map(excision_spheres.at("ExcisionSphereA"));
+    std::cout << "here is fine 650" << std::endl;
     if (excise_B) {
+      std::cout << "here is fine 652" << std::endl;
       check_excision_sphere_map(excision_spheres.at("ExcisionSphereB"));
+      std::cout << "here is fine 654" << std::endl;
     }
   }
 }
