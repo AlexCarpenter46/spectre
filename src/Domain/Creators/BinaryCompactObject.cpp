@@ -368,24 +368,25 @@ Domain<3> BinaryCompactObject::create_domain() const {
 
   // ObjectA/B is on the right/left, respectively.
   const Translation translation_A{
-      Affine{-1.0, 1.0, -1.0 + x_coord_a_ + offset_x_coord_a_,
-             1.0 + x_coord_a_ + offset_x_coord_a_},
+      Affine{-1.0, 1.0, -1.0 + x_coord_a_ - offset_x_coord_a_,
+             1.0 + x_coord_a_ - offset_x_coord_a_},
       Identity2D{}};
   const Translation translation_B{
-      Affine{-1.0, 1.0, -1.0 + x_coord_b_ + offset_x_coord_b_,
-             1.0 + x_coord_b_ + offset_x_coord_b_},
+      Affine{-1.0, 1.0, -1.0 + x_coord_b_ - offset_x_coord_b_,
+             1.0 + x_coord_b_ - offset_x_coord_b_},
       Identity2D{}};
 
   // Two blocks covering the compact objects and their immediate neighborhood
   if (use_single_block_a_) {
     maps.emplace_back(
-        make_coordinate_map_base<Frame::BlockLogical, Frame::Inertial>(
-            Affine3D{Affine(-1.0, 1.0, -0.5 * length_inner_cube_ + x_coord_a_,
-                            0.5 * length_inner_cube_ + x_coord_a_),
-                     Affine(-1.0, 1.0, -0.5 * length_inner_cube_,
-                            0.5 * length_inner_cube_),
-                     Affine(-1.0, 1.0, -0.5 * length_inner_cube_,
-                            0.5 * length_inner_cube_)}));
+        make_coordinate_map_base<Frame::BlockLogical, Frame::Inertial>(Affine3D{
+            Affine(-1.0, 1.0,
+                   -0.5 * length_inner_cube_ + x_coord_a_ - offset_x_coord_a_,
+                   0.5 * length_inner_cube_ + x_coord_a_ - offset_x_coord_a_),
+            Affine(-1.0, 1.0, -0.5 * length_inner_cube_,
+                   0.5 * length_inner_cube_),
+            Affine(-1.0, 1.0, -0.5 * length_inner_cube_,
+                   0.5 * length_inner_cube_)}));
   } else {
     // --- Blocks enclosing each object (12 blocks per object) ---
     //
@@ -416,13 +417,14 @@ Domain<3> BinaryCompactObject::create_domain() const {
   }
   if (use_single_block_b_) {
     maps.emplace_back(
-        make_coordinate_map_base<Frame::BlockLogical, Frame::Inertial>(
-            Affine3D{Affine(-1.0, 1.0, -0.5 * length_inner_cube_ + x_coord_b_,
-                            0.5 * length_inner_cube_ + x_coord_b_),
-                     Affine(-1.0, 1.0, -0.5 * length_inner_cube_,
-                            0.5 * length_inner_cube_),
-                     Affine(-1.0, 1.0, -0.5 * length_inner_cube_,
-                            0.5 * length_inner_cube_)}));
+        make_coordinate_map_base<Frame::BlockLogical, Frame::Inertial>(Affine3D{
+            Affine(-1.0, 1.0,
+                   -0.5 * length_inner_cube_ + x_coord_b_ - offset_x_coord_b_,
+                   0.5 * length_inner_cube_ + x_coord_b_ - offset_x_coord_b_),
+            Affine(-1.0, 1.0, -0.5 * length_inner_cube_,
+                   0.5 * length_inner_cube_),
+            Affine(-1.0, 1.0, -0.5 * length_inner_cube_,
+                   0.5 * length_inner_cube_)}));
   } else {
     // --- Blocks enclosing each object (12 blocks per object) ---
     //
@@ -492,18 +494,21 @@ Domain<3> BinaryCompactObject::create_domain() const {
       if (use_equiangular_map_) {
         maps.emplace_back(
             make_coordinate_map_base<Frame::BlockLogical, Frame::Inertial>(
-                Equiangular3D{Equiangular(-1.0, 1.0, -1.0 * scaled_r_inner_A,
-                                          scaled_r_inner_A),
-                              Equiangular(-1.0, 1.0, -1.0 * scaled_r_inner_A,
-                                          scaled_r_inner_A),
-                              Equiangular(-1.0, 1.0, -1.0 * scaled_r_inner_A,
-                                          scaled_r_inner_A)},
+                Equiangular3D{
+                    Equiangular(-1.0, 1.0,
+                                -1.0 * scaled_r_inner_A + offset_x_coord_a_,
+                                scaled_r_inner_A + offset_x_coord_a_),
+                    Equiangular(-1.0, 1.0, -1.0 * scaled_r_inner_A,
+                                scaled_r_inner_A),
+                    Equiangular(-1.0, 1.0, -1.0 * scaled_r_inner_A,
+                                scaled_r_inner_A)},
                 translation_A));
       } else {
         maps.emplace_back(make_coordinate_map_base<Frame::BlockLogical,
                                                    Frame::Inertial>(
             Affine3D{
-                Affine(-1.0, 1.0, -1.0 * scaled_r_inner_A, scaled_r_inner_A),
+                Affine(-1.0, 1.0, -1.0 * scaled_r_inner_A + offset_x_coord_a_,
+                       scaled_r_inner_A + offset_x_coord_a_),
                 Affine(-1.0, 1.0, -1.0 * scaled_r_inner_A, scaled_r_inner_A),
                 Affine(-1.0, 1.0, -1.0 * scaled_r_inner_A, scaled_r_inner_A)},
             translation_A));
@@ -534,18 +539,21 @@ Domain<3> BinaryCompactObject::create_domain() const {
       if (use_equiangular_map_) {
         maps.emplace_back(
             make_coordinate_map_base<Frame::BlockLogical, Frame::Inertial>(
-                Equiangular3D{Equiangular(-1.0, 1.0, -1.0 * scaled_r_inner_B,
-                                          scaled_r_inner_B),
-                              Equiangular(-1.0, 1.0, -1.0 * scaled_r_inner_B,
-                                          scaled_r_inner_B),
-                              Equiangular(-1.0, 1.0, -1.0 * scaled_r_inner_B,
-                                          scaled_r_inner_B)},
+                Equiangular3D{
+                    Equiangular(-1.0, 1.0,
+                                -1.0 * scaled_r_inner_B + offset_x_coord_b_,
+                                scaled_r_inner_B + offset_x_coord_b_),
+                    Equiangular(-1.0, 1.0, -1.0 * scaled_r_inner_B,
+                                scaled_r_inner_B),
+                    Equiangular(-1.0, 1.0, -1.0 * scaled_r_inner_B,
+                                scaled_r_inner_B)},
                 translation_B));
       } else {
         maps.emplace_back(make_coordinate_map_base<Frame::BlockLogical,
                                                    Frame::Inertial>(
             Affine3D{
-                Affine(-1.0, 1.0, -1.0 * scaled_r_inner_B, scaled_r_inner_B),
+                Affine(-1.0, 1.0, -1.0 * scaled_r_inner_B + offset_x_coord_b_,
+                       scaled_r_inner_B + offset_x_coord_b_),
                 Affine(-1.0, 1.0, -1.0 * scaled_r_inner_B, scaled_r_inner_B),
                 Affine(-1.0, 1.0, -1.0 * scaled_r_inner_B, scaled_r_inner_B)},
             translation_B));

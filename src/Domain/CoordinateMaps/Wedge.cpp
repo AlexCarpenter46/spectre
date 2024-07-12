@@ -61,8 +61,8 @@ Wedge<Dim>::Wedge(const double radius_inner, const double radius_outer,
          "The arguments passed into the constructor for Wedge result in an "
          "object where the "
          "outer surface is pierced by the inner surface.");
-  // TODO: Add assert to make sure you're only using sphericity 1 or 0 if you
-  // have a focal offset
+  // TODO: Add assert to make sure you're only using sphericity 1 if you
+  // have a focal offset (make sure only 1.0 for inner sphericity!!!!)
   ASSERT(radial_distribution_ == Distribution::Linear or
              (sphericity_inner_ == 1.0 and sphericity_outer_ == 1.0),
          "Only the 'Linear' radial distribution is supported for non-spherical "
