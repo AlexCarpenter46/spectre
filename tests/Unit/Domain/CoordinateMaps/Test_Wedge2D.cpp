@@ -126,40 +126,50 @@ void test_wedge2d_all_orientations(const bool with_equiangular_map) {
   CAPTURE(inner_circularity);
   const double outer_circularity = unit_dis(gen);
   CAPTURE(outer_circularity);
+  std::uniform_real_distribution<> cube_half_length_dist(4, 6);
+  std::uniform_real_distribution<> offset_coord_dist(-1, 1);
+  const double random_cube_half_length = cube_half_length_dist(gen);
+  CAPTURE(random_cube_half_length);
 
   using WedgeHalves = Wedge2D::WedgeHalves;
   const std::array<WedgeHalves, 3> possible_halves = {
       {WedgeHalves::UpperOnly, WedgeHalves::LowerOnly, WedgeHalves::Both}};
-  for (OrientationMapIterator<2> map_i{}; map_i; ++map_i) {
-    if (get(determinant(discrete_rotation_jacobian(*map_i))) < 0.0) {
-      continue;
-    }
-    // first slot is where +0 got map and second slot is +1 got mapped
-    // so +0 +1 is default
-    const auto& orientation = map_i();
-    CAPTURE(orientation);
-    for (const auto& halves : possible_halves) {
-      CAPTURE(halves);
-      for (const auto radial_distribution :
-           {CoordinateMaps::Distribution::Linear,
-            CoordinateMaps::Distribution::Logarithmic,
-            CoordinateMaps::Distribution::Inverse}) {
-        CAPTURE(radial_distribution);
-        test_suite_for_map_on_unit_cube(
-            Wedge2D{inner_radius,
-                    outer_radius,
-                    radial_distribution == CoordinateMaps::Distribution::Linear
-                        ? inner_circularity
-                        : 1.0,
-                    radial_distribution == CoordinateMaps::Distribution::Linear
-                        ? outer_circularity
-                        : 1.0,
-                    6.0,
-                    {{0.0, 0.0}},
-                    orientation,
-                    with_equiangular_map,
-                    halves,
-                    radial_distribution});
+
+  const std::array<double, 2> zero_offset{{0.0, 0.0}};
+  const std::array<std::array<double, 2>, 4> focal_offsets = {
+      {zero_offset,
+       {{offset_coord_dist(gen), 0.0}},
+       {{0.0, offset_coord_dist(gen)}},
+       {{offset_coord_dist(gen), offset_coord_dist(gen)}}}};
+
+  for (const auto& focal_offset : focal_offsets) {
+    CAPTURE(focal_offset);
+    for (OrientationMapIterator<2> map_i{}; map_i; ++map_i) {
+      if (get(determinant(discrete_rotation_jacobian(*map_i))) < 0.0) {
+        continue;
+      }
+      const auto& orientation = map_i();
+      CAPTURE(orientation);
+      for (const auto& halves : possible_halves) {
+        CAPTURE(halves);
+        for (const auto radial_distribution :
+             {CoordinateMaps::Distribution::Linear,
+              CoordinateMaps::Distribution::Logarithmic,
+              CoordinateMaps::Distribution::Inverse}) {
+          CAPTURE(radial_distribution);
+          test_suite_for_map_on_unit_cube(Wedge2D{
+              inner_radius, outer_radius,
+              (radial_distribution == CoordinateMaps::Distribution::Linear and
+               focal_offset == zero_offset)
+                  ? inner_circularity
+                  : 1.0,
+              (radial_distribution == CoordinateMaps::Distribution::Linear and
+               focal_offset == zero_offset)
+                  ? outer_circularity
+                  : 1.0,
+              random_cube_half_length, focal_offset, orientation,
+              with_equiangular_map, halves, radial_distribution});
+        }
       }
     }
   }
@@ -191,29 +201,69 @@ void test_wedge2d_fail() {
 
 void test_equality() {
   INFO("Equality");
+
+  const Wedge2D::WedgeHalves halves_to_use = Wedge2D::WedgeHalves::Both;
+  const Wedge2D::WedgeHalves changed_halves_to_use =
+      Wedge2D::WedgeHalves::UpperOnly;
+
+  const domain::CoordinateMaps::Distribution radial_distribution =
+      CoordinateMaps::Distribution::Logarithmic;
+  const domain::CoordinateMaps::Distribution changed_radial_distribution =
+      CoordinateMaps::Distribution::Linear;
+
+  const std::array<double, 1>& opening_angles{{M_PI_2}};
+  const std::array<double, 1>& changed_opening_angles{{M_PI_2 / 2.0}};
+
   const auto wedge2d =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true);
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+              halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_inner_radius_changed =
-      Wedge2D(0.3, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true);
+      Wedge2D(0.3, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+              halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_outer_radius_changed =
-      Wedge2D(0.2, 4.2, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true);
+      Wedge2D(0.2, 4.2, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+              halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_inner_circularity_changed =
-      Wedge2D(0.2, 4.0, 0.3, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true);
+      Wedge2D(0.2, 4.0, 0.3, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+              halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_outer_circularity_changed =
-      Wedge2D(0.2, 4.0, 0.0, 0.9, 6.0, {{0., 0.}}, OrientationMap<2>{}, true);
+      Wedge2D(0.2, 4.0, 0.0, 0.9, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+              halves_to_use, radial_distribution, opening_angles);
+  const auto wedge2d_cube_half_length_changed =
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 5.0, {{0., 0.}}, OrientationMap<2>{}, true,
+              halves_to_use, radial_distribution, opening_angles);
+  const auto wedge2d_focal_offset_changed =
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0.1, 0.}}, OrientationMap<2>{}, true,
+              halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_orientation_map_changed =
       Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::upper_eta(), Direction<2>::lower_xi()}}},
-              true);
+              true, halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_use_equiangular_map_changed =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, false);
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, false,
+              halves_to_use, radial_distribution, opening_angles);
+  const auto wedge2d_halves_to_use_changed =
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+              changed_halves_to_use, radial_distribution, opening_angles);
+  const auto wedge2d_radial_distribution_changed =
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+              halves_to_use, changed_radial_distribution, opening_angles);
+  const auto wedge2d_opening_angles_changed =
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+              halves_to_use, radial_distribution, changed_opening_angles);
+
   CHECK_FALSE(wedge2d == wedge2d_inner_radius_changed);
   CHECK_FALSE(wedge2d == wedge2d_outer_radius_changed);
   CHECK_FALSE(wedge2d == wedge2d_inner_circularity_changed);
   CHECK_FALSE(wedge2d == wedge2d_outer_circularity_changed);
+  CHECK_FALSE(wedge2d == wedge2d_cube_half_length_changed);
+  CHECK_FALSE(wedge2d == wedge2d_focal_offset_changed);
   CHECK_FALSE(wedge2d == wedge2d_orientation_map_changed);
   CHECK_FALSE(wedge2d == wedge2d_use_equiangular_map_changed);
+  CHECK_FALSE(wedge2d == wedge2d_halves_to_use_changed);
+  CHECK_FALSE(wedge2d == wedge2d_radial_distribution_changed);
+  CHECK_FALSE(wedge2d == wedge2d_opening_angles_changed);
 }
 }  // namespace
 
