@@ -270,6 +270,7 @@ std::optional<std::array<double, Dim>> Wedge<Dim>::inverse(
     const double one_over_rho = generalized_z / radius;
     const double zeta_coefficient =
         (scaled_frustum_rate_ + sphere_rate_ * one_over_rho);
+    // TODO : does this need to be updated to work with focal_offset_?
     // If -sphere_rate_/scaled_frustum_rate_ > 1, then
     // there exists a cone in x,y,z space given by the surface
     // zeta_coefficient=0; the map is singular on this surface.
@@ -455,14 +456,9 @@ tnsr::Ij<tt::remove_cvref_wrap_t<T>, Dim, Frame::NoFrame> Wedge<Dim>::jacobian(
     dxyz_deta[radial_coord] =
         gamma[radial_coord] * d_lifting_factor_lambda[azimuth_coord];
 
-    if (radial_distribution_ == Distribution::Linear) {
-      dxyz_deta[azimuth_coord] =
-          gamma[azimuth_coord] * d_lifting_factor_lambda[azimuth_coord] +
-          cap_deriv[1] * lambda_lifting_factor;
-    } else {
-      dxyz_deta[azimuth_coord] = (1.0 + square(cap[0])) * square(one_over_rho) *
-                                 cap_deriv[1] * lambda_lifting_factor;
-    }
+    dxyz_deta[azimuth_coord] =
+        gamma[azimuth_coord] * d_lifting_factor_lambda[azimuth_coord] +
+        cap_deriv[1] * lambda_lifting_factor;
 
     dxyz_deta[polar_coord] =
         gamma[polar_coord] * d_lifting_factor_lambda[azimuth_coord];

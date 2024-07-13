@@ -36,7 +36,10 @@ void test_wedge3d_all_directions() {
   std::uniform_real_distribution<> unit_dis(0, 1);
   std::uniform_real_distribution<> inner_dis(1, 3);
   std::uniform_real_distribution<> outer_dis(5.2, 7);
+  std::uniform_real_distribution<> cube_half_length_dist(4, 6);
+  std::uniform_real_distribution<> offset_coord_dist(-1, 1);
   std::uniform_real_distribution<> angle_dis(80.0, 90.0);
+
   const double inner_radius = inner_dis(gen);
   CAPTURE(inner_radius);
   const double outer_radius = outer_dis(gen);
@@ -45,6 +48,8 @@ void test_wedge3d_all_directions() {
   CAPTURE(inner_sphericity);
   const double outer_sphericity = unit_dis(gen);
   CAPTURE(outer_sphericity);
+  const double random_cube_half_length = cube_half_length_dist(gen);
+  CAPTURE(random_cube_half_length);
   const double opening_angle_xi = angle_dis(gen) * M_PI / 180.0;
   CAPTURE(opening_angle_xi * 180.0 / M_PI);
   const double opening_angle_eta = angle_dis(gen) * M_PI / 180.0;
@@ -54,38 +59,54 @@ void test_wedge3d_all_directions() {
   using WedgeHalves = Wedge3D::WedgeHalves;
   const std::array<WedgeHalves, 3> halves_array = {
       {WedgeHalves::UpperOnly, WedgeHalves::LowerOnly, WedgeHalves::Both}};
-  // [cartesian_product_loop]
-  for (const auto& [halves, orientation, with_equiangular_map,
-                    radial_distribution] :
-       random_sample<5>(
-           cartesian_product(
-               halves_array, all_wedge_directions(), make_array(true, false),
-               make_array(CoordinateMaps::Distribution::Linear,
-                          CoordinateMaps::Distribution::Linear,
-                          CoordinateMaps::Distribution::Linear,
-                          CoordinateMaps::Distribution::Logarithmic,
-                          CoordinateMaps::Distribution::Inverse)),
-           make_not_null(&gen))) {
+  const std::array<double, 3> zero_offset{{0.0, 0.0, 0.0}};
+  const std::array<std::array<double, 3>, 8> focal_offsets = {
+      {zero_offset,
+       {{offset_coord_dist(gen), 0.0, 0.0}},
+       {{0.0, offset_coord_dist(gen), 0.0}},
+       {{0.0, 0.0, offset_coord_dist(gen)}},
+       {{offset_coord_dist(gen), offset_coord_dist(gen), 0.0}},
+       {{offset_coord_dist(gen), 0.0, offset_coord_dist(gen)}},
+       {{0.0, offset_coord_dist(gen), offset_coord_dist(gen)}},
+       {{offset_coord_dist(gen), offset_coord_dist(gen),
+         offset_coord_dist(gen)}}}};
+  for (const auto& focal_offset : focal_offsets) {
+    CAPTURE(focal_offset);
     // [cartesian_product_loop]
-    CAPTURE(halves);
-    CAPTURE(orientation);
-    CAPTURE(with_equiangular_map);
-    CAPTURE(radial_distribution);
-    const Wedge3D wedge_map(
-        inner_radius, outer_radius,
-        radial_distribution == CoordinateMaps::Distribution::Linear
-            ? inner_sphericity
-            : 1.0,
-        radial_distribution == CoordinateMaps::Distribution::Linear
-            ? outer_sphericity
-            : 1.0,
-        6.0, {{0., 0., 0.}}, orientation, with_equiangular_map, halves,
-        radial_distribution,
-        with_equiangular_map
-            ? std::array<double, 2>{{opening_angle_xi, opening_angle_eta}}
-            : std::array<double, 2>{{M_PI_2, M_PI_2}},
-        with_adapted_equiangular_map);
-    test_suite_for_map_on_unit_cube(wedge_map);
+    for (const auto& [halves, orientation, with_equiangular_map,
+                      radial_distribution] :
+         random_sample<5>(
+             cartesian_product(
+                 halves_array, all_wedge_directions(), make_array(true, false),
+                 make_array(CoordinateMaps::Distribution::Linear,
+                            CoordinateMaps::Distribution::Linear,
+                            CoordinateMaps::Distribution::Linear,
+                            CoordinateMaps::Distribution::Logarithmic,
+                            CoordinateMaps::Distribution::Inverse)),
+             make_not_null(&gen))) {
+      // [cartesian_product_loop]
+      CAPTURE(halves);
+      CAPTURE(orientation);
+      CAPTURE(with_equiangular_map);
+      CAPTURE(radial_distribution);
+      const Wedge3D wedge_map(
+          inner_radius, outer_radius,
+          (radial_distribution == CoordinateMaps::Distribution::Linear and
+           focal_offset == zero_offset)
+              ? inner_sphericity
+              : 1.0,
+          (radial_distribution == CoordinateMaps::Distribution::Linear and
+           focal_offset == zero_offset)
+              ? outer_sphericity
+              : 1.0,
+          random_cube_half_length, focal_offset, orientation,
+          with_equiangular_map, halves, radial_distribution,
+          with_equiangular_map
+              ? std::array<double, 2>{{opening_angle_xi, opening_angle_eta}}
+              : std::array<double, 2>{{M_PI_2, M_PI_2}},
+          with_adapted_equiangular_map);
+      test_suite_for_map_on_unit_cube(wedge_map);
+    }
   }
 }
 
@@ -513,6 +534,7 @@ void test_wedge3d_fail() {
   const std::array<double, 3> test_mapped_point1{{3.0, 3.0, 0.0}};
   const std::array<double, 3> test_mapped_point2{{-3.0, 3.0, 0.0}};
 
+  // TODO : do we need to add a non-zero offset test case for this?
   // Any point with (x^2+y^2)/z^2 >= 1199 should fail the inverse map.
   const std::array<double, 3> test_mapped_point3{{sqrt(1198.0), 1.0, 1.0}};
   const std::array<double, 3> test_mapped_point4{{30.0, sqrt(299.0), 1.0}};
