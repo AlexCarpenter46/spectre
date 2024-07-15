@@ -123,6 +123,11 @@ create_grid_anchors(const std::array<double, 3>& center_a,
  *   hemispheres. The cutting plane always intersects the x-axis at the origin.
  * - The x-coordinate locations of the two objects should be chosen such that
  *   the center of mass is located at x=0.
+ * - The CubeLength option describes the length on the cube surrounding each
+ *   object. It must be greater than or equal to the physical separation between
+ *   the two objects. If CubeLength is greater than the physical separation,
+ *   then an offset will be applied to the objects to preserve their physical
+ *   separation.
  * -  Alternatively, one can replace the inner shell and cube blocks of each
  *    object with a single cartesian cube. This is less efficient, but allows
  *    testing of methods only coded on cartesian grids.

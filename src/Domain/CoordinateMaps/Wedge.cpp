@@ -61,8 +61,6 @@ Wedge<Dim>::Wedge(const double radius_inner, const double radius_outer,
          "The arguments passed into the constructor for Wedge result in an "
          "object where the "
          "outer surface is pierced by the inner surface.");
-  // TODO: Add assert to make sure you're only using sphericity 1 if you
-  // have a focal offset (make sure only 1.0 for inner sphericity!!!!)
   ASSERT(radial_distribution_ == Distribution::Linear or
              (sphericity_inner_ == 1.0 and sphericity_outer_ == 1.0),
          "Only the 'Linear' radial distribution is supported for non-spherical "
@@ -89,15 +87,18 @@ Wedge<Dim>::Wedge(const double radius_inner, const double radius_outer,
                           sphericity_inner * radius_inner);
     // TODO : change to an if else, don't want to recompute these
     if (not equal_within_roundoff(magnitude(focal_offset_), 0.0)) {
+      ASSERT(sphericity_inner_ == 0.0,
+             "Inner sphericity > 0.0 is not supported"
+             " for focal offsets.");
+      ASSERT(sphericity_outer_ == 0.0 or sphericity_outer_ == 1.0,
+             "Focal "
+             "offset is only supported for wedges with outer sphericity of 1.0 "
+             "or 0.0");
       scaled_frustum_zero_ =
           0.5 * cube_half_length_ *
-          // TODO : turn into ternary expression so we don't mislead that
-          // sphericity can be anything between 0 and 1 because it can't
           ((1.0 - sphericity_outer_) + (1.0 - sphericity_inner));
       scaled_frustum_rate_ =
           0.5 * cube_half_length_ *
-          // TODO : turn into ternary expression so we don't mislead that
-          // sphericity can be anything between 0 and 1 because it can't
           ((1.0 - sphericity_outer_) - (1.0 - sphericity_inner));
     }
   } else if (radial_distribution_ == Distribution::Logarithmic) {

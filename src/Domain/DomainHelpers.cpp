@@ -1002,7 +1002,7 @@ cyl_wedge_coord_map_surrounding_blocks(
   double temp_inner_circularity{};
   double temp_inner_radius{};
   double temp_outer_radius{};
-  std::array<double, 2> offset{0.0, 0.0};
+  std::array<double, 2> zero_offset{0.0, 0.0};
   double temp_lower_z_bound = lower_z_bound;
   double temp_upper_z_bound{};
   const auto use_both_halves = Wedge2D::WedgeHalves::Both;
@@ -1040,7 +1040,7 @@ cyl_wedge_coord_map_surrounding_blocks(
       for (const auto& cardinal_direction : wedge_orientations) {
         maps.emplace_back(Wedge3DPrism{
             Wedge2D{temp_inner_radius, temp_outer_radius,
-                    temp_inner_circularity, 1.0, 6.0, offset,
+                    temp_inner_circularity, 1.0, 1.0, zero_offset,
                     cardinal_direction, use_equiangular_map, use_both_halves,
                     radial_distribution.at(shell)},
             z_map});

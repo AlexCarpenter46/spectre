@@ -211,6 +211,13 @@ BinaryCompactObject::BinaryCompactObject(
           "or neither.");
     }
   }
+  if ((not is_excised_a_ or not is_excised_b_) and offset_x_coord_a_ != 0.0) {
+    PARSE_ERROR(
+        context,
+        "CubeLength > X_Coord_A - X_Coord_B is not supported for domains with "
+        "ExciseInterior = False. Consider using CartesianCubeAtX for the Object"
+        " without an excised interior.");
+  }
   if (envelope_radius_ >= outer_radius_) {
     PARSE_ERROR(context,
                 "The outer radius must be larger than the envelope radius.");
