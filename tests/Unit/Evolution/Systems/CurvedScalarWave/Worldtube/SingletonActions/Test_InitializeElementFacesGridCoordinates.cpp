@@ -124,6 +124,7 @@ SPECTRE_TEST_CASE(
             false},
         30.,
         50.,
+        13.0,
         initial_refinement,
         initial_extents};
     test_initialize_element_faces_coordinates_map(binary_compact_object,
