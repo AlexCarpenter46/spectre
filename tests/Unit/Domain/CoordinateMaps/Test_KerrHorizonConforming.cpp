@@ -104,7 +104,7 @@ void test_with_kerr_horizon(const double mass,
       2. * horizon_kerrschild_radius,
       1.,
       1.,
-      6.0,
+      1.0,
       {{0., 0., 0.}},
       {},
       false};

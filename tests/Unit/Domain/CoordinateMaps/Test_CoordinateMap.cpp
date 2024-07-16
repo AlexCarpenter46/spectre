@@ -689,7 +689,7 @@ void test_coordinate_map_with_rotation_wedge() {
 
   const auto first_map = Rotate(2.0);
   const auto second_map =
-      Wedge2D(3.0, 7.0, 0.0, 1.0, 6.0, {{0., 0.}},
+      Wedge2D(3.0, 7.0, 0.0, 1.0, 1.0, {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::lower_xi(), Direction<2>::lower_eta()}}},
               false);
@@ -752,7 +752,7 @@ void test_make_vector_coordinate_map_base() {
                  2.0,
                  0.0,
                  1.0,
-                 6.0,
+                 1.0,
                  {{0., 0.}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::upper_xi(), Direction<2>::upper_eta()}}},
@@ -762,7 +762,7 @@ void test_make_vector_coordinate_map_base() {
                  2.0,
                  0.0,
                  1.0,
-                 6.0,
+                 1.0,
                  {{0., 0.}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::upper_eta(), Direction<2>::lower_xi()}}},
@@ -772,7 +772,7 @@ void test_make_vector_coordinate_map_base() {
                  2.0,
                  0.0,
                  1.0,
-                 6.0,
+                 1.0,
                  {{0., 0.}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::lower_xi(), Direction<2>::lower_eta()}}},
@@ -782,7 +782,7 @@ void test_make_vector_coordinate_map_base() {
                  2.0,
                  0.0,
                  1.0,
-                 6.0,
+                 1.0,
                  {{0., 0.}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::lower_eta(), Direction<2>::upper_xi()}}},
@@ -794,7 +794,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::upper_xi(), Direction<2>::upper_eta()}}},
@@ -804,7 +804,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::upper_eta(), Direction<2>::lower_xi()}}},
@@ -814,7 +814,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::lower_xi(), Direction<2>::lower_eta()}}},
@@ -824,7 +824,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::lower_eta(), Direction<2>::upper_xi()}}},
@@ -882,7 +882,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::upper_xi(), Direction<2>::upper_eta()}}},
@@ -895,7 +895,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::upper_eta(), Direction<2>::lower_xi()}}},
@@ -908,7 +908,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::lower_xi(), Direction<2>::lower_eta()}}},
@@ -921,7 +921,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::lower_eta(), Direction<2>::upper_xi()}}},
@@ -934,7 +934,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::upper_xi(), Direction<2>::upper_eta()}}},
@@ -947,7 +947,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::upper_eta(), Direction<2>::lower_xi()}}},
@@ -960,7 +960,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::lower_xi(), Direction<2>::lower_eta()}}},
@@ -973,7 +973,7 @@ void test_make_vector_coordinate_map_base() {
               2.0,
               0.0,
               1.0,
-              6.0,
+              1.0,
               {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::lower_eta(), Direction<2>::upper_xi()}}},
@@ -1029,11 +1029,11 @@ void test_coordinate_maps_are_identity() {
   CHECK(giant_identity_map_base->function_of_time_names().empty());
 
   const auto wedge = make_coordinate_map<Frame::BlockLogical, Frame::Inertial>(
-      CoordinateMaps::Wedge<3>(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0., 0.}},
+      CoordinateMaps::Wedge<3>(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0., 0.}},
                                OrientationMap<3>{}, true));
   const auto wedge_composed_with_giant_identity =
       make_coordinate_map<Frame::BlockLogical, Frame::Inertial>(
-          CoordinateMaps::Wedge<3>(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0., 0.}},
+          CoordinateMaps::Wedge<3>(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0., 0.}},
                                    OrientationMap<3>{}, true),
           CoordinateMaps::Identity<3>{},
           CoordinateMaps::BulgedCube{sqrt(3.0), 0.0, false},

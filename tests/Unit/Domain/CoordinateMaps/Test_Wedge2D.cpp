@@ -60,26 +60,26 @@ void test_wedge2d_all_orientations(const bool with_equiangular_map) {
   CAPTURE(random_outer_radius_lower_eta);
 
   const Wedge2D map_upper_xi(
-      random_inner_radius_upper_xi, random_outer_radius_upper_xi, 0.0, 1.0, 6.0,
+      random_inner_radius_upper_xi, random_outer_radius_upper_xi, 0.0, 1.0, 1.0,
       {{0., 0.}},
       OrientationMap<2>{std::array<Direction<2>, 2>{
           {Direction<2>::upper_xi(), Direction<2>::upper_eta()}}},
       with_equiangular_map);
   const Wedge2D map_upper_eta(
       random_inner_radius_upper_eta, random_outer_radius_upper_eta, 0.0, 1.0,
-      6.0, {{0., 0.}},
+      1.0, {{0., 0.}},
       OrientationMap<2>{std::array<Direction<2>, 2>{
           {Direction<2>::upper_eta(), Direction<2>::lower_xi()}}},
       with_equiangular_map);
   const Wedge2D map_lower_xi(
-      random_inner_radius_lower_xi, random_outer_radius_lower_xi, 0.0, 1.0, 6.0,
+      random_inner_radius_lower_xi, random_outer_radius_lower_xi, 0.0, 1.0, 1.0,
       {{0., 0.}},
       OrientationMap<2>{std::array<Direction<2>, 2>{
           {Direction<2>::lower_xi(), Direction<2>::lower_eta()}}},
       with_equiangular_map);
   const Wedge2D map_lower_eta(
       random_inner_radius_lower_eta, random_outer_radius_lower_eta, 0.0, 1.0,
-      6.0, {{0., 0.}},
+      1.0, {{0., 0.}},
       OrientationMap<2>{std::array<Direction<2>, 2>{
           {Direction<2>::lower_eta(), Direction<2>::upper_xi()}}},
       with_equiangular_map);
@@ -178,7 +178,7 @@ void test_wedge2d_all_orientations(const bool with_equiangular_map) {
 void test_wedge2d_fail() {
   INFO("Wedge2d fail");
   const auto map =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true);
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true);
 
   // Any point with x<=0 should fail the inverse map.
   const std::array<double, 2> test_mapped_point1{{0.0, 3.0}};
@@ -215,42 +215,42 @@ void test_equality() {
   const std::array<double, 1>& changed_opening_angles{{M_PI_2 / 2.0}};
 
   const auto wedge2d =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
               halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_inner_radius_changed =
-      Wedge2D(0.3, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+      Wedge2D(0.3, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
               halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_outer_radius_changed =
-      Wedge2D(0.2, 4.2, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+      Wedge2D(0.2, 4.2, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
               halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_inner_circularity_changed =
-      Wedge2D(0.2, 4.0, 0.3, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+      Wedge2D(0.2, 4.0, 0.3, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
               halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_outer_circularity_changed =
-      Wedge2D(0.2, 4.0, 0.0, 0.9, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+      Wedge2D(0.2, 4.0, 0.0, 0.9, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
               halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_cube_half_length_changed =
       Wedge2D(0.2, 4.0, 0.0, 1.0, 5.0, {{0., 0.}}, OrientationMap<2>{}, true,
               halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_focal_offset_changed =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0.1, 0.}}, OrientationMap<2>{}, true,
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0.1, 0.}}, OrientationMap<2>{}, true,
               halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_orientation_map_changed =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}},
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::upper_eta(), Direction<2>::lower_xi()}}},
               true, halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_use_equiangular_map_changed =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, false,
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, false,
               halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_halves_to_use_changed =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
               changed_halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_radial_distribution_changed =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
               halves_to_use, changed_radial_distribution, opening_angles);
   const auto wedge2d_opening_angles_changed =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true,
+      Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
               halves_to_use, radial_distribution, changed_opening_angles);
 
   CHECK_FALSE(wedge2d == wedge2d_inner_radius_changed);
@@ -276,24 +276,24 @@ SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.Wedge2D.Map", "[Domain][Unit]") {
 
 #ifdef SPECTRE_DEBUG
   CHECK_THROWS_WITH(
-      Wedge2D(-0.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true),
+      Wedge2D(-0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true),
       Catch::Matchers::ContainsSubstring(
           "The radius of the inner surface must be greater than zero."));
   CHECK_THROWS_WITH(
-      Wedge2D(0.2, 4.0, -0.2, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true),
+      Wedge2D(0.2, 4.0, -0.2, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true),
       Catch::Matchers::ContainsSubstring(
           "Sphericity of the inner surface must be between 0 and 1"));
   CHECK_THROWS_WITH(
-      Wedge2D(0.2, 4.0, 0.0, -0.2, 6.0, {{0., 0.}}, OrientationMap<2>{}, true),
+      Wedge2D(0.2, 4.0, 0.0, -0.2, 1.0, {{0., 0.}}, OrientationMap<2>{}, true),
       Catch::Matchers::ContainsSubstring(
           "Sphericity of the outer surface must be between 0 and 1"));
   CHECK_THROWS_WITH(
-      Wedge2D(4.2, 4.0, 0.0, 1.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true),
+      Wedge2D(4.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true),
       Catch::Matchers::ContainsSubstring(
           "The radius of the outer surface must be greater than "
           "the radius of the inner surface."));
   CHECK_THROWS_WITH(
-      Wedge2D(3.0, 4.0, 1.0, 0.0, 6.0, {{0., 0.}}, OrientationMap<2>{}, true),
+      Wedge2D(3.0, 4.0, 1.0, 0.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true),
       Catch::Matchers::ContainsSubstring(
           "The arguments passed into the constructor for Wedge result in an "
           "object where the outer surface is pierced by the inner surface."));

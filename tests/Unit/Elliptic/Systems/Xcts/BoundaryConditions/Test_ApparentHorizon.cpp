@@ -431,6 +431,8 @@ void test_consistency_with_kerr(const bool compute_expansion) {
       2. * horizon_kerrschild_radius,
       1.,
       1.,
+      1.,
+      {{0.0, 0.0, 0.0}},
       {},
       false};
   const domain::CoordinateMaps::KerrHorizonConforming horizon_map{

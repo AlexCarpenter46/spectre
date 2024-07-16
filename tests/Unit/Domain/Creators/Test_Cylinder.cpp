@@ -203,7 +203,7 @@ void test_cylinder_construction(
                   outer_radius,
                   0.0,
                   1.0,
-                  6.0,
+                  1.0,
                   {{0.0, 0.0}},
                   OrientationMap<2>{std::array<Direction<2>, 2>{
                       {Direction<2>::upper_xi(), Direction<2>::upper_eta()}}},

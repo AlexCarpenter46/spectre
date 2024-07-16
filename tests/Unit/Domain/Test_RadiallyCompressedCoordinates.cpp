@@ -57,7 +57,7 @@ void test_radially_compressed_coordinates(
                                  outer_radius,
                                  1.0,
                                  1.0,
-                                 6.0,
+                                 1.0,
                                  {{0.0, 0.0, 0.0}},
                                  {},
                                  true,

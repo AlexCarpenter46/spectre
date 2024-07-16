@@ -148,7 +148,7 @@ void test_element_map<2>() {
   // test with a rotation and a wedge
   test_element_impl(
       false, element_id, affine_map, first_map,
-      Wedge2D(3., 7., 0.0, 1.0, 6.0, {{0.0, 0.0}},
+      Wedge2D(3., 7., 0.0, 1.0, 1.0, {{0.0, 0.0}},
               OrientationMap<2>{std::array<Direction<2>, 2>{
                   {Direction<2>::lower_xi(), Direction<2>::lower_eta()}}},
               false),
@@ -185,7 +185,7 @@ void test_element_map<3>() {
                                              7.0,
                                              0.8,
                                              0.9,
-                                             6.0,
+                                             1.0,
                                              {{0.0, 0.0, 0.0}},
                                              OrientationMap<3>{},
                                              true},

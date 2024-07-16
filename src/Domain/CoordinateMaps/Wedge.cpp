@@ -74,17 +74,10 @@ Wedge<Dim>::Wedge(const double radius_inner, const double radius_outer,
          "If using opening angles other than pi/2, then the "
          "equiangular map option must be turned on.");
   if (radial_distribution_ == Distribution::Linear) {
-    scaled_frustum_zero_ = 0.5 / sqrt_dim *
-                           ((1.0 - sphericity_outer_) * radius_outer +
-                            (1.0 - sphericity_inner) * radius_inner);
     sphere_zero_ = 0.5 * (sphericity_outer_ * radius_outer +
                           sphericity_inner * radius_inner);
-    scaled_frustum_rate_ = 0.5 / sqrt_dim *
-                           ((1.0 - sphericity_outer_) * radius_outer -
-                            (1.0 - sphericity_inner) * radius_inner);
     sphere_rate_ = 0.5 * (sphericity_outer_ * radius_outer -
                           sphericity_inner * radius_inner);
-    // TODO : change to an if else, don't want to recompute these
     if (not equal_within_roundoff(magnitude(focal_offset_), 0.0)) {
       ASSERT(sphericity_inner_ == 0.0,
              "Focal offsets are not supported for inner sphericity > 0.0");
@@ -99,6 +92,13 @@ Wedge<Dim>::Wedge(const double radius_inner, const double radius_outer,
       scaled_frustum_rate_ =
           0.5 * cube_half_length_ *
           ((1.0 - sphericity_outer_) - (1.0 - sphericity_inner));
+    } else {
+      scaled_frustum_zero_ = 0.5 / sqrt_dim *
+                             ((1.0 - sphericity_outer_) * radius_outer +
+                              (1.0 - sphericity_inner) * radius_inner);
+      scaled_frustum_rate_ = 0.5 / sqrt_dim *
+                             ((1.0 - sphericity_outer_) * radius_outer -
+                              (1.0 - sphericity_inner) * radius_inner);
     }
   } else if (radial_distribution_ == Distribution::Logarithmic) {
     scaled_frustum_zero_ = 0.0;

@@ -85,7 +85,7 @@ void test_equiangular() {
   // Construct a 2D equiangular Wedge map
   const domain::CoordinateMap<Frame::ElementLogical, Frame::Inertial,
                               domain::CoordinateMaps::Wedge<2>>
-      coord_map{{1., 2., 1., 1., 6.0, {{0.0, 0.0}}, {}, true}};
+      coord_map{{1., 2., 1., 1., 1.0, {{0.0, 0.0}}, {}, true}};
   using CoordAxis = domain::CoordinateMaps::detail::WedgeCoordOrientation<2>;
   // Set up a grid
   const Mesh<2> mesh{6, Spectral::Basis::Legendre,

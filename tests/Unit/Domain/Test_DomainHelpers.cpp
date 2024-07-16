@@ -98,8 +98,6 @@ std::vector<CoordinateMaps::Wedge<3>> test_wedge_map_generation(
     double outer_sphericity, const double cube_half_length,
     const std::array<double, 3> focal_offset, bool use_equiangular_map,
     bool use_half_wedges = false) {
-  //   const std::array<double, 3> focal_offset{{0., 0., 0.}};
-  //   const double cube_half_length = 6.0;
   using Wedge3DMap = CoordinateMaps::Wedge<3>;
 
   if (use_half_wedges) {
@@ -244,7 +242,7 @@ void test_six_wedge_directions_equiangular() {
   const double outer_radius = 2.7;
   const double inner_sphericity = 0.8;
   const double outer_sphericity = 0.6;
-  const double cube_half_length = 6.0;
+  const double cube_half_length = 1.0;
   const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
   const bool use_equiangular_map = true;
   test_wedge_map_generation_against_domain_helpers(
@@ -258,7 +256,7 @@ void test_six_wedge_directions_equidistant() {
   const double outer_radius = 7.1;
   const double inner_sphericity = 0.2;
   const double outer_sphericity = 0.4;
-  const double cube_half_length = 6.0;
+  const double cube_half_length = 1.0;
   const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
   const bool use_equiangular_map = false;
   test_wedge_map_generation_against_domain_helpers(
@@ -272,7 +270,7 @@ void test_ten_wedge_directions_equiangular() {
   const double outer_radius = 2.2;
   const double inner_sphericity = 0.0;
   const double outer_sphericity = 1.0;
-  const double cube_half_length = 6.0;
+  const double cube_half_length = 1.0;
   const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
   const bool use_equiangular_map = true;
   const bool use_half_wedges = true;
@@ -287,7 +285,7 @@ void test_ten_wedge_directions_equidistant() {
   const double outer_radius = 29.2;
   const double inner_sphericity = 0.01;
   const double outer_sphericity = 0.99;
-  const double cube_half_length = 6.0;
+  const double cube_half_length = 1.0;
   const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
   const bool use_equiangular_map = false;
   const bool use_half_wedges = true;
