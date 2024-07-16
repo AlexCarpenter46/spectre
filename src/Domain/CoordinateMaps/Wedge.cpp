@@ -6,7 +6,6 @@
 #include <climits>
 #include <cmath>
 #include <cstddef>
-#include <iostream>
 #include <pup.h>
 
 #include "DataStructures/Tensor/EagerMath/Determinant.hpp"
@@ -88,12 +87,12 @@ Wedge<Dim>::Wedge(const double radius_inner, const double radius_outer,
     // TODO : change to an if else, don't want to recompute these
     if (not equal_within_roundoff(magnitude(focal_offset_), 0.0)) {
       ASSERT(sphericity_inner_ == 0.0,
-             "Inner sphericity > 0.0 is not supported"
-             " for focal offsets.");
-      ASSERT(sphericity_outer_ == 0.0 or sphericity_outer_ == 1.0,
-             "Focal "
-             "offset is only supported for wedges with outer sphericity of 1.0 "
-             "or 0.0");
+             "Focal offsets are not supported for inner sphericity > 0.0");
+      ASSERT(
+          sphericity_outer_ == 0.0 or sphericity_outer_ == 1.0,
+          "Focal "
+          "offsets are only supported for wedges with outer sphericity of 1.0 "
+          "or 0.0");
       scaled_frustum_zero_ =
           0.5 * cube_half_length_ *
           ((1.0 - sphericity_outer_) + (1.0 - sphericity_inner));
@@ -216,7 +215,7 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> Wedge<Dim>::operator()(
     one_over_rho +=
         square(cap[1] - rotated_focus[azimuth_coord] / cube_half_length_);
   }
-  one_over_rho = 1. / sqrt(one_over_rho);
+  one_over_rho = 1.0 / sqrt(one_over_rho);
 
   std::array<ReturnType, Dim> physical_coords{};
   auto lambda_lifting_factor = lifting_factor_lambda(zeta, one_over_rho);
@@ -234,7 +233,6 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> Wedge<Dim>::operator()(
             (cap[1] - rotated_focus[azimuth_coord] / cube_half_length_) +
         rotated_focus[azimuth_coord];
   }
-
   return discrete_rotation(orientation_of_wedge_, std::move(physical_coords));
 }
 
@@ -393,7 +391,7 @@ tnsr::Ij<tt::remove_cvref_wrap_t<T>, Dim, Frame::NoFrame> Wedge<Dim>::jacobian(
     one_over_rho +=
         square(cap[1] - rotated_focus[azimuth_coord] / cube_half_length_);
   }
-  one_over_rho = 1. / sqrt(one_over_rho);
+  one_over_rho = 1.0 / sqrt(one_over_rho);
 
   const ReturnType s_factor = get_s_factor(zeta);
   const ReturnType s_factor_deriv = get_s_factor_deriv(zeta, s_factor);
@@ -566,7 +564,7 @@ Wedge<Dim>::inv_jacobian(const std::array<T, Dim>& source_coords) const {
     one_over_rho +=
         square(cap[1] - rotated_focus[azimuth_coord] / cube_half_length_);
   }
-  one_over_rho = 1. / sqrt(one_over_rho);
+  one_over_rho = 1.0 / sqrt(one_over_rho);
 
   const ReturnType one_over_rho_cubed = pow<3>(one_over_rho);
 

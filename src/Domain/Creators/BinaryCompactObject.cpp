@@ -7,7 +7,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <iostream>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -91,6 +90,7 @@ BinaryCompactObject::BinaryCompactObject(
       use_equiangular_map_(use_equiangular_map),
       radial_distribution_envelope_(radial_distribution_envelope),
       radial_distribution_outer_shell_(radial_distribution_outer_shell),
+      length_inner_cube_(cube_length),
       outer_boundary_condition_(std::move(outer_boundary_condition)),
       time_dependent_options_(std::move(time_dependent_options)),
       opening_angle_(M_PI * opening_angle_in_degrees / 180.0) {
@@ -112,7 +112,6 @@ BinaryCompactObject::BinaryCompactObject(
   // Determination of parameters for domain construction:
   const double tan_half_opening_angle = tan(0.5 * opening_angle_);
   translation_ = 0.5 * (x_coord_a_ + x_coord_b_);
-  length_inner_cube_ = cube_length;
   length_outer_cube_ =
       2.0 * envelope_radius_ / sqrt(2.0 + square(tan_half_opening_angle));
   offset_x_coord_a_ =
