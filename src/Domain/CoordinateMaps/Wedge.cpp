@@ -708,6 +708,9 @@ void Wedge<Dim>::pup(PUP::er& p) {
   if (version >= 2) {
     p | cube_half_length_;
     p | focal_offset_;
+  } else if (p.isUnpacking()) {
+    cube_half_length_ = 1.0;
+    focal_offset_ = make_with_value<std::array<double, Dim>>(Dim, 0.0);
   }
 }
 
