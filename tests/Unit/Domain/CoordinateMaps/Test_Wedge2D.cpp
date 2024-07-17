@@ -297,6 +297,19 @@ SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.Wedge2D.Map", "[Domain][Unit]") {
       Catch::Matchers::ContainsSubstring(
           "The arguments passed into the constructor for Wedge result in an "
           "object where the outer surface is pierced by the inner surface."));
+  CHECK_THROWS_WITH(
+      Wedge2D(0.2, 4.0, 0.2, 1.0, 1.0, {{5., 0.}}, OrientationMap<2>{}, true,
+              Wedge2D::WedgeHalves::Both,
+              domain::CoordinateMaps::Distribution::Linear),
+      Catch::Matchers::ContainsSubstring(
+          "Focal offsets are not supported for inner sphericity < 1.0"));
+  CHECK_THROWS_WITH(
+      Wedge2D(0.2, 4.0, 1.0, 0.5, 1.0, {{5., 0.}}, OrientationMap<2>{}, true,
+              Wedge2D::WedgeHalves::Both,
+              domain::CoordinateMaps::Distribution::Linear),
+      Catch::Matchers::ContainsSubstring(
+          "Focal offsets are only supported for wedges with outer sphericity of"
+          " 1.0 or 0.0"));
 #endif
 }
 }  // namespace domain

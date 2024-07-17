@@ -135,7 +135,7 @@ DomainCreator:
       OpeningAngle: 120.0
       BoundaryCondition: Flatness
     UseEquiangularMap: True
-    CubeLength: {{ *x_right - *x_left }}
+    CubeLength: Auto
     InitialRefinement:
       ObjectAShell:     [0, 0, 0]
       ObjectBShell:     [0, 0, 0]

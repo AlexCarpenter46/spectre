@@ -352,11 +352,11 @@ class BinaryCompactObject : public DomainCreator<3> {
   };
 
   struct CubeLength {
-    using type = double;
+    using type = Options::Auto<double>;
     static constexpr Options::String help = {
         "Specify the desired cube length that must be greater than or equal to "
-        "the separation length, where the cube is that which surrounds the "
-        "object."};
+        "the physical separation between the two objects. The cube is that "
+        "which surrounds each object."};
   };
 
   struct InitialRefinement {
@@ -462,7 +462,8 @@ class BinaryCompactObject : public DomainCreator<3> {
 
   BinaryCompactObject(
       typename ObjectA::type object_A, typename ObjectB::type object_B,
-      double envelope_radius, double outer_radius, double cube_length,
+      double envelope_radius, double outer_radius,
+      std::optional<double> cube_length,
       const typename InitialRefinement::type& initial_refinement,
       const typename InitialGridPoints::type& initial_number_of_grid_points,
       bool use_equiangular_map = true,

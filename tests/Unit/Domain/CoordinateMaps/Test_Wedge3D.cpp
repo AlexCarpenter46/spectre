@@ -565,8 +565,6 @@ SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.Wedge3D.Map", "[Domain][Unit]") {
   test_wedge3d_all_directions();
   test_wedge3d_alignment();
   test_wedge3d_random_radii();
-  // can't run this test right now because Distribution::Inverse case hasn't
-  // been handled in Wedge class yet
   test_wedge3d_large_radius();
   CHECK(not Wedge3D{}.is_identity());
 
@@ -613,6 +611,17 @@ SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.Wedge3D.Map", "[Domain][Unit]") {
       Catch::Matchers::ContainsSubstring(
           "If using opening angles other than pi/2, then the "
           "equiangular map option must be turned on."));
+  CHECK_THROWS_WITH(
+      Wedge3D(0.2, 4.0, 0.2, 1.0, 1.0, {{5., 0., 0.}}, OrientationMap<3>{},
+              true),
+      Catch::Matchers::ContainsSubstring(
+          "Focal offsets are not supported for inner sphericity < 1.0"));
+  CHECK_THROWS_WITH(
+      Wedge3D(0.2, 4.0, 1.0, 0.5, 1.0, {{5., 0., 0.}}, OrientationMap<3>{},
+              true),
+      Catch::Matchers::ContainsSubstring(
+          "Focal offsets are only supported for wedges with outer sphericity of"
+          " 1.0 or 0.0"));
 #endif
 }
 }  // namespace domain

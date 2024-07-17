@@ -43,6 +43,7 @@
 #include "Domain/FunctionsOfTime/QuaternionFunctionOfTime.hpp"
 #include "Domain/Structure/BlockNeighbor.hpp"  // IWYU pragma: keep
 #include "Options/ParseError.hpp"
+#include "Utilities/EqualWithinRoundoff.hpp"
 #include "Utilities/MakeArray.hpp"
 
 namespace Frame {
@@ -72,7 +73,7 @@ bool BinaryCompactObject::Object::is_excised() const {
 BinaryCompactObject::BinaryCompactObject(
     typename ObjectA::type object_A, typename ObjectB::type object_B,
     const double envelope_radius, const double outer_radius,
-    const double cube_length,
+    const std::optional<double> cube_length,
     const typename InitialRefinement::type& initial_refinement,
     const typename InitialGridPoints::type& initial_number_of_grid_points,
     const bool use_equiangular_map,
@@ -90,7 +91,6 @@ BinaryCompactObject::BinaryCompactObject(
       use_equiangular_map_(use_equiangular_map),
       radial_distribution_envelope_(radial_distribution_envelope),
       radial_distribution_outer_shell_(radial_distribution_outer_shell),
-      length_inner_cube_(cube_length),
       outer_boundary_condition_(std::move(outer_boundary_condition)),
       time_dependent_options_(std::move(time_dependent_options)),
       opening_angle_(M_PI * opening_angle_in_degrees / 180.0) {
@@ -112,6 +112,11 @@ BinaryCompactObject::BinaryCompactObject(
   // Determination of parameters for domain construction:
   const double tan_half_opening_angle = tan(0.5 * opening_angle_);
   translation_ = 0.5 * (x_coord_a_ + x_coord_b_);
+  if (cube_length.has_value()) {
+    length_inner_cube_ = cube_length.value();
+  } else {
+    length_inner_cube_ = x_coord_a_ - x_coord_b_;
+  }
   length_outer_cube_ =
       2.0 * envelope_radius_ / sqrt(2.0 + square(tan_half_opening_angle));
   offset_x_coord_a_ =
@@ -157,7 +162,7 @@ BinaryCompactObject::BinaryCompactObject(
         "malformed. A recommended radius is:\n"
             << suggested_value);
   }
-  if (cube_length < (x_coord_a_ - x_coord_b_)) {
+  if (length_inner_cube_ < (x_coord_a_ - x_coord_b_)) {
     PARSE_ERROR(
         context,
         "The cube length should be greater than or equal to the initial "
@@ -210,7 +215,9 @@ BinaryCompactObject::BinaryCompactObject(
           "or neither.");
     }
   }
-  if ((not is_excised_a_ or not is_excised_b_) and offset_x_coord_a_ != 0.0) {
+  if (((not use_single_block_a_ and not is_excised_a_) or
+       (not use_single_block_b_ and not is_excised_b_)) and
+      not equal_within_roundoff(offset_x_coord_a_, 0.0)) {
     PARSE_ERROR(
         context,
         "CubeLength > X_Coord_A - X_Coord_B is not supported for domains with "

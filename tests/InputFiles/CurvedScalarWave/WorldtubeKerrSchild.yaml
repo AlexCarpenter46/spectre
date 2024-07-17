@@ -58,7 +58,7 @@ DomainCreator:
       Interior:
         ExciseWithBoundaryCondition: Worldtube
       UseLogarithmicMap: false
-    CubeLength: {{ *XCoordA - *XCoordB }}
+    CubeLength: Auto
     Envelope:
       RadialDistribution: Linear
       Radius: 50.

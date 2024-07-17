@@ -11,6 +11,7 @@
 #include "DataStructures/Tensor/EagerMath/Determinant.hpp"
 #include "DataStructures/Tensor/Tensor.hpp"
 #include "DataStructures/VectorImpl.hpp"
+#include "Domain/CoordinateMaps/Distribution.hpp"
 #include "Domain/Structure/OrientationMap.hpp"
 #include "Utilities/ConstantExpressions.hpp"
 #include "Utilities/DereferenceWrapper.hpp"
@@ -79,13 +80,12 @@ Wedge<Dim>::Wedge(const double radius_inner, const double radius_outer,
     sphere_rate_ = 0.5 * (sphericity_outer_ * radius_outer -
                           sphericity_inner * radius_inner);
     if (not equal_within_roundoff(magnitude(focal_offset_), 0.0)) {
-      ASSERT(sphericity_inner_ == 0.0,
-             "Focal offsets are not supported for inner sphericity > 0.0");
+      ASSERT(sphericity_inner_ == 1.0,
+             "Focal offsets are not supported for inner sphericity < 1.0");
       ASSERT(
           sphericity_outer_ == 0.0 or sphericity_outer_ == 1.0,
-          "Focal "
-          "offsets are only supported for wedges with outer sphericity of 1.0 "
-          "or 0.0");
+          "Focal offsets are only supported for wedges with outer sphericity "
+          "of 1.0 or 0.0");
       scaled_frustum_zero_ =
           0.5 * cube_half_length_ *
           ((1.0 - sphericity_outer_) + (1.0 - sphericity_inner));
@@ -408,8 +408,6 @@ tnsr::Ij<tt::remove_cvref_wrap_t<T>, Dim, Frame::NoFrame> Wedge<Dim>::jacobian(
   if (radial_distribution_ == Distribution::Linear) {
     d_lifting_factor_lambda[radial_coord] =
         sphere_rate_ * one_over_rho + scaled_frustum_rate_;
-  } else if (radial_distribution_ == Distribution::Logarithmic) {
-    d_lifting_factor_lambda[radial_coord] = s_factor_deriv * one_over_rho;
   } else {
     d_lifting_factor_lambda[radial_coord] = s_factor_deriv * one_over_rho;
   }
@@ -581,8 +579,6 @@ Wedge<Dim>::inv_jacobian(const std::array<T, Dim>& source_coords) const {
   if (radial_distribution_ == Distribution::Linear) {
     d_lifting_factor_lambda[radial_coord] =
         sphere_rate_ * one_over_rho + scaled_frustum_rate_;
-  } else if (radial_distribution_ == Distribution::Logarithmic) {
-    d_lifting_factor_lambda[radial_coord] = s_factor_deriv * one_over_rho;
   } else {
     d_lifting_factor_lambda[radial_coord] = s_factor_deriv * one_over_rho;
   }
