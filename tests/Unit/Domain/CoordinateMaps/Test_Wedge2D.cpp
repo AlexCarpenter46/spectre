@@ -207,9 +207,9 @@ void test_equality() {
       Wedge2D::WedgeHalves::UpperOnly;
 
   const domain::CoordinateMaps::Distribution radial_distribution =
-      CoordinateMaps::Distribution::Logarithmic;
-  const domain::CoordinateMaps::Distribution changed_radial_distribution =
       CoordinateMaps::Distribution::Linear;
+  const domain::CoordinateMaps::Distribution changed_radial_distribution =
+      CoordinateMaps::Distribution::Logarithmic;
 
   const std::array<double, 1>& opening_angles{{M_PI_2}};
   const std::array<double, 1>& changed_opening_angles{{M_PI_2 / 2.0}};
@@ -233,7 +233,7 @@ void test_equality() {
       Wedge2D(0.2, 4.0, 0.0, 1.0, 5.0, {{0., 0.}}, OrientationMap<2>{}, true,
               halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_focal_offset_changed =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0.1, 0.}}, OrientationMap<2>{}, true,
+      Wedge2D(0.2, 4.0, 1.0, 1.0, 1.0, {{0.1, 0.}}, OrientationMap<2>{}, true,
               halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_orientation_map_changed =
       Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}},
@@ -247,7 +247,7 @@ void test_equality() {
       Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
               changed_halves_to_use, radial_distribution, opening_angles);
   const auto wedge2d_radial_distribution_changed =
-      Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
+      Wedge2D(0.2, 4.0, 1.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
               halves_to_use, changed_radial_distribution, opening_angles);
   const auto wedge2d_opening_angles_changed =
       Wedge2D(0.2, 4.0, 0.0, 1.0, 1.0, {{0., 0.}}, OrientationMap<2>{}, true,
