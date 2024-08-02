@@ -38,13 +38,13 @@ DomainCreator:
     ObjectA:
       InnerRadius: 0.45825
       OuterRadius: 6.0
-      XCoord: 7.683
+      XCoord: &XCoordA 7.683
       ExciseInterior: true
       UseLogarithmicMap: true
     ObjectB:
       InnerRadius: 0.45825
       OuterRadius: 6.0
-      XCoord: -7.683
+      XCoord: &XCoordB -7.683
       ExciseInterior: true
       UseLogarithmicMap: true
     Envelope:
@@ -55,6 +55,7 @@ DomainCreator:
       RadialDistribution: Linear
       OpeningAngle: 90.0
     UseEquiangularMap: True
+    CubeLength: Auto
     InitialRefinement:
       ObjectAShell:   [1, 1, 1]
       ObjectBShell:   [1, 1, 1]

@@ -47,17 +47,18 @@ DomainCreator:
     ObjectB:
       InnerRadius: 1.9
       OuterRadius: 2.2
-      XCoord: -1e-64
+      XCoord: &XCoordB -1e-64
       Interior:
         ExciseWithBoundaryCondition: DemandOutgoingCharSpeeds
       UseLogarithmicMap: false
     ObjectA:
       InnerRadius: 1.6
       OuterRadius: 2.
-      XCoord: 5.
+      XCoord: &XCoordA 5.
       Interior:
         ExciseWithBoundaryCondition: Worldtube
       UseLogarithmicMap: false
+    CubeLength: Auto
     Envelope:
       RadialDistribution: Linear
       Radius: 50.
