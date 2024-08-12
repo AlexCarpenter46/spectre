@@ -52,6 +52,7 @@ DomainCreator:
         ConstraintPreservingFreeOutflow:
           Type: ConstraintPreservingPhysical
     UseEquiangularMap: False
+    CubeLength: Auto
     InitialRefinement:
       ObjectA: [4, 4, 4]
       ObjectB: [4, 4, 4]
