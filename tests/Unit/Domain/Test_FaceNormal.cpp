@@ -451,8 +451,8 @@ void test_compute_item() {
       ElementMap<2, Frame::Inertial>(
           ElementId<2>(0),
           make_coordinate_map_base<Frame::BlockLogical, Frame::Inertial>(
-              CoordinateMaps::Wedge<2>(1., 2., 0., 1., OrientationMap<2>{},
-                                       false))));
+              CoordinateMaps::Wedge<2>(1., 2., 0., 1., 1.0, {{0.0, 0.0}},
+                                       OrientationMap<2>{}, false))));
 
   auto invert = [](std::unordered_map<Direction<2>, tnsr::i<DataVector, 2>>
                        map_of_vectors) {

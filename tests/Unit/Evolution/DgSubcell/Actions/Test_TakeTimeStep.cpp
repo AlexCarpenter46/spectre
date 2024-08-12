@@ -115,14 +115,16 @@ auto make_grid_map() {
     return make_coordinate_map_base<Frame::BlockLogical, Frame::Grid>(
         ProductOf2Maps<Affine, Affine>(Affine(-1.0, 1.0, -1.0, -0.8),
                                        Affine(-1.0, 1.0, -1.0, -0.8)),
-        domain::CoordinateMaps::Wedge<2>(0.5, 0.75, 1.0, 1.0, {}, false));
+        domain::CoordinateMaps::Wedge<2>(0.5, 0.75, 1.0, 1.0, 1.0, {{0.0, 0.0}},
+                                         {}, false));
   } else {
     using domain::CoordinateMaps::ProductOf3Maps;
     return make_coordinate_map_base<Frame::BlockLogical, Frame::Grid>(
         ProductOf3Maps<Affine, Affine, Affine>(Affine(-1.0, 1.0, -1.0, -0.8),
                                                Affine(-1.0, 1.0, -1.0, -0.8),
                                                Affine(-1.0, 1.0, 0.8, 1.0)),
-        domain::CoordinateMaps::Wedge<3>(0.5, 0.75, 1.0, 1.0, {}, false));
+        domain::CoordinateMaps::Wedge<3>(0.5, 0.75, 1.0, 1.0, 1.0,
+                                         {{0.0, 0.0, 0.0}}, {}, false));
   }
 }
 
