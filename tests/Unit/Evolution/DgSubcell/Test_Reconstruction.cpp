@@ -71,8 +71,8 @@ auto make_map() {
     return make_coordinate_map_base<Frame::ElementLogical, Frame::Inertial>(
         ProductOf2Maps<Affine, Affine>(Affine(-1.0, 1.0, -1.0, -0.8),
                                        Affine(-1.0, 1.0, -1.0, -0.8)),
-        Wedge2D(0.5, 0.75, 1.0, 1.0, OrientationMap<Dim>::create_aligned(),
-                false));
+        Wedge2D(0.5, 0.75, 1.0, 1.0, 1.0, {{0.0, 0.0}},
+                OrientationMap<Dim>::create_aligned(), false));
   } else {
     using domain::make_coordinate_map_base;
     using domain::CoordinateMaps::Affine;
@@ -82,8 +82,8 @@ auto make_map() {
         ProductOf3Maps<Affine, Affine, Affine>(Affine(-1.0, 1.0, -1.0, -0.8),
                                                Affine(-1.0, 1.0, -1.0, -0.8),
                                                Affine(-1.0, 1.0, 0.8, 1.0)),
-        Wedge3D(0.5, 0.75, 1.0, 1.0, OrientationMap<Dim>::create_aligned(),
-                false));
+        Wedge3D(0.5, 0.75, 1.0, 1.0, 1.0, {{0.0, 0.0, 0.0}},
+                OrientationMap<Dim>::create_aligned(), false));
   }
 }
 

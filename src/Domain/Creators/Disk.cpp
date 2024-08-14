@@ -83,19 +83,39 @@ Domain<2> Disk::create_domain() const {
 
   auto coord_maps = make_vector_coordinate_map_base<Frame::BlockLogical,
                                                     Frame::Inertial>(
-      Wedge2DMap{inner_radius_, outer_radius_, 0.0, 1.0,
+      Wedge2DMap{inner_radius_,
+                 outer_radius_,
+                 0.0,
+                 1.0,
+                 6.0,
+                 {{0.0, 0.0}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::upper_xi(), Direction<2>::upper_eta()}}},
                  use_equiangular_map_},
-      Wedge2DMap{inner_radius_, outer_radius_, 0.0, 1.0,
+      Wedge2DMap{inner_radius_,
+                 outer_radius_,
+                 0.0,
+                 1.0,
+                 6.0,
+                 {{0.0, 0.0}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::lower_eta(), Direction<2>::upper_xi()}}},
                  use_equiangular_map_},
-      Wedge2DMap{inner_radius_, outer_radius_, 0.0, 1.0,
+      Wedge2DMap{inner_radius_,
+                 outer_radius_,
+                 0.0,
+                 1.0,
+                 6.0,
+                 {{0.0, 0.0}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::lower_xi(), Direction<2>::lower_eta()}}},
                  use_equiangular_map_},
-      Wedge2DMap{inner_radius_, outer_radius_, 0.0, 1.0,
+      Wedge2DMap{inner_radius_,
+                 outer_radius_,
+                 0.0,
+                 1.0,
+                 6.0,
+                 {{0.0, 0.0}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::upper_eta(), Direction<2>::lower_xi()}}},
                  use_equiangular_map_});

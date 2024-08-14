@@ -51,7 +51,7 @@ void test_area_element_against_normal_vector() {
   const auto element_map_3d = ElementMap<3, TargetFrame>(
       ElementId<3>(0),
       make_coordinate_map_base<Frame::BlockLogical, TargetFrame>(
-          CoordinateMaps::Wedge(1., 2., 1., 1.,
+          CoordinateMaps::Wedge(1., 2., 1., 1., 1.0, {{0.0, 0.0, 0.0}},
                                 OrientationMap<3>::create_aligned(), true)));
 
   gr::Solutions::Minkowski<3> minkowski{};

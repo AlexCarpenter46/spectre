@@ -57,6 +57,8 @@ void test_radially_compressed_coordinates(
                                  outer_radius,
                                  1.0,
                                  1.0,
+                                 1.0,
+                                 {{0.0, 0.0, 0.0}},
                                  OrientationMap<3>::create_aligned(),
                                  true,
                                  CoordinateMaps::Wedge<3>::WedgeHalves::Both,

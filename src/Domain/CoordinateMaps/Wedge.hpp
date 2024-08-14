@@ -61,11 +61,12 @@ struct WedgeCoordOrientation<3> {
  * through the rest of the domain code (see issue
  * https://github.com/sxs-collaboration/spectre/issues/2988).
  *
- * The following documentation is for the 3D map. The 2D map is obtained by
- * setting either of the two angular coordinates to zero (and using \f$\xi\f$ as
- * the radial coordinate). Note that there is also a normalization factor of
- * $\sqrt{3}$ that appears in multiple expressions in the 3D case that becomes
- * $\sqrt{2}$ in the 2D case.
+ * The following documentation is for the **centered** 3D map, as we will defer
+ * the dicussion of `Wedge`s with a `focal_offset_` to a later section. The 2D
+ * map is obtained by setting either of the two angular coordinates to zero
+ * (and using \f$\xi\f$ as the radial coordinate). Note that there is also a
+ * normalization factor of $\sqrt{3}$ that appears in multiple expressions in
+ * the 3D case that becomes $\sqrt{2}$ in the 2D case.
  *
  * The Wedge map is constructed by linearly interpolating between a bulged
  * face of radius `radius_inner_` to a bulged face of radius `radius_outer_`,
@@ -76,11 +77,12 @@ struct WedgeCoordOrientation<3> {
  * parameterizing these surface as they are, in which case we have the
  * equidistant choice of coordinates, or whether to apply a tangent map to them
  * which leads us to the equiangular choice of coordinates. `Wedge`s have
- * variable `opening_angles_`, which are the angular sizes of the wedge in the
- * $\xi$ and $\eta$ directions (for the 3D case) in the target frame. By
- * default, `Wedge`s have opening angles of $\pi/2$, so we will discuss that
- * case here and defer the discussion of generalized opening angles for a later
- * section.
+ * variable `opening_angles_` which, for centered `Wedge`s, are the angular
+ * sizes of the wedge in the $\xi$ and $\eta$ directions (for the 3D case) in
+ * the target frame. By default, `Wedge`s have opening angles of $\pi/2$, so we
+ * will discuss that case here and defer both the discussion of generalized
+ * opening angles and the interaction between opening angles and non-zero focal
+ * offsets for later sections.
  *
  * For a Wedge with $\xi$ and $\eta$ opening angles of $\pi/2$, the
  * equiangular coordinates in terms of the logical coordinates are:
@@ -523,6 +525,264 @@ struct WedgeCoordOrientation<3> {
  * $-x$ directions have angular dimensions and gridpoint distributions
  * determined by the other four `Wedge`s, as the six `Wedge`s must conforming
  * have gridpoint distributions at the $\xi = \pm1$, $\eta = \pm 1$ boundaries.
+ *
+ * ### Wedge with a Focal Offset
+ * \image html FocalOffset.jpg "Wedges without and with a focal offset"
+ *
+ * In the case of the rectangular
+ * \ref ::domain::creators::BinaryCompactObject "BinaryCompactObject" domain,
+ * it becomes desirable to offset the center of the spherical excision surface
+ * relative to the center of the cubical surface surrounding it. To enable the
+ * offsetting of the central excision, the Wedge map must be generalized
+ * according to the *focal lifting* method, which we will now discuss.
+ *
+ * We consider the problem of creating parameterized volumes from parameterized
+ * surfaces. Consider a parameterized surface $\vec{\sigma}_{parent}(\xi,\eta)$,
+ * also referred to as the *parent surface*. We define *focal lifting* as the
+ * projection of this parent surface into a three-dimensional parameterized
+ * volume $\vec{x}(\xi,\eta, \zeta)$ with respect to some *focus* $\vec{x}_0$
+ * and *lifting scale factor* $\Lambda(\xi,\eta,\zeta)$. The resulting volume
+ * is then said to be a *focally lifted* volume. These volume maps can be cast
+ * into the following form:
+ *
+ * \begin{align}
+ *   \vec{x} - \vec{x}_0 = \Lambda(\vec{\sigma}_{parent}-\vec{x}_0),
+ *   \label{eq:focal_lifting}
+ * \end{align}
+ *
+ * which makes apparent how the mapped point $\vec{x}(\xi,\eta,\zeta)$ is
+ * obtained. The parametric equations for the generalized 3D Wedge maps can all
+ * be written in the above form, which we will refer to as
+ * *focally lifted form*. In the case of the 3D Wedge map with no focal offset,
+ * we have:
+ *
+ * \begin{align}
+ *   \vec{x}_0 &= 0 \\
+ *   \Lambda &= \left\{\frac{F(\zeta)}{\sqrt{3}} +
+ *                     \frac{S(\zeta)}{\rho} \right\} \\
+ *   \vec{\sigma}_{parent} &= \begin{bmatrix} \Xi, \mathrm{H}, 1 \end{bmatrix}^T
+ * \end{align}
+ *
+ * The above map can be thought of as constructing a wedge from a biunit cube
+ * centered at the origin. Points on the parent surface are scaled by a factor
+ * of $\Lambda(\xi,\eta,\zeta)$ to obtain the corresponding point in the
+ * volume. When generalizing the map to have a focus shifted from the origin
+ * (obtained by setting `focal_offset_` to be non-zero), we scale the original
+ * parent surface $\vec{\sigma}_{parent} = [\Xi, \mathrm{H},1]^T$ by a factor
+ * $L$, and let the focus $\vec{x_0}$ shift away from the origin. The
+ * generalized wedge map is then given by:
+ *
+ * \begin{align}
+ *   \vec{x} - \vec{x}_0 =
+ *       \left\{\frac{F(\zeta)}{L\sqrt 3} +
+ *       \frac{S(\zeta)}{L\rho}\right\}
+ *           \begin{bmatrix}
+ *             L\Xi - x_0 \\
+ *             L\mathrm{H} - y_0 \\
+ *             L-z_0 \\
+ *           \end{bmatrix}
+ * \end{align}
+ *
+ * where we are now defining $\rho$ to be
+ *
+ * \begin{align}
+ *   \rho = \sqrt{(\Xi - x_0/L)^2 + (\mathrm{H} - y_0/L)^2 + (1 - z_0/L)^2}.
+ *   \label{eq:generalized_rho}
+ * \end{align}
+ *
+ * This map is often written as:
+ *
+ * \begin{align}
+ *   \vec{x} - \vec{x}_0 =
+ *       \left\{\frac{F(\zeta)}{\sqrt{3}} +
+ *       \frac{S(\zeta)}{\rho}\right\}(\vec{\sigma}_0 - \vec{x}_0/L),
+ *    \label{eq:focally_lifted_map_with_s_and_f_factors}
+ * \end{align}
+ *
+ * where $\vec{\sigma}_0 = [\Xi, \mathrm{H},1]^T$, as the parent surface
+ * $\vec{\sigma}_{parent}$ is now $L\vec{\sigma}_0$. We give the quantity in
+ * braces the name $z_{\Lambda} = L\Lambda$, *generalized z*. With this
+ * definition, we can rewrite
+ * Eq. ($\ref{eq:focally_lifted_map_with_s_and_f_factors}$) in the simpler form,
+ *
+ * \begin{align}
+ *   \vec{x} - \vec{x}_0 = z_{\Lambda}(\vec{\sigma}_0 - \vec{x}_0/L).
+ *   \label{eq:focally_lifted_map_with_generalized_z_coef}
+ * \end{align}
+ *
+ * The map can be inverted by first solving for \f$z_{\Lambda}\f$ in terms of
+ * the target coordinates. We make use of the fact that the parent surface
+ * $\vec{\sigma}_{parent}$ has a constant normal vector $\hat{n} = \hat{z}$.
+ *
+ * \begin{align}
+ *   z_{\Lambda} = \frac{(\vec{x} - \vec{x}_0)\cdot\hat{n}}
+ *                      {(\vec{\sigma}_0-\vec{x}_0/L)\cdot\hat{n}}.
+ * \end{align}
+ *
+ * In other words, when $\hat{n} = \hat{z}$,
+ *
+ * \begin{align}
+ *   z_{\Lambda} = \left\{\frac{F(\zeta)}{\sqrt{3}} +
+ *                 \frac{S(\zeta)}{\rho}\right\}
+ *               = \frac{z - z_0}{1 - z_0/L}
+ * \end{align}
+ *
+ * Moving all the known quantities in
+ * Eq. ($\ref{eq:focally_lifted_map_with_generalized_z_coef}$) to the left hand
+ * side results in the following expression that solves for the source
+ * coordinates $\xi$ and $\eta$ in terms of the target coordinates:
+ *
+ * \begin{align}
+ *   \frac{\vec{x} - \vec{x}_0}{z_{\Lambda}} + \frac{\vec{x}_0}{L}
+ *        = \vec{\sigma}_0(\xi,\eta)
+ *        = \begin{bmatrix}
+ *            \Xi \\
+ *            \mathrm{H} \\
+ *            1 \\
+ *          \end{bmatrix},
+ * \end{align}
+ *
+ * Note that $|\vec{\sigma}_0 - \vec{x}_0/L| = \sqrt{(\Xi - x_0/L)^2 +
+ * (\mathrm{H} - y_0/L)^2 + (1 - z_0/L)^2} = \rho$, indicating that an
+ * expression for $\rho$ in terms of the target coordinates can be computed via
+ * taking the magnitude of both sides of
+ * Eq. ($\ref{eq:focally_lifted_map_with_generalized_z_coef}$):
+ *
+ * \begin{align}
+ *   |\vec{x} - \vec{x}_0| = z_{\Lambda}|\vec{\sigma}_0 - \vec{x}_0/L|
+ *                         = z_{\Lambda}\rho.
+ * \end{align}
+ *
+ * The quantity $\rho$ is then given by:
+ *
+ * \begin{align}
+ *   \rho = \frac{|\vec{x} - \vec{x}_0|}{z_{\Lambda}}.
+ * \end{align}
+ *
+ * With $\rho$ computed, the radial source coordinate $\zeta$ can be computed
+ * from
+ *
+ * \begin{align}
+ *   z_{\Lambda} = \left\{\frac{F(\zeta)}{\sqrt{3}} +
+ *                 \frac{S(\zeta)}{\rho} \right\}
+ *               = \left\{\frac{F_0}{\sqrt{3}} + \frac{S_0}{\rho} +
+ *                 \frac{F_1\zeta}{\sqrt{3}} + \frac{S_1\zeta}{\rho}\right\},
+ * \end{align}
+ *
+ * which gives
+ *
+ * \begin{align}
+ *   \zeta = \frac{z_{\Lambda} -
+ *                 \left(\frac{F_0}{\sqrt{3}} + \frac{S_0}{\rho}\right)}
+ *                {\left(\frac{F_1}{\sqrt{3}} + \frac{S_1}{\rho}\right)}.
+ * \end{align}
+ *
+ * To compute the Jacobian, it is useful to first note that $\rho$
+ * (Eq. ($\ref{eq:generalized_rho}$)) is the magnitude of the vector
+ *
+ * \begin{align}
+ *   \vec{\rho} = \vec{\sigma}_0 - \vec{x}_0/L
+ *              = \begin{bmatrix}
+ *                  \Xi - x_0/L \\
+ *                  \mathrm{H} - y_0/L \\
+ *                  1 - z_0/L
+ *                \end{bmatrix}
+ * \end{align}
+ *
+ * and that we can express the target coordinates in
+ * Eq. ($\ref{eq:focally_lifted_map_with_generalized_z_coef}$) in terms of the
+ * components of $\vec{\rho}$:
+ *
+ * \begin{align}
+ *   x &= z_{\Lambda}\rho_x + x_0 \\
+ *   y &= z_{\Lambda}\rho_y + y_0 \\
+ *   z &= z_{\Lambda}\rho_z + z_0
+ * \end{align}
+ *
+ * Some common terms used in the Jacobian are the derivatives of $z_{\Lambda}$
+ * with respect to the source coordinates:
+ *
+ * \begin{align}
+ *   \partial_{\xi}z_{\Lambda} &=
+ *       \frac{-S(\zeta)\Xi'\rho_x}{\rho^3} \\
+ *   \partial_{\eta}z_{\Lambda} &=
+ *       \frac{-S(\zeta)\mathrm{H}'\rho_y}{\rho^3} \\
+ *   \partial_{\zeta}z_{\Lambda} &=
+ *       \frac{F'(\zeta)}{\sqrt{3}} + \frac{S'(\zeta)}{\rho}
+ * \end{align}
+ *
+ * The Jacobian then is:
+ *
+ * \begin{align}
+ *   J =
+ *       \begin{bmatrix}
+ *         \Xi'z_{\Lambda} + \rho_x\partial_{\xi}z_{\Lambda} &
+ *             \rho_x\partial_{\eta}z_{\Lambda} &
+ *             \rho_x\partial_{\zeta}z_{\Lambda} \\
+ *         \rho_y\partial_{\xi}z_{\Lambda} &
+ *             \mathrm{H}'z_{\Lambda} + \rho_y\partial_{\eta}z_{\Lambda} &
+ *             \rho_y\partial_{\zeta}z_{\Lambda} \\
+ *         \rho_z\partial_{\xi}z_{\Lambda} &
+ *             \rho_z\partial_{\eta}z_{\Lambda} &
+ *             \rho_z\partial_{\zeta}z_{\Lambda} \\
+ *       \end{bmatrix}
+ * \end{align}
+ *
+ * A common factor that shows up in this inverse Jacobian is:
+ *
+ * \begin{align}
+ *   T:= \frac{S(\zeta)}{(\partial_{\zeta}z_{\Lambda})\rho^3}
+ * \end{align}
+ *
+ * And the inverse Jacobian is then:
+ *
+ * \begin{align}
+ *   J^{-1} =
+ *       \frac{1}{z_{\Lambda}}\begin{bmatrix}
+ *         \Xi'^{-1} & 0 & -\rho_x(\Xi'\rho_z)^{-1} \\
+ *         0 & \mathrm{H}'^{-1} & -\rho_y(\mathrm{H}'\rho_z)^{-1} \\
+ *         T\rho_x & T\rho_y &
+ *             T\rho_z + F(\partial_{\zeta}z_{\Lambda}\rho_z)^{-1}/\sqrt{3}
+ *       \end{bmatrix}
+ * \end{align}
+ *
+ * ### Offsetting a Rotated Wedge
+ * The default Wedge map is oriented in the $+z$ direction, so the
+ * construction of a Wedge oriented along a different direction requires an
+ * additional OrientationMap $R$ to be passed to `orientation_of_wedge`. When
+ * offsetting a rotated Wedge, the coordinates passed as parameters to
+ * `focal_offset` are in the coordinate frame in which the Wedge is rotated
+ * (the target frame). However, the focal lifting procedure (shown in
+ * Eq. ($\ref{eq:focal_lifting}$)) is done in the default frame in which the
+ * Wedge is facing the $+z$ direction, so the focal offset $\vec{x}_0$ is first
+ * hit by the inverse rotation $R^{-1}$ and then the rotated focus
+ * $R^{-1}\vec{x}_0$ is used internally as the focus for the $+z$ Wedge. When
+ * the focal lifting calculation has completed, the rotation of the $+z$ Wedge
+ * into the desired orientation by $R$ also rotates the focus into the desired
+ * location. When performing the inverse operation, the focus is similarly
+ * rotated into the default frame, where the inversion is performed.
+ *
+ * ### Interaction between opening angles and focal offsets
+ * When a Wedge is created with a non-zero focal offset, the resulting shape
+ * can take on a variety of possible angular sizes, depending on where the
+ * focus is placed relative to the default centered location. The reader might
+ * note that the angular size of a Wedge can also be controlled by passing an
+ * argument to the `opening_angles` parameter in the Wedge constructor. While
+ * both of these methods allow the angular size of a Wedge to be changed, the
+ * user is prevented from employing both of them at the same time. In
+ * particular, when the the offset is set to some non-zero value, the
+ * `opening_angles_` member variable is set to $\pi/2$. Note that the
+ * `opening_angles_` member being set to $\pi/2$ does not imply the
+ * resulting Wedge will have an angular size of $\pi/2$. On the contrary, the
+ * Wedge will have the angular size that is determined by the application of
+ * the focal lifting method on the parent surface, which is the upper $+z$ face
+ * of a cube that is centered at the origin.
+ *
+ * Because `opening_angles_` is set to $\pi/2$ when there is a non-zero focal
+ * offset, when there is a non-zero focal offset and `with_equiangular_map_` is
+ * `true`, $\Xi$ is given by Eq. ($\ref{eq:equiangular_xi_pi_over_2}$) and
+ * $\mathrm{H}$ by Eq. ($\ref{eq:equiangular_eta_pi_over_2}$), just as it is
+ * for the case of a centered Wedge with `opening_angles_` of $\pi/2$.
  */
 template <size_t Dim>
 class Wedge {
@@ -541,18 +801,30 @@ class Wedge {
    * Constructs a 3D wedge.
    * \param radius_inner Distance from the origin to one of the corners which
    * lie on the inner surface.
-   * \param radius_outer Distance from the origin to one of the corners which
-   * lie on the outer surface.
+   * \param radius_outer For any Wedge with zero `focal_offset` or a spherical
+   * Wedge with nonzero `focal_offset`, this is the distance from the
+   * `focal_offset` to one of the corners that lie on the outer surface. For a
+   * Wedge with both a nonzero `focal_offset` and `outer_sphericity == 0.0`,
+   * this parameter has no effect because the outer corners of the Wedge will
+   * instead lie on the parent surface, which is set by the `cube_half_length`
+   * (see Wedge docs for more details).
    * \param orientation_of_wedge The orientation of the desired wedge relative
    * to the orientation of the default wedge which is a wedge that has its
    * curved surfaces pierced by the upper-z axis. The logical $\xi$ and $\eta$
    * coordinates point in the cartesian x and y directions, respectively.
    * \param sphericity_inner Value between 0 and 1 which determines
    * whether the inner surface is flat (value of 0), spherical (value of 1) or
-   * somewhere in between.
+   * somewhere in between. If `focal_offset` is nonzero, `sphericity_inner` must
+   * be `1.0`.
    * \param sphericity_outer Value between 0 and 1 which determines
    * whether the outer surface is flat (value of 0), spherical (value of 1) or
-   * somewhere in between.
+   * somewhere in between. If `focal_offset` is nonzero, `sphericity_outer` must
+   * be `0.0` or `1.0`.
+   * \param cube_half_length Half the length of the parent surface (see Wedge
+   * documentation for more details). This parameter has no effect when
+   * `focal_offset` is zero.
+   * \param focal_offset The target frame coordinates of the focus from which
+   * the Wedge is focally lifted.
    * \param with_equiangular_map Determines whether to apply a tangent function
    * mapping to the logical coordinates (for `true`) or not (for `false`).
    * \param halves_to_use Determines whether to construct a full wedge or only
@@ -569,20 +841,24 @@ class Wedge {
    * \param radial_distribution Determines how to distribute gridpoints along
    * the radial direction. For wedges that are not exactly spherical, only
    * `Distribution::Linear` is currently supported.
-   * \param opening_angles Determines the angular size of the wedge. The default
-   * value is $\pi/2$, which corresponds to a wedge size of $\pi/2$. For this
-   * setting, four Wedges can be put together to cover $2\pi$ in angle along a
-   * great circle. This option is meant to be used with the equiangular map
-   * option turned on.
+   * \param opening_angles Determines the angular size of a wedge when
+   * `focal_offset` is 0. The default value is $\pi/2$, which corresponds to a
+   * wedge size of $\pi/2$. For this setting, four Wedges can be put together to
+   * cover $2\pi$ in angle along a great circle. This option is meant to be used
+   * with the equiangular map option turned on. If `focal_offset` is nonzero,
+   * this parameter must be $\pi/2$ because opening angles don't make sense to
+   * define with a focal offset (see Wedge docs for more details).
    * \param with_adapted_equiangular_map Determines whether to adapt the
    * point distribution in the wedge to match its physical angular size. When
    * `true`, angular distances are proportional to logical distances. Note
    * that it is not possible to use adapted maps in every Wedge of a Sphere
-   * unless each Wedge has the same size along both angular directions.
+   * unless each Wedge has the same size along both angular directions. If
+   * `focal_offset` is nonzero, this parameter has no effect.
    */
   Wedge(double radius_inner, double radius_outer, double sphericity_inner,
-        double sphericity_outer, OrientationMap<Dim> orientation_of_wedge,
-        bool with_equiangular_map,
+        double sphericity_outer, double cube_half_length,
+        std::array<double, Dim> focal_offset,
+        OrientationMap<Dim> orientation_of_wedge, bool with_equiangular_map,
         WedgeHalves halves_to_use = WedgeHalves::Both,
         Distribution radial_distribution = Distribution::Linear,
         const std::array<double, Dim - 1>& opening_angles =
@@ -637,10 +913,183 @@ class Wedge {
   static constexpr size_t azimuth_coord =
       detail::WedgeCoordOrientation<Dim>::azimuth_coord;
 
-  // factors out calculation of z needed for mapping and jacobian
+  /*!
+   * \brief Factors out calculation of $S(\zeta)$ needed for the map and the
+   * Jacobian.
+   *
+   * \details The value of $S(\zeta)$ is computed differently for different
+   * radial distributions.
+   *
+   * For a **linear** radial distribution:
+   *
+   * \f{align*}{
+   *   S(\zeta) = S_0 + S_1\zeta
+   * \f}
+   *
+   * where $S_0$ and $S_1$ are defined as
+   *
+   * \f{align*}{
+   *   S_0 &=
+   *       \frac{1}{2} \big\{
+   *         s_{outer}R_{outer} + s_{inner}R_{inner}
+   *       \big\} \\
+   *   S_1 &= \partial_{\zeta}S
+   *        = \frac{1}{2} \big\{ s_{outer}R_{outer} - s_{inner}R_{inner}\big\}
+   * \f}
+   *
+   * and are stored in `sphere_zero_` and `sphere_rate_`, respectively.
+   *
+   * For a **logarithmic** radial distribution:
+   *
+   * \f{align*}{
+   *   S(\zeta) = \exp{(S_0 + S_1\zeta)}
+   * \f}
+   *
+   * where $S_0$ and $S_1$ are defined as
+   *
+   * \f{align*}{
+   *   S_0 &= \frac{1}{2} \ln(R_{outer}R_{inner}) \\
+   *   S_1 &= \frac{1}{2} \ln(R_{outer}/R_{inner})
+   * \f}
+   *
+   * With these definitions of $S_0$ and $S_1$, we can rewrite the expression
+   * for $S(\zeta)$ as:
+   *
+   * \f{align*}{
+   *   S(\zeta) &= \sqrt{R_{inner}^{1-\zeta}R_{outer}^{1+\zeta}}
+   * \f}
+   *
+   * As with the linear distribution, $S_0$ and $S_1$ are stored in
+   * `sphere_zero_` and `sphere_rate_`, respectively.
+   *
+   * For an **inverse** radial distribution:
+   *
+   * \f{align*}{
+   *   S(\zeta) =
+   *       \frac{2R_{inner}R_{outer}}
+   *            {(1 + \zeta)R_{inner} + (1 - \zeta)R_{outer}}
+   * \f}
+   *
+   * In this case, `sphere_zero_` and `sphere_rate_` will simply be `NaN`.
+   *
+   * See Wedge for more details on these quantities.
+   *
+   * \param zeta the radial source coordinate
+   */
   template <typename T>
-  tt::remove_cvref_wrap_t<T> default_physical_z(const T& zeta,
-                                                const T& one_over_rho) const;
+  tt::remove_cvref_wrap_t<T> get_s_factor(const T& zeta) const;
+  /*!
+   * \brief Factors out calculation of $S'(\zeta)$ needed for the Jacobian.
+   *
+   * \details The value of $S'(\zeta)$ is computed differently for different
+   * radial distributions.
+   *
+   * For a **linear** radial distribution:
+   *
+   * \f{align*}{
+   *   S'(\zeta) =
+   *       \frac{1}{2} \big\{ s_{outer}R_{outer} - s_{inner}R_{inner}\big\}
+   * \f}
+   *
+   * For a **logarithmic** radial distribution:
+   *
+   * \f{align*}{
+   *   S'(\zeta) = \frac{1}{2} S(\zeta)\ln(R_{outer}/R_{inner})
+   * \f}
+   *
+   * where $S(\zeta)$ is defined in `get_s_factor()`.
+   *
+   * For an **inverse** radial distribution:
+   *
+   * \f{align*}{
+   *   S'(\zeta) =
+   *       \frac{2(R_{inner} R_{outer}^2 - R_{inner}^2 R_{outer})}
+   *            {(R_{inner} + R_{outer} + \zeta(R_{inner} - R_{outer}))^2}
+   * \f}
+   *
+   * See Wedge and `get_s_factor()` for more details on these quantities.
+   *
+   * \param zeta the radial source coordinate
+   * \param s_factor $S(\zeta)$ (see `get_s_factor()`)
+   */
+  template <typename T>
+  tt::remove_cvref_wrap_t<T> get_s_factor_deriv(const T& zeta,
+                                                const T& s_factor) const;
+
+  /*!
+   * \brief Factors out calculation of $z_{\Lambda}$ needed for the map and the
+   * Jacobian.
+   *
+   * \details The value of $z_{\Lambda}$  is computed differently for different
+   * radial distributions.
+   *
+   * For a **linear** radial distribution:
+   *
+   * \f{align*}{
+   *   z_{\Lambda} = \frac{F(\zeta)}{\sqrt 3} + \frac{S(\zeta)}{\rho}
+   * \f}
+   *
+   * For a **logarithmic** or **inverse** radial distribution:
+   *
+   * \f{align*}{
+   *   z_{\Lambda} = \frac{S(\zeta)}{\rho}
+   * \f}
+   *
+   * See Wedge and `get_s_factor()` for more details on these quantities.
+   *
+   * \param zeta the radial source coordinate
+   * \param one_over_rho one over $\rho$ where
+   * $\rho = |\vec{\sigma}_0 - \vec{x}_0/L| = \sqrt{(\Xi - x_0/L)^2 +
+   * (\mathrm{H} - y_0/L)^2 + (1 - z_0/L)^2}$ (see Wedge)
+   * \param s_factor $S(\zeta)$ (see `get_s_factor()`)
+   */
+  template <typename T>
+  tt::remove_cvref_wrap_t<T> get_generalized_z(const T& zeta,
+                                               const T& one_over_rho,
+                                               const T& s_factor) const;
+  template <typename T>
+  tt::remove_cvref_wrap_t<T> get_generalized_z(const T& zeta,
+                                               const T& one_over_rho) const;
+  /*!
+   * \brief Factors out calculation of $\partial_i z_{\Lambda}$ needed for the
+   * Jacobian
+   *
+   * \details For **all** radial distributions:
+   *
+   * \f{align*}{
+   *   \partial_{\xi} z_{\Lambda} &=
+   *       \frac{-S(\zeta)\Xi'\rho_x}{\rho^3} \\
+   *   \partial_{\eta} z_{\Lambda} &=
+   *       \frac{-S(\zeta)\mathrm{H}'\rho_y}{\rho^3} \\
+   *   \partial_{\zeta} z_{\Lambda} &=
+   *       \frac{F'(\zeta)}{\sqrt 3} + \frac{S'(\zeta)}{\rho}
+   * \f}
+   *
+   * However, $\partial_{\zeta} z_{\Lambda}$ reduces to
+   *
+   * \f{align*}{
+   *   \partial_{\zeta} z_{\Lambda} &= \frac{S'(\zeta)}{\rho}
+   * \f}
+   *
+   * for **logarithmic** and **inverse** radial distributions because
+   * $F(\zeta) = 0$.
+   *
+   * See Wedge and `get_s_factor()` for more details on these quantities.
+   *
+   * \param zeta the radial source coordinate
+   * \param one_over_rho one over $\rho$ where
+   * $\rho = |\vec{\sigma}_0 - \vec{x}_0/L| = \sqrt{(\Xi - x_0/L)^2 +
+   * (\mathrm{H} - y_0/L)^2 + (1 - z_0/L)^2}$ (see Wedge)
+   * \param s_factor $S(\zeta)$ (see `get_s_factor()`)
+   * \param cap_deriv $\Xi'$ and $\mathrm{H}'$ (see Wedge)
+   * \param rho_vec $\vec{\rho} = [\Xi-x_0/L, \mathrm{H}-y_0/L, 1-z_0/L]^T$
+   * (see Wedge)
+   */
+  template <typename T>
+  std::array<tt::remove_cvref_wrap_t<T>, Dim> get_d_generalized_z(
+      const T& zeta, const T& one_over_rho, const T& s_factor,
+      const std::array<tt::remove_cvref_wrap_t<T>, Dim - 1>& cap_deriv,
+      const std::array<tt::remove_cvref_wrap_t<T>, Dim>& rho_vec) const;
 
   template <size_t LocalDim>
   // NOLINTNEXTLINE(readability-redundant-declaration)
@@ -650,15 +1099,29 @@ class Wedge {
   /// Distance from the origin to one of the corners which lie on the inner
   /// surface.
   double radius_inner_{std::numeric_limits<double>::signaling_NaN()};
-  /// Distance from the origin to one of the corners which lie on the outer
-  /// surface.
+  /// For any Wedge with zero `focal_offset` or a spherical Wedge with nonzero
+  /// `focal_offset`, this is the distance from the `focal_offset` to one of the
+  /// corners that lie on the outer surface. For a Wedge with both a nonzero
+  /// `focal_offset` and `outer_sphericity == 0.0`, this parameter has no effect
+  /// because the outer corners of the Wedge will instead lie on the parent
+  /// surface, which is set by the `cube_half_length` (see Wedge docs for more
+  /// details).
   double radius_outer_{std::numeric_limits<double>::signaling_NaN()};
   /// Value between 0 and 1 which determines whether the inner surface is flat
-  /// (value of 0), spherical (value of 1) or somewhere in between.
+  /// (value of 0), spherical (value of 1) or somewhere in between. If
+  /// `focal_offset` is nonzero, `sphericity_inner` must be `1.0`.
   double sphericity_inner_{std::numeric_limits<double>::signaling_NaN()};
   /// Value between 0 and 1 which determines whether the outer surface is flat
-  /// (value of 0), spherical (value of 1) or somewhere in between.
+  /// (value of 0), spherical (value of 1) or somewhere in between. If
+  /// `focal_offset` is nonzero, `sphericity_outer` must be `0.0` or `1.0`.
   double sphericity_outer_{std::numeric_limits<double>::signaling_NaN()};
+  /// Half the length of the parent surface (see Wedge documentation for more
+  /// details). This parameter has no effect when `focal_offset` is zero.
+  double cube_half_length_{std::numeric_limits<double>::signaling_NaN()};
+  /// The target frame coordinates of the focus from which the Wedge is focally
+  /// lifted.
+  std::array<double, Dim> focal_offset_{
+      make_array<Dim>(std::numeric_limits<double>::signaling_NaN())};
   /// The orientation of the desired wedge relative to the orientation of the
   /// default wedge which is a wedge that has its curved surfaces pierced by the
   /// upper-z axis. The logical $\xi$ and $\eta$ coordinates point in the

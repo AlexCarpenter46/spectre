@@ -179,9 +179,14 @@ void test_set_initial_data(
   const size_t subcell_num_points = subcell_mesh.number_of_grid_points();
   const auto map =
       domain::make_coordinate_map<Frame::ElementLogical, Frame::Inertial>(
-          domain::CoordinateMaps::Wedge<3>{
-              0.75 * star_radius, star_radius * 1.25, 1., 1.,
-              OrientationMap<3>::create_aligned(), true});
+          domain::CoordinateMaps::Wedge<3>{0.75 * star_radius,
+                                           star_radius * 1.25,
+                                           1.,
+                                           1.,
+                                           1.,
+                                           {{0.0, 0.0, 0.0}},
+                                           OrientationMap<3>::create_aligned(),
+                                           true});
   const auto dg_logical_coords = logical_coordinates(dg_mesh);
   const auto dg_coords = map(dg_logical_coords);
   const auto dg_inv_jacobian = map.inv_jacobian(dg_logical_coords);
