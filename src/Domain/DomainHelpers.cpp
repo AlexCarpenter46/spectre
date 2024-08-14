@@ -618,6 +618,8 @@ std::vector<domain::CoordinateMaps::Wedge<3>> sph_wedge_coordinate_maps(
   double temp_inner_radius = inner_radius;
   double temp_outer_radius{};
   double temp_inner_sphericity = inner_sphericity;
+  const double cube_half_length = 1.0;
+  const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
   for (size_t layer_i = 0; layer_i < number_of_layers; layer_i++) {
     const auto& radial_distribution_this_layer =
         radial_distribution.at(layer_i);
@@ -633,23 +635,24 @@ std::vector<domain::CoordinateMaps::Wedge<3>> sph_wedge_coordinate_maps(
            face_j++) {
         wedges_for_this_layer.emplace_back(
             temp_inner_radius, temp_outer_radius, temp_inner_sphericity,
-            outer_sphericity, gsl::at(wedge_orientations, face_j),
-            use_equiangular_map, Halves::Both, radial_distribution_this_layer,
+            outer_sphericity, cube_half_length, focal_offset,
+            gsl::at(wedge_orientations, face_j), use_equiangular_map,
+            Halves::Both, radial_distribution_this_layer,
             std::array<double, 2>({{M_PI_2, M_PI_2}}));
       }
     } else {
       for (size_t i = 0; i < 4; i++) {
         wedges_for_this_layer.emplace_back(
             temp_inner_radius, temp_outer_radius, temp_inner_sphericity,
-            outer_sphericity, gsl::at(wedge_orientations, i),
-            use_equiangular_map, Halves::LowerOnly,
-            radial_distribution_this_layer,
+            outer_sphericity, cube_half_length, focal_offset,
+            gsl::at(wedge_orientations, i), use_equiangular_map,
+            Halves::LowerOnly, radial_distribution_this_layer,
             std::array<double, 2>({{opening_angle, M_PI_2}}));
         wedges_for_this_layer.emplace_back(
             temp_inner_radius, temp_outer_radius, temp_inner_sphericity,
-            outer_sphericity, gsl::at(wedge_orientations, i),
-            use_equiangular_map, Halves::UpperOnly,
-            radial_distribution_this_layer,
+            outer_sphericity, cube_half_length, focal_offset,
+            gsl::at(wedge_orientations, i), use_equiangular_map,
+            Halves::UpperOnly, radial_distribution_this_layer,
             std::array<double, 2>({{opening_angle, M_PI_2}}));
       }
       const double endcap_opening_angle = M_PI - opening_angle;
@@ -657,14 +660,14 @@ std::vector<domain::CoordinateMaps::Wedge<3>> sph_wedge_coordinate_maps(
           {endcap_opening_angle, endcap_opening_angle}};
       wedges_for_this_layer.emplace_back(
           temp_inner_radius, temp_outer_radius, temp_inner_sphericity,
-          outer_sphericity, gsl::at(wedge_orientations, 4), use_equiangular_map,
-          Halves::Both, radial_distribution_this_layer, endcap_opening_angles,
-          false);
+          outer_sphericity, cube_half_length, focal_offset,
+          gsl::at(wedge_orientations, 4), use_equiangular_map, Halves::Both,
+          radial_distribution_this_layer, endcap_opening_angles, false);
       wedges_for_this_layer.emplace_back(
           temp_inner_radius, temp_outer_radius, temp_inner_sphericity,
-          outer_sphericity, gsl::at(wedge_orientations, 5), use_equiangular_map,
-          Halves::Both, radial_distribution_this_layer, endcap_opening_angles,
-          false);
+          outer_sphericity, cube_half_length, focal_offset,
+          gsl::at(wedge_orientations, 5), use_equiangular_map, Halves::Both,
+          radial_distribution_this_layer, endcap_opening_angles, false);
     }
     for (const auto& wedge : wedges_for_this_layer) {
       wedges_for_all_layers.push_back(wedge);
@@ -1000,6 +1003,7 @@ cyl_wedge_coord_map_surrounding_blocks(
   double temp_inner_circularity{};
   double temp_inner_radius{};
   double temp_outer_radius{};
+  const std::array<double, 2> zero_offset{0.0, 0.0};
   double temp_lower_z_bound = lower_z_bound;
   double temp_upper_z_bound{};
   const auto use_both_halves = Wedge2D::WedgeHalves::Both;
@@ -1037,8 +1041,8 @@ cyl_wedge_coord_map_surrounding_blocks(
       for (const auto& cardinal_direction : wedge_orientations) {
         maps.emplace_back(Wedge3DPrism{
             Wedge2D{temp_inner_radius, temp_outer_radius,
-                    temp_inner_circularity, 1.0, cardinal_direction,
-                    use_equiangular_map, use_both_halves,
+                    temp_inner_circularity, 1.0, 1.0, zero_offset,
+                    cardinal_direction, use_equiangular_map, use_both_halves,
                     radial_distribution.at(shell)},
             z_map});
       }

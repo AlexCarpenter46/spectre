@@ -184,8 +184,14 @@ void test_set_initial_data(
                      Spectral::Quadrature::GaussLobatto};
   const auto map =
       domain::make_coordinate_map<Frame::ElementLogical, Frame::Inertial>(
-          domain::CoordinateMaps::Wedge<3>{
-              2., 4., 1., 1., OrientationMap<3>::create_aligned(), true});
+          domain::CoordinateMaps::Wedge<3>{2.,
+                                           4.,
+                                           1.,
+                                           1.,
+                                           1.,
+                                           {{0.0, 0.0, 0.0}},
+                                           OrientationMap<3>::create_aligned(),
+                                           true});
   const auto logical_coords = logical_coordinates(mesh);
   const auto coords = map(logical_coords);
   const auto inv_jacobian = map.inv_jacobian(logical_coords);

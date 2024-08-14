@@ -448,7 +448,7 @@ void test_compute_item() {
       ElementMap<2, Frame::Inertial>(
           ElementId<2>(0),
           make_coordinate_map_base<Frame::BlockLogical, Frame::Inertial>(
-              CoordinateMaps::Wedge<2>(1., 2., 0., 1.,
+              CoordinateMaps::Wedge<2>(1., 2., 0., 1., 1.0, {{0.0, 0.0}},
                                        OrientationMap<2>::create_aligned(),
                                        false))));
 

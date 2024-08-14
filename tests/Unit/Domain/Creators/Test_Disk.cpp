@@ -100,19 +100,39 @@ void test_disk_construction(
 
   auto coord_maps = make_vector_coordinate_map_base<Frame::BlockLogical,
                                                     TargetFrame>(
-      Wedge2DMap{inner_radius, outer_radius, 0.0, 1.0,
+      Wedge2DMap{inner_radius,
+                 outer_radius,
+                 0.0,
+                 1.0,
+                 1.0,
+                 {{0.0, 0.0}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::upper_xi(), Direction<2>::upper_eta()}}},
                  use_equiangular_map},
-      Wedge2DMap{inner_radius, outer_radius, 0.0, 1.0,
+      Wedge2DMap{inner_radius,
+                 outer_radius,
+                 0.0,
+                 1.0,
+                 1.0,
+                 {{0.0, 0.0}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::lower_eta(), Direction<2>::upper_xi()}}},
                  use_equiangular_map},
-      Wedge2DMap{inner_radius, outer_radius, 0.0, 1.0,
+      Wedge2DMap{inner_radius,
+                 outer_radius,
+                 0.0,
+                 1.0,
+                 1.0,
+                 {{0.0, 0.0}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::lower_xi(), Direction<2>::lower_eta()}}},
                  use_equiangular_map},
-      Wedge2DMap{inner_radius, outer_radius, 0.0, 1.0,
+      Wedge2DMap{inner_radius,
+                 outer_radius,
+                 0.0,
+                 1.0,
+                 1.0,
+                 {{0.0, 0.0}},
                  OrientationMap<2>{std::array<Direction<2>, 2>{
                      {Direction<2>::upper_eta(), Direction<2>::lower_xi()}}},
                  use_equiangular_map});

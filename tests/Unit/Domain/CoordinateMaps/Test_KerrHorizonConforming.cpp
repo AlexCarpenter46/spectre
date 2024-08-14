@@ -104,6 +104,8 @@ void test_with_kerr_horizon(const double mass,
       2. * horizon_kerrschild_radius,
       1.,
       1.,
+      1.0,
+      {{0., 0., 0.}},
       OrientationMap<3>::create_aligned(),
       false};
   const domain::CoordinateMaps::KerrHorizonConforming horizon_map{
