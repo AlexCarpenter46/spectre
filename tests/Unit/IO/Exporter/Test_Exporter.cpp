@@ -102,6 +102,7 @@ SPECTRE_TEST_CASE("Unit.IO.Exporter", "[Unit]") {
         Object{0.8, 2.5, -6., true, true},
         60.,
         300.,
+        14.0,  // cube_length = separation
         0_st,
         6_st,
         true,
