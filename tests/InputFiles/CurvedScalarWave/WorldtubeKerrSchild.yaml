@@ -59,6 +59,7 @@ DomainCreator:
         ExciseWithBoundaryCondition: Worldtube
       UseLogarithmicMap: false
     CenterOfMassOffset: [0., 0.]
+    CubeLength: Auto
     Envelope:
       RadialDistribution: Linear
       Radius: 50.

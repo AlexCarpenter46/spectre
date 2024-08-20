@@ -595,6 +595,7 @@ size_t which_wedge_index(const ShellWedges& which_wedges) {
 std::vector<domain::CoordinateMaps::Wedge<3>> sph_wedge_coordinate_maps(
     const double inner_radius, const double outer_radius,
     const double inner_sphericity, const double outer_sphericity,
+    const double cube_half_length, const std::array<double, 3> focal_offset,
     const bool use_equiangular_map, const bool use_half_wedges,
     const std::vector<double>& radial_partitioning,
     const std::vector<domain::CoordinateMaps::Distribution>&
