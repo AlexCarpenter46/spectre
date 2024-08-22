@@ -29,7 +29,7 @@ spectre_run_cmake_gcc() {
           -D CMAKE_CXX_COMPILER=g++ \
           -D CMAKE_Fortran_COMPILER=gfortran \
           -D CHARM_ROOT=$CHARM_ROOT \
-          -D CMAKE_BUILD_TYPE=Release \
+          -D CMAKE_BUILD_TYPE=Debug \
           -D MEMORY_ALLOCATOR=JEMALLOC \
           -D BUILD_PYTHON_BINDINGS=ON \
           -D ENABLE_PARAVIEW=ON \

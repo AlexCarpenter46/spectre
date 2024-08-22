@@ -95,12 +95,10 @@ void test_periodic_different_blocks() {
 
 std::vector<CoordinateMaps::Wedge<3>> test_wedge_map_generation(
     double inner_radius, double outer_radius, double inner_sphericity,
-    double outer_sphericity, bool use_equiangular_map,
+    double outer_sphericity, const double cube_half_length,
+    const std::array<double, 3> focal_offset, bool use_equiangular_map,
     bool use_half_wedges = false) {
   using Wedge3DMap = CoordinateMaps::Wedge<3>;
-
-  const double cube_half_length = 1.0;
-  const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
 
   if (use_half_wedges) {
     using Halves = Wedge3DMap::WedgeHalves;
@@ -201,14 +199,15 @@ std::vector<CoordinateMaps::Wedge<3>> test_wedge_map_generation(
 
 void test_wedge_map_generation_against_domain_helpers(
     double inner_radius, double outer_radius, double inner_sphericity,
-    double outer_sphericity, bool use_equiangular_map,
+    double outer_sphericity, double cube_half_length,
+    const std::array<double, 3> focal_offset, bool use_equiangular_map,
     bool use_half_wedges = false) {
   const auto expected_coord_maps = test_wedge_map_generation(
       inner_radius, outer_radius, inner_sphericity, outer_sphericity,
-      use_equiangular_map, use_half_wedges);
+      cube_half_length, focal_offset, use_equiangular_map, use_half_wedges);
   const auto maps = sph_wedge_coordinate_maps(
       inner_radius, outer_radius, inner_sphericity, outer_sphericity,
-      use_equiangular_map, use_half_wedges);
+      cube_half_length, focal_offset, use_equiangular_map, use_half_wedges);
   CHECK(maps == expected_coord_maps);
 }
 
@@ -220,6 +219,8 @@ void test_wedge_errors() {
         const double outer_radius = 2.0;
         const double inner_sphericity = 1.0;
         const double outer_sphericity = 1.0;
+        const double cube_half_length = 1.0;
+        const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
         const bool use_equiangular_map = true;
         const bool use_half_wedges = true;
         const std::vector<domain::CoordinateMaps::Distribution>
@@ -228,8 +229,8 @@ void test_wedge_errors() {
         const ShellWedges which_wedges = ShellWedges::FourOnEquator;
         static_cast<void>(sph_wedge_coordinate_maps(
             inner_radius, outer_radius, inner_sphericity, outer_sphericity,
-            use_equiangular_map, use_half_wedges, {}, radial_distribution,
-            which_wedges));
+            cube_half_length, focal_offset, use_equiangular_map,
+            use_half_wedges, {}, radial_distribution, which_wedges));
       }()),
       Catch::Matchers::ContainsSubstring(
           "If we are using half wedges we must also be using "
@@ -243,10 +244,12 @@ void test_six_wedge_directions_equiangular() {
   const double outer_radius = 2.7;
   const double inner_sphericity = 0.8;
   const double outer_sphericity = 0.6;
+  const double cube_half_length = 1.0;
+  const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
   const bool use_equiangular_map = true;
   test_wedge_map_generation_against_domain_helpers(
       inner_radius, outer_radius, inner_sphericity, outer_sphericity,
-      use_equiangular_map);
+      cube_half_length, focal_offset, use_equiangular_map);
 }
 
 void test_six_wedge_directions_equidistant() {
@@ -255,10 +258,12 @@ void test_six_wedge_directions_equidistant() {
   const double outer_radius = 7.1;
   const double inner_sphericity = 0.2;
   const double outer_sphericity = 0.4;
+  const double cube_half_length = 1.0;
+  const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
   const bool use_equiangular_map = false;
   test_wedge_map_generation_against_domain_helpers(
       inner_radius, outer_radius, inner_sphericity, outer_sphericity,
-      use_equiangular_map);
+      cube_half_length, focal_offset, use_equiangular_map);
 }
 
 void test_ten_wedge_directions_equiangular() {
@@ -267,11 +272,13 @@ void test_ten_wedge_directions_equiangular() {
   const double outer_radius = 2.2;
   const double inner_sphericity = 0.0;
   const double outer_sphericity = 1.0;
+  const double cube_half_length = 1.0;
+  const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
   const bool use_equiangular_map = true;
   const bool use_half_wedges = true;
   test_wedge_map_generation_against_domain_helpers(
       inner_radius, outer_radius, inner_sphericity, outer_sphericity,
-      use_equiangular_map, use_half_wedges);
+      cube_half_length, focal_offset, use_equiangular_map, use_half_wedges);
 }
 
 void test_ten_wedge_directions_equidistant() {
@@ -280,11 +287,13 @@ void test_ten_wedge_directions_equidistant() {
   const double outer_radius = 29.2;
   const double inner_sphericity = 0.01;
   const double outer_sphericity = 0.99;
+  const double cube_half_length = 1.0;
+  const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
   const bool use_equiangular_map = false;
   const bool use_half_wedges = true;
   test_wedge_map_generation_against_domain_helpers(
       inner_radius, outer_radius, inner_sphericity, outer_sphericity,
-      use_equiangular_map, use_half_wedges);
+      cube_half_length, focal_offset, use_equiangular_map, use_half_wedges);
 }
 
 void test_wedge_map_generation() {

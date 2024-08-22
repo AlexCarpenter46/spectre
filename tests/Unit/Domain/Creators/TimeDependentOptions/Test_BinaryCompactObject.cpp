@@ -271,6 +271,12 @@ void test(const bool include_expansion, const bool include_rotation,
 
   const std::array<std::array<double, 3>, 2> centers{
       std::array{5.0, 0.01, 0.02}, std::array{-5.0, -0.01, -0.02}};
+  const std::optional<std::array<double, 3>> cube_a_center =
+      IsCylindrical ? std::optional<std::array<double, 3>>{}
+                    : std::array<double, 3>{{4.25, -0.3, 0.2}};
+  const std::optional<std::array<double, 3>> cube_b_center =
+      IsCylindrical ? std::optional<std::array<double, 3>>{}
+                    : std::array<double, 3>{{-4.25, 0.4, -0.15}};
   const double domain_envelope_radius = 15.0;
   const double domain_outer_radius = 20.0;
 
@@ -324,10 +330,11 @@ void test(const bool include_expansion, const bool include_rotation,
     }
     const auto build_maps = [&time_dep_options, &centers, &inner_outer_radii_A,
                              &inner_outer_radii_B, &domain_envelope_radius,
-                             &domain_outer_radius]() {
-      time_dep_options.build_maps(centers, inner_outer_radii_A,
-                                  inner_outer_radii_B, domain_envelope_radius,
-                                  domain_outer_radius);
+                             &domain_outer_radius, &cube_a_center,
+                             &cube_b_center]() {
+      time_dep_options.build_maps(centers, cube_a_center, cube_b_center,
+                                  inner_outer_radii_A, inner_outer_radii_B,
+                                  domain_envelope_radius, domain_outer_radius);
     };
 
     // If we have excision info, but didn't specify shape map options, we
@@ -583,7 +590,7 @@ void test_errors() {
             ShapeMapBOptions<IsCylindrical>{8, {}}};
         time_dep_opts.build_maps(
             std::array{std::array{0.0, 0.0, 0.0}, std::array{0.0, 0.0, 0.0}},
-            radii, std::nullopt, 25.0, 100.0);
+            std::nullopt, std::nullopt, radii, std::nullopt, 25.0, 100.0);
       }()),
       Catch::Matchers::ContainsSubstring(
           "Trying to build the shape map for object " +
@@ -599,7 +606,7 @@ void test_errors() {
             std::nullopt};
         time_dep_opts.build_maps(
             std::array{std::array{0.0, 0.0, 0.0}, std::array{0.0, 0.0, 0.0}},
-            radii, radii, 25.0, 100.0);
+            std::nullopt, std::nullopt, radii, radii, 25.0, 100.0);
       }()),
       Catch::Matchers::ContainsSubstring(
           "Trying to build the shape map for object " +

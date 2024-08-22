@@ -59,6 +59,9 @@ std::unique_ptr<DomainCreator<3>> worldtube_binary_compact_object(
       "  InitialRefinement: 0\n"
       "  InitialGridPoints: 3\n"
       "  UseEquiangularMap: true\n"
+      "  CubeLength: " +
+      std::to_string(orbit_radius) +
+      "\n"
       "  TimeDependentMaps:\n"
       "    InitialTime: 0.0\n"
       "    ExpansionMap: \n"

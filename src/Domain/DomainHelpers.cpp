@@ -595,6 +595,7 @@ size_t which_wedge_index(const ShellWedges& which_wedges) {
 std::vector<domain::CoordinateMaps::Wedge<3>> sph_wedge_coordinate_maps(
     const double inner_radius, const double outer_radius,
     const double inner_sphericity, const double outer_sphericity,
+    const double cube_half_length, const std::array<double, 3> focal_offset,
     const bool use_equiangular_map, const bool use_half_wedges,
     const std::vector<double>& radial_partitioning,
     const std::vector<domain::CoordinateMaps::Distribution>&
@@ -618,8 +619,6 @@ std::vector<domain::CoordinateMaps::Wedge<3>> sph_wedge_coordinate_maps(
   double temp_inner_radius = inner_radius;
   double temp_outer_radius{};
   double temp_inner_sphericity = inner_sphericity;
-  const double cube_half_length = 1.0;
-  const std::array<double, 3> focal_offset{{0.0, 0.0, 0.0}};
   for (size_t layer_i = 0; layer_i < number_of_layers; layer_i++) {
     const auto& radial_distribution_this_layer =
         radial_distribution.at(layer_i);
