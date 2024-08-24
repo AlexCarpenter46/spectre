@@ -144,7 +144,7 @@ Evolution:
   # This is the smallest interval we'd need to observe time step/constraints. If
   # you need it smaller you can edit it, but make sure to change the slab
   # intervals in the EventsAndTriggers
-  InitialSlabSize: 0.5
+  InitialSlabSize: 0.1
   StepChoosers:
     - LimitIncrease:
         Factor: 2
@@ -204,8 +204,8 @@ EvolutionSystem:
 # since we support up to 20 gridpoints.
 Filtering:
   ExpFilter0:
-    Alpha: 36.0
-    HalfPower: 420
+    Alpha: 64.0
+    HalfPower: 210
     Enable: true
     BlocksToFilter: All
 
@@ -244,7 +244,7 @@ PhaseChangeAndTriggers:
           Offset: 0
     PhaseChanges:
       - CheckpointAndExitAfterWallclock:
-          WallclockHours: 23.5
+          WallclockHours: 143.5
 
 EventsAndTriggers:
   # Observe time step and cheap constraints every slab
@@ -307,12 +307,39 @@ EventsAndTriggers:
   - Trigger:
       Slabs:
         EvenlySpaced:
-          Interval: 100
+          Interval: 1000
           Offset: 0
     Events:
       - ObserveFields:
           SubfileName: VolumeData
           VariablesToObserve:
+            - Lapse
+            - ConstraintEnergy
+            - Psi4Real
+          InterpolateToMesh: None
+          # This volume data is just for visualization; float is sufficient
+          CoordinatesFloatingPointType: Float
+          FloatingPointTypes: [Float]
+  # Trigger for continuation after merger
+  - Trigger:
+      And:
+        - SeparationLessThan:
+            Value: 2.32 # for q=1, spin=0, quasicircular
+        - Slabs:
+            EvenlySpaced:
+              Interval: 1
+              Offset: 0
+    Events:
+      - ChangeSlabSize:
+          DelayChange: 0
+          StepChoosers:
+            - Constant: 0.01
+      - ObservationAhC
+      - ObserveFields:
+          SubfileName: ForContinuation
+          VariablesToObserve:
+            - Lapse
+            - ConstraintEnergy
             - SpacetimeMetric
             # For diagnostics:
             - ConstraintEnergy
@@ -323,17 +350,14 @@ EventsAndTriggers:
             - SpatialRicciScalar
             - Psi4Real
           InterpolateToMesh: None
-          # Save disk space by saving single precision data. This is enough
-          # for visualization.
-          CoordinatesFloatingPointType: Float
-          FloatingPointTypes: [Float]
-  # Try to find common horizon at small separation
+          # This volume data is for starting the ringdown, so double precision
+          CoordinatesFloatingPointType: Double
+          FloatingPointTypes: [Double]
   - Trigger:
       SeparationLessThan:
-        Value: 2.5
+        Value: 2.138 # for q=1, spin=0, quasicircular
     Events:
-      - ObservationAhC
-  # Never terminate... run until something fails!
+      - Completion
 
 EventsAndDenseTriggers:
   # BondiSachs output needs to be often enough for CCE to run properly. An
@@ -374,7 +398,7 @@ ApparentHorizons:
     Verbosity: Quiet
   ObservationAhC:
     InitialGuess:
-      LMax: 20
+      LMax: 33
       Radius: 10.0
       Center: [0.0, 0.0, 0.0]
     FastFlow: *DefaultFastFlow
