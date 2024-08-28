@@ -65,11 +65,16 @@ def fit_to_a_cubic(times, coefs, match_time, zero_coefs):
     return fit_ahc, fit_dt_ahc, fit_dt2_ahc
 
 
+"""Function for Computing AhC Coefficients in the Ringdown Distorted Frame
+Todo: Add description and arguments list.
+"""
+
+
 def compute_ahc_coefs_in_ringdown_distorted_frame(
-    path_to_ah_h5,
-    ahc_subfile_path,
-    path_to_fot_h5,
-    fot_subfile_path,
+    ahc_reductions_path,
+    ahc_subfile,
+    fot_vol_h5_path,
+    fot_vol_subfile,
     path_to_output_h5,
     output_subfile_prefix,
     number_of_steps,
@@ -80,8 +85,8 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     shape_coefs = {}
 
     # Subfile for AhC data
-    if ahc_subfile_path.split(".")[-1] == "dat":
-        ahc_subfile_path = ahc_subfile_path.split(".")[0]
+    if ahc_subfile.split(".")[-1] == "dat":
+        ahc_subfile = ahc_subfile.split(".")[0]
 
     # Setting up output with Distorted Subfile
     output_subfile_ahc = output_subfile_prefix + "AhC_Ylm"
@@ -92,8 +97,8 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     ahc_legend = ""
     ahc_center = []
     ahc_lmax = 0
-    with spectre_h5.H5File(path_to_ah_h5, "r") as h5file:
-        datfile = h5file.get_dat("/" + ahc_subfile_path)
+    with spectre_h5.H5File(ahc_reductions_path, "r") as h5file:
+        datfile = h5file.get_dat("/" + ahc_subfile)
         datfile_np = np.array(datfile.get_data())
         ahc_times = datfile_np[:, 0]
         ahc_legend = datfile.get_legend()
@@ -107,10 +112,10 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
 
     # Transform AhC coefs to ringdown distorted frame and get other data
     # needed to start a ringdown, such as initial values for functions of time
-    with spectre_h5.H5File(path_to_fot_h5, "r") as h5file:
-        if fot_subfile_path.split(".")[-1] == "vol":
-            fot_subfile_path = fot_subfile_path.split(".")[0]
-        volfile = h5file.get_vol("/" + fot_subfile_path)
+    with spectre_h5.H5File(fot_vol_h5_path, "r") as h5file:
+        if fot_vol_subfile.split(".")[-1] == "vol":
+            fot_vol_subfile = fot_vol_subfile.split(".")[0]
+        volfile = h5file.get_vol("/" + fot_vol_subfile)
         obs_ids = volfile.list_observation_ids()
         logger.info("About to deserialize functions of time")
         fot_times = list(map(volfile.get_observation_value, obs_ids))
@@ -142,8 +147,8 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
 
         coefs_at_different_times = np.array(
             Ringdown.strahlkorper_coefs_in_ringdown_distorted_frame(
-                path_to_ah_h5,
-                ahc_subfile_path,
+                ahc_reductions_path,
+                ahc_subfile,
                 number_of_steps,
                 match_time,
                 settling_timescale,
@@ -327,7 +332,7 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
 def ringdown_parameters(
     inspiral_input_file: dict,
     inspiral_run_dir: Union[str, Path],
-    fot_subfile_path: str,
+    fot_vol_subfile: str,
     refinement_level: int,
     polynomial_order: int,
 ) -> dict:
@@ -348,7 +353,7 @@ def ringdown_parameters(
             Path(inspiral_run_dir).resolve()
             / (inspiral_input_file["Observers"]["VolumeFileName"] + "*.h5")
         ),
-        "IdFileGlobSubgroup": fot_subfile_path,
+        "IdFileGlobSubgroup": fot_vol_subfile,
         # Resolution
         "L": refinement_level,
         "P": polynomial_order,
@@ -356,20 +361,20 @@ def ringdown_parameters(
 
 
 def start_ringdown(
-    path_to_ah_h5: Union[str, Path],
-    ahc_subfile_path: str,
-    path_to_fot_h5: Union[str, Path],
-    fot_subfile_path: str,
-    path_to_output_h5: Union[str, Path],
-    output_subfile_prefix: str,
+    inspiral_run_dir: Union[str, Path],
     number_of_steps: int,
     match_time: float,
     settling_timescale: float,
     zero_coefs: float,
-    inspiral_input_file_path: Union[str, Path],
     refinement_level: int,
     polynomial_order: int,
-    inspiral_run_dir: Optional[Union[str, Path]] = None,
+    inspiral_input_file: Optional[Union[str, Path]] = None,
+    ahc_reductions_path: Optional[Union[str, Path]] = None,
+    ahc_subfile: str = "ObservationAhC_Ylm",
+    fot_vol_h5_path: Optional[Union[str, Path]] = None,
+    fot_vol_subfile: str = "ForContinuation",
+    path_to_output_h5: Optional[Union[str, Path]] = None,
+    output_subfile_prefix: str = "Distorted",
     ringdown_input_file_template: Union[
         str, Path
     ] = RINGDOWN_INPUT_FILE_TEMPLATE,
@@ -380,17 +385,45 @@ def start_ringdown(
 ):
     """Schedule a ringdown simulation from the inspiral.
 
-    Point the INSPIRAL_INPUT_FILE_PATH to the input file of the last inspiral
-    segment. Also specify 'inspiral_run_dir' if the simulation was run in a
-    different directory than where the input file is. Parameters for the
-    ringdown will be determined from the inspiral and inserted into the
+    Point the inspiral_run_dir to the last inspiral segment. Also specify
+    'inspiral_input_file' if the simulation was run in a different directory
+    than where the input file is. Parameters for the ringdown will be determined
+    from the inspiral and inserted into the
     'ringdown_input_file_template'. The remaining options are forwarded to the
     'schedule' command. See 'schedule' docs for details.
 
     Here 'parameters for the ringdown' includes the information needed to
-    initialize the time-dependent maps, including the shape me. Common horizon
+    initialize the time-dependent maps, including the shape map. Common horizon
     shape coefficients in the ringdown distorted frame will be written to
     disk that the ringdown input file will point to.
+
+    Arguments:
+        inspiral_run_dir: Path to the last segment in the inspiral run
+        directory.
+        number_of_steps: The number of steps from the last time in the
+        simulation to look for AhC finds.
+        match_time: The time to match the time dependent maps at.
+        settling_timescale: The settling timescale for the rotation and
+        expansion maps.
+        zero_coefs: Coefficients to set to 0.0
+        refinement_level: The initial H refinement level for ringdown.
+        polynomial_order: The initial P refinement level for ringdown.
+        inspiral_input_file: The input file used for during the Inspiral,
+        defaults to the Inspiral.yaml inside the inspiral_run_dir.
+        ahc_reductions_path: The full path to the BbhReductions file that
+        contains AhC data, defaults to BbhReductions.h5 in the inspiral_run_dir.
+        ahc_subfile: Subfile containing reduction data at times of AhC finds,
+        defaults to 'ObservationAhC_Ylm'.
+        fot_vol_h5_path: The full path to any volume data containing the
+        functions of time at the time of AhC finds, defaults to BbhVolume0.h5 in
+        the inspiral_run_dir.
+        fot_vol_subfile: Subfile containing volume data where at times of AhC
+        finds, defaults to 'ForContinuation'.
+        path_to_output_h5: H5 file to output horizon coefficients needed for
+        Ringdown.
+        output_subfile_prefix: Subfile prefix for output data, defaults to
+        'Distorted'.
+        ringdown_input_file_template: Yaml to insert ringdown coefficients into.
     """
     logger.warning(
         "The BBH pipeline is still experimental. Please review the"
@@ -401,10 +434,18 @@ def start_ringdown(
     )
 
     # Determine ringdown parameters from inspiral
-    with open(inspiral_input_file_path, "r") as open_input_file:
+    # Resolve and set correct files/paths.
+    if inspiral_input_file is None:
+        inspiral_input_file = inspiral_run_dir / "Inspiral.yaml"
+
+    if ahc_reductions_path is None:
+        ahc_reductions_path = inspiral_run_dir / "BbhReductions.h5"
+
+    if fot_vol_h5_path is None:
+        fot_vol_h5_path = inspiral_run_dir / "BbhVolume0.h5"
+
+    with open(inspiral_input_file, "r") as open_input_file:
         _, inspiral_input_file = yaml.safe_load_all(open_input_file)
-    if inspiral_run_dir is None:
-        inspiral_run_dir = Path(inspiral_input_file_path).resolve().parent
 
     # Resolve directories
     if pipeline_dir:
@@ -412,20 +453,23 @@ def start_ringdown(
     if pipeline_dir and not segments_dir and not run_dir:
         segments_dir = pipeline_dir / "003_Ringdown"
 
+    if path_to_output_h5 is None:
+        path_to_output_h5 = pipeline_dir / "RingdownDistortedCoefs.h5"
+
     ringdown_params = ringdown_parameters(
         inspiral_input_file,
         inspiral_run_dir,
-        fot_subfile_path,
+        fot_vol_subfile,
         refinement_level=refinement_level,
         polynomial_order=polynomial_order,
     )
 
     # Compute ringdown shape coefficients and function of time info
     # for ringdown
-    with spectre_h5.H5File(str(path_to_fot_h5), "r") as h5file:
-        if fot_subfile_path.split(".")[-1] == "vol":
-            fot_subfile_path = fot_subfile_path.split(".")[0]
-        volfile = h5file.get_vol("/" + fot_subfile_path)
+    with spectre_h5.H5File(str(fot_vol_h5_path), "r") as h5file:
+        if fot_vol_subfile.split(".")[-1] == "vol":
+            fot_vol_subfile = fot_vol_subfile.split(".")[0]
+        volfile = h5file.get_vol("/" + fot_vol_subfile)
         obs_ids = volfile.list_observation_ids()
         fot_times = np.array(list(map(volfile.get_observation_value, obs_ids)))
         which_obs_id = np.argmin(np.abs(fot_times - match_time))
@@ -435,10 +479,10 @@ def start_ringdown(
         logger.info("Selected match time: " + str(fot_times[which_obs_id]))
 
     coefs, fot_info = compute_ahc_coefs_in_ringdown_distorted_frame(
-        str(path_to_ah_h5),
-        ahc_subfile_path,
-        str(path_to_fot_h5),
-        fot_subfile_path,
+        str(ahc_reductions_path),
+        ahc_subfile,
+        str(fot_vol_h5_path),
+        fot_vol_subfile,
         str(path_to_output_h5),
         output_subfile_prefix,
         number_of_steps,
@@ -499,8 +543,19 @@ def start_ringdown(
 
 
 @click.command(name="start-ringdown", help=start_ringdown.__doc__)
+@click.argument(
+    "inspiral_run_dir",
+    type=click.Path(
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        readable=True,
+        path_type=Path,
+    ),
+)
 @click.option(
-    "--path-to-ah-h5",
+    "-i",
+    "--inspiral-input-file",
     type=click.Path(
         exists=True,
         file_okay=True,
@@ -508,16 +563,11 @@ def start_ringdown(
         readable=True,
         path_type=Path,
     ),
-    help="Path of file containing AhC coefs",
+    default=None,
+    help="Path to Inspiral yaml, defaults to Inspiral.yaml in directory given.",
 )
 @click.option(
-    "--ahc-subfile-path",
-    type=str,
-    required=True,
-    help="Subfile path to reduction data containing AhC coefs",
-)
-@click.option(
-    "--path-to-fot-h5",
+    "--ahc-reductions-path",
     type=click.Path(
         exists=True,
         file_okay=True,
@@ -525,13 +575,44 @@ def start_ringdown(
         readable=True,
         path_type=Path,
     ),
-    help="Path to file containing funcs of time",
+    default=None,
+    help=(
+        "Path to reduction file containing AhC coefs, defualts to"
+        " 'BbhReductions.h5' in directory given."
+    ),
 )
 @click.option(
-    "--fot-subfile-path",
+    "--ahc-subfile",
     type=str,
-    required=True,
-    help="Subfile path to volume data with funcs of time at different times",
+    default="ObservationAhC_Ylm",
+    help=(
+        "Subfile path name in reduction data containing AhC coefs, defaults to"
+        " 'ObservationAhC_Ylm'"
+    ),
+)
+@click.option(
+    "--fot-vol-h5-path",
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        path_type=Path,
+    ),
+    default=None,
+    help=(
+        "Path to volume data file containing funcs of time, defaults to"
+        " 'BbhVolume0.h5' in directory given."
+    ),
+)
+@click.option(
+    "--fot-vol-subfile",
+    type=str,
+    default="ForContinuation",
+    help=(
+        "Subfile in volume data with funcs of time at different times,"
+        " defaults to 'ForContinuation'."
+    ),
 )
 @click.option(
     "--path-to-output-h5",
@@ -542,12 +623,13 @@ def start_ringdown(
         readable=True,
         path_type=Path,
     ),
-    help="Path relative to inspiral-run-dir to shape coefs output h5 file",
+    default=None,
+    help="Output h5 file for shape coefs",
 )
 @click.option(
     "--output-subfile-prefix",
     type=str,
-    required=True,
+    default="Distorted",
     help="Output subfile prefix for AhC coefs",
 )
 @click.option(
@@ -574,45 +656,6 @@ def start_ringdown(
     default=None,
     help="What value of coefs to zero below. None means don't zero any",
 )
-@click.argument(
-    "inspiral_input_file_path",
-    type=click.Path(
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        readable=True,
-        path_type=Path,
-    ),
-)
-@click.option(
-    "-i",
-    "--inspiral-run-dir",
-    type=click.Path(
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        readable=True,
-        path_type=Path,
-    ),
-    help=(
-        "Directory of the last inspiral segment. Paths in the input file are"
-        " relative to this directory."
-    ),
-    show_default="directory of the INSPIRAL_INPUT_FILE_PATH",
-)
-@click.option(
-    "--ringdown-input-file-template",
-    type=click.Path(
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        readable=True,
-        path_type=Path,
-    ),
-    default=RINGDOWN_INPUT_FILE_TEMPLATE,
-    help="Input file template for the ringdown.",
-    show_default=True,
-)
 @click.option(
     "--refinement-level",
     "-L",
@@ -627,6 +670,19 @@ def start_ringdown(
     type=int,
     help="p-refinement level.",
     default=11,
+    show_default=True,
+)
+@click.option(
+    "--ringdown-input-file-template",
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        path_type=Path,
+    ),
+    default=RINGDOWN_INPUT_FILE_TEMPLATE,
+    help="Input file template for the ringdown.",
     show_default=True,
 )
 @click.option(
