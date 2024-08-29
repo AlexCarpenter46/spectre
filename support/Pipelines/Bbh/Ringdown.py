@@ -70,6 +70,7 @@ Todo: Add description and arguments list.
 """
 
 
+# Move this to another file :)
 def compute_ahc_coefs_in_ringdown_distorted_frame(
     ahc_reductions_path,
     ahc_subfile,
@@ -110,6 +111,7 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     info_for_ringdown = {}
     legend_for_ringdown = {}
 
+    # This can go somewhere else :)
     # Transform AhC coefs to ringdown distorted frame and get other data
     # needed to start a ringdown, such as initial values for functions of time
     with spectre_h5.H5File(fot_vol_h5_path, "r") as h5file:
@@ -273,8 +275,6 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     # same, i.e. both are at the origin. A future update will incorporate
     # translation.
 
-    # QUESTION: do I need to use modal coefficients here? And assuming I do,
-    # do I need to multiply the coefficients by -1 still?
     fit_ahc_coef_mv = ModalVector(fit_ahc_coefs)
     fit_ahc_dt_coef_mv = ModalVector(fit_ahc_dt_coefs)
     fit_ahc_dt2_coef_mv = ModalVector(fit_ahc_dt2_coefs)
