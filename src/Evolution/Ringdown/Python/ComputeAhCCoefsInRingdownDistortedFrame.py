@@ -61,7 +61,8 @@ Todo: Add description and arguments list.
 """
 
 
-# Todo: Change the arguments to be h5 files containing so that we don't have to what's done in line 111 or 112
+# Todo: Change the arguments to be h5 files containing so that we don't have to
+# what's done in line 111 or 112
 def compute_ahc_coefs_in_ringdown_distorted_frame(
     ahc_reductions_path,
     ahc_subfile,
@@ -74,6 +75,26 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     settling_timescale,
     zero_coefs,
 ):
+    """Computes AhC Coefficients in the Ringdown Distorted Frame from functions
+    of time from AhC in inspiral distorted frame.
+
+    Arugments:
+    ahc_reductions_path: Path to reduction file where AhC Coefficients will be
+    written.
+    ahc_subfile: The subfile of the reductions file where AhC coefficients will
+    be placed.
+    path_to_output_h5: Path to file where AhC coefficients in Ringdown distorted
+    frame will be written.
+    output_subfile_prefix: Subfile in output_h5 for AhC coefficients in Ringdown
+    distorted frame.
+    number_of_steps: The number of steps from the last time in the
+    simulation to look for AhC finds.
+    which_obs_id: First time to look at AhC coefficients.
+    settling_timescale: Timescale for settle to constant functions of time.
+    zero_coefs: Coefficients to zero out
+
+    """
+
     shape_coefs = {}
 
     # Subfile for AhC data

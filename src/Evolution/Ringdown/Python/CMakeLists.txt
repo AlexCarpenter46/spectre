@@ -9,7 +9,7 @@ spectre_python_add_module(
     MODULE_PATH "Evolution"
     SOURCES
     Bindings.cpp
-    StrahlkorperCoefsInRingdownDistortedFrame.py
+    ComputeAhCCoefsInRingdownDistortedFrame.py
     PYTHON_FILES
     __init__.py
 )
