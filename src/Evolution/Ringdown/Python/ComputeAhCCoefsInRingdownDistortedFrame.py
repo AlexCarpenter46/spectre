@@ -66,8 +66,7 @@ Todo: Add description and arguments list.
 def compute_ahc_coefs_in_ringdown_distorted_frame(
     ahc_reductions_path,
     ahc_subfile,
-    fot_vol_h5_path,
-    fot_vol_subfile,
+    fot_vol_files,
     path_to_output_h5,
     output_subfile_prefix,
     number_of_steps,
@@ -83,6 +82,8 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     written.
     ahc_subfile: The subfile of the reductions file where AhC coefficients will
     be placed.
+    fot_vol_data: The expansion and rotation functions of time taken from volume
+    data.
     path_to_output_h5: Path to file where AhC coefficients in Ringdown distorted
     frame will be written.
     output_subfile_prefix: Subfile in output_h5 for AhC coefficients in Ringdown
@@ -126,107 +127,72 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     # This can go somewhere else :)
     # Transform AhC coefs to ringdown distorted frame and get other data
     # needed to start a ringdown, such as initial values for functions of time
-    with spectre_h5.H5File(fot_vol_h5_path, "r") as h5file:
-        if fot_vol_subfile.split(".")[-1] == "vol":
-            fot_vol_subfile = fot_vol_subfile.split(".")[0]
-        volfile = h5file.get_vol("/" + fot_vol_subfile)
-        obs_ids = volfile.list_observation_ids()
-        logger.info("About to deserialize functions of time")
-        fot_times = list(map(volfile.get_observation_value, obs_ids))
-        serialized_fots = volfile.get_functions_of_time(obs_ids[which_obs_id])
-        functions_of_time = deserialize_functions_of_time(serialized_fots)
-        logger.info("Deserialized functions of time")
+    match_time = fot_times[which_obs_id]
 
-        # The inspiral expansion map includes two functions of time:
-        # an expansion map allowing the black holes to move closer together in
-        # comoving coordinates, and an expansion map causing the outer boundary
-        # to move slightly inwards. The ringdown only requires the outer
-        # boundary expansion map, so set the other map to the identity.
-        exp_func_and_2_derivs = [1.0, 0.0, 0.0]
-
-        exp_outer_bdry_func_and_2_derivs = [
-            x[0]
-            for x in functions_of_time[
-                "ExpansionOuterBoundary"
-            ].func_and_2_derivs(fot_times[which_obs_id])
-        ]
-        rot_func_and_2_derivs_tuple = functions_of_time[
-            "Rotation"
-        ].func_and_2_derivs(fot_times[which_obs_id])
-        rot_func_and_2_derivs = [
-            [coef for coef in x] for x in rot_func_and_2_derivs_tuple
-        ]
-
-        match_time = fot_times[which_obs_id]
-
-        coefs_at_different_times = np.array(
-            Ringdown.strahlkorper_coefs_in_ringdown_distorted_frame(
-                ahc_reductions_path,
-                ahc_subfile,
-                number_of_steps,
-                match_time,
-                settling_timescale,
-                exp_func_and_2_derivs,
-                exp_outer_bdry_func_and_2_derivs,
-                rot_func_and_2_derivs,
-            )
+    coefs_at_different_times = np.array(
+        Ringdown.strahlkorper_coefs_in_ringdown_distorted_frame(
+            ahc_reductions_path,
+            ahc_subfile,
+            number_of_steps,
+            match_time,
+            settling_timescale,
+            exp_func_and_2_derivs,
+            exp_outer_bdry_func_and_2_derivs,
+            rot_func_and_2_derivs,
         )
+    )
 
-        # Print out coefficients for insertion into BBH domain
-        logger.info("Expansion: " + str(exp_func_and_2_derivs))
-        logger.info(
-            "ExpansionOutrBdry: " + str(exp_outer_bdry_func_and_2_derivs)
-        )
-        logger.info("Rotation: " + str(rot_func_and_2_derivs))
-        logger.info("Match time: " + str(match_time))
-        logger.info("Settling timescale: " + str(settling_timescale))
-        logger.info("Lmax: " + str(ahc_lmax))
+    # Print out coefficients for insertion into BBH domain
+    logger.info("Expansion: " + str(exp_func_and_2_derivs))
+    logger.info("ExpansionOutrBdry: " + str(exp_outer_bdry_func_and_2_derivs))
+    logger.info("Rotation: " + str(rot_func_and_2_derivs))
+    logger.info("Match time: " + str(match_time))
+    logger.info("Settling timescale: " + str(settling_timescale))
+    logger.info("Lmax: " + str(ahc_lmax))
 
-        shape_coefs["Expansion"]: exp_func_and_2_derivs
-        shape_coefs["ExpansionOutrBdry"]: exp_outer_bdry_func_and_2_derivs
-        shape_coefs["Rotation"]: rot_func_and_2_derivs
-        shape_coefs["Match time"]: match_time
-        shape_coefs["Settling timescale"]: settling_timescale
-        shape_coefs["Lmax"]: ahc_lmax
+    shape_coefs["Expansion"]: exp_func_and_2_derivs
+    shape_coefs["ExpansionOutrBdry"]: exp_outer_bdry_func_and_2_derivs
+    shape_coefs["Rotation"]: rot_func_and_2_derivs
+    shape_coefs["Match time"]: match_time
+    shape_coefs["Settling timescale"]: settling_timescale
+    shape_coefs["Lmax"]: ahc_lmax
 
-        legend_fot = ["FunctionOfTime", "dtFunctionOfTime", "dt2FunctionOfTime"]
-        legend_value = ["Value"]
-        info_for_ringdown["Expansion"] = exp_func_and_2_derivs
-        legend_for_ringdown["Expansion"] = legend_fot
-        info_for_ringdown["ExpansionOuterBdry"] = (
-            exp_outer_bdry_func_and_2_derivs
-        )
-        legend_for_ringdown["ExpansionOuterBdry"] = legend_fot
-        info_for_ringdown["Rotation0"] = [
-            rot_func_and_2_derivs[0][0],
-            rot_func_and_2_derivs[1][0],
-            rot_func_and_2_derivs[2][0],
-        ]
-        info_for_ringdown["Rotation1"] = [
-            rot_func_and_2_derivs[0][1],
-            rot_func_and_2_derivs[1][1],
-            rot_func_and_2_derivs[2][1],
-        ]
-        info_for_ringdown["Rotation2"] = [
-            rot_func_and_2_derivs[0][2],
-            rot_func_and_2_derivs[1][2],
-            rot_func_and_2_derivs[2][2],
-        ]
-        info_for_ringdown["Rotation3"] = [
-            rot_func_and_2_derivs[0][3],
-            rot_func_and_2_derivs[1][3],
-            rot_func_and_2_derivs[2][3],
-        ]
-        legend_for_ringdown["Rotation0"] = legend_fot
-        legend_for_ringdown["Rotation1"] = legend_fot
-        legend_for_ringdown["Rotation2"] = legend_fot
-        legend_for_ringdown["Rotation3"] = legend_fot
-        info_for_ringdown["MatchTime"] = [match_time]
-        legend_for_ringdown["MatchTime"] = legend_value
-        info_for_ringdown["SettlingTimescale"] = [settling_timescale]
-        legend_for_ringdown["SettlingTimescale"] = legend_value
-        info_for_ringdown["Lmax"] = [ahc_lmax]
-        legend_for_ringdown["Lmax"] = legend_value
+    legend_fot = ["FunctionOfTime", "dtFunctionOfTime", "dt2FunctionOfTime"]
+    legend_value = ["Value"]
+    info_for_ringdown["Expansion"] = exp_func_and_2_derivs
+    legend_for_ringdown["Expansion"] = legend_fot
+    info_for_ringdown["ExpansionOuterBdry"] = exp_outer_bdry_func_and_2_derivs
+    legend_for_ringdown["ExpansionOuterBdry"] = legend_fot
+    info_for_ringdown["Rotation0"] = [
+        rot_func_and_2_derivs[0][0],
+        rot_func_and_2_derivs[1][0],
+        rot_func_and_2_derivs[2][0],
+    ]
+    info_for_ringdown["Rotation1"] = [
+        rot_func_and_2_derivs[0][1],
+        rot_func_and_2_derivs[1][1],
+        rot_func_and_2_derivs[2][1],
+    ]
+    info_for_ringdown["Rotation2"] = [
+        rot_func_and_2_derivs[0][2],
+        rot_func_and_2_derivs[1][2],
+        rot_func_and_2_derivs[2][2],
+    ]
+    info_for_ringdown["Rotation3"] = [
+        rot_func_and_2_derivs[0][3],
+        rot_func_and_2_derivs[1][3],
+        rot_func_and_2_derivs[2][3],
+    ]
+    legend_for_ringdown["Rotation0"] = legend_fot
+    legend_for_ringdown["Rotation1"] = legend_fot
+    legend_for_ringdown["Rotation2"] = legend_fot
+    legend_for_ringdown["Rotation3"] = legend_fot
+    info_for_ringdown["MatchTime"] = [match_time]
+    legend_for_ringdown["MatchTime"] = legend_value
+    info_for_ringdown["SettlingTimescale"] = [settling_timescale]
+    legend_for_ringdown["SettlingTimescale"] = legend_value
+    info_for_ringdown["Lmax"] = [ahc_lmax]
+    legend_for_ringdown["Lmax"] = legend_value
 
     # Do not include AhCs at times greater than the match time. Errors tend
     # to grow as time increases, so fit derivatives using the match time

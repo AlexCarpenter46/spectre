@@ -171,6 +171,12 @@ def start_ringdown(
         logger.info("Selected ObservationID: " + str(which_obs_id))
         logger.info("Selected match time: " + str(fot_times[which_obs_id]))
 
+    fot_vol_expansion, fot_vol_expansion_outer_boundary, fot_vol_rotation = (
+        Ringdown.get_volume_data_kinematic_functions_of_time(
+            str(fot_vol_h5_path), fot_vol_subfile, which_obs_id
+        )
+    )
+
     coefs, fot_info = Ringdown.compute_ahc_coefs_in_ringdown_distorted_frame(
         str(ahc_reductions_path),
         ahc_subfile,
