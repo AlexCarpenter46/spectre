@@ -11,10 +11,15 @@ import numpy as np
 import yaml
 from rich.pretty import pretty_repr
 
-# next import out of order to avoid Unrecognized PUP::able::PUP_ID error
-import spectre.Evolution.Ringdown as Ringdown
 import spectre.IO.H5 as spectre_h5
-from spectre.SphericalHarmonics import Strahlkorper, ylm_legend_and_data
+from spectre.Evolution.Ringdown.ComputeAhCCoefsInRingdownDistortedFrame import (
+    compute_ahc_coefs_in_ringdown_distorted_frame,
+)
+
+# next import out of order to avoid Unrecognized PUP::able::PUP_ID error
+from spectre.Evolution.Ringdown.FunctionsOfTimeFromVolume import (
+    functions_of_time_from_volume,
+)
 from spectre.support.Schedule import schedule, scheduler_options
 
 logger = logging.getLogger(__name__)
@@ -125,7 +130,6 @@ def start_ringdown(
         " yet support accounting for a nonzero translation map in the inspiral"
         " (necessary for unequal-mass mergers.)"
     )
-
     # Determine ringdown parameters from inspiral
     # Resolve and set correct files/paths.
     if inspiral_input_file is None:
@@ -171,21 +175,24 @@ def start_ringdown(
         logger.info("Selected ObservationID: " + str(which_obs_id))
         logger.info("Selected match time: " + str(fot_times[which_obs_id]))
 
+    match_time = fot_times[which_obs_id]
+
     fot_vol_expansion, fot_vol_expansion_outer_boundary, fot_vol_rotation = (
-        Ringdown.get_volume_data_kinematic_functions_of_time(
-            str(fot_vol_h5_path), fot_vol_subfile, which_obs_id
+        functions_of_time_from_volume(
+            str(fot_vol_h5_path), fot_vol_subfile, match_time, which_obs_id
         )
     )
 
-    coefs, fot_info = Ringdown.compute_ahc_coefs_in_ringdown_distorted_frame(
+    coefs, fot_info = compute_ahc_coefs_in_ringdown_distorted_frame(
         str(ahc_reductions_path),
         ahc_subfile,
-        str(fot_vol_h5_path),
-        fot_vol_subfile,
+        fot_vol_expansion,
+        fot_vol_expansion_outer_boundary,
+        fot_vol_rotation,
         str(path_to_output_h5),
         output_subfile_prefix,
         number_of_steps,
-        which_obs_id,
+        match_time,
         settling_timescale,
         zero_coefs,
     )

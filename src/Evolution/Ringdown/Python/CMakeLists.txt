@@ -9,9 +9,10 @@ spectre_python_add_module(
     MODULE_PATH "Evolution"
     SOURCES
     Bindings.cpp
-    ComputeAhCCoefsInRingdownDistortedFrame.py
     PYTHON_FILES
     __init__.py
+    ComputeAhCCoefsInRingdownDistortedFrame.py
+    FunctionsOfTimeFromVolume.py
 )
 
 spectre_python_headers(

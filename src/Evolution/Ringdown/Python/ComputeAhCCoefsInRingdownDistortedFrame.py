@@ -11,8 +11,12 @@ import numpy as np
 import yaml
 from rich.pretty import pretty_repr
 
+import spectre.Evolution.Ringdown as Ringdown
+import spectre.IO.H5 as spectre_h5
 from spectre.DataStructures import ModalVector
 from spectre.SphericalHarmonics import Strahlkorper, ylm_legend_and_data
+
+logger = logging.getLogger(__name__)
 
 
 def cubic(x, a, b, c, d):
@@ -66,11 +70,13 @@ Todo: Add description and arguments list.
 def compute_ahc_coefs_in_ringdown_distorted_frame(
     ahc_reductions_path,
     ahc_subfile,
-    fot_vol_files,
+    exp_func_and_2_derivs,
+    exp_outer_bdry_func_and_2_derivs,
+    rot_func_and_2_derivs,
     path_to_output_h5,
     output_subfile_prefix,
     number_of_steps,
-    which_obs_id,
+    match_time,
     settling_timescale,
     zero_coefs,
 ):
@@ -82,15 +88,18 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     written.
     ahc_subfile: The subfile of the reductions file where AhC coefficients will
     be placed.
-    fot_vol_data: The expansion and rotation functions of time taken from volume
+    expansion_func_and_2_derivs: Expansion functions of time from volume
     data.
+    exp_outer_bdry_func_and_2_derivs: Outer boundary expansion function of time
+    from volume data
+    rot_func_and_2_derivs: Rotation function of time from volume data
     path_to_output_h5: Path to file where AhC coefficients in Ringdown distorted
     frame will be written.
     output_subfile_prefix: Subfile in output_h5 for AhC coefficients in Ringdown
     distorted frame.
     number_of_steps: The number of steps from the last time in the
     simulation to look for AhC finds.
-    which_obs_id: First time to look at AhC coefficients.
+    match_time: Time to match functions of time.
     settling_timescale: Timescale for settle to constant functions of time.
     zero_coefs: Coefficients to zero out
 
@@ -127,7 +136,6 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     # This can go somewhere else :)
     # Transform AhC coefs to ringdown distorted frame and get other data
     # needed to start a ringdown, such as initial values for functions of time
-    match_time = fot_times[which_obs_id]
 
     coefs_at_different_times = np.array(
         Ringdown.strahlkorper_coefs_in_ringdown_distorted_frame(

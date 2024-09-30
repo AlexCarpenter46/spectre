@@ -92,7 +92,6 @@ DomainCreator:
 Evolution:
   InitialTime: 0.0
   InitialTimeStep: 0.0001
-  MinimumTimeStep: 1e-7
   # This is the smallest interval we'd need to observe time step/constraints. If
   # you would like more frequent output, consider using dense output.
   InitialSlabSize: 0.1

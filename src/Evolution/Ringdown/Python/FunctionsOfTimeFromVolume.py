@@ -11,12 +11,21 @@ import numpy as np
 import yaml
 from rich.pretty import pretty_repr
 
+import spectre.IO.H5 as spectre_h5
+from spectre.Domain import deserialize_functions_of_time
+
+logger = logging.getLogger(__name__)
+
 
 # Transform AhC coefs to ringdown distorted frame and get other data
 # needed to start a ringdown, such as initial values for functions of time
-def get_volume_data_kinematic_functions_of_time(
-    fot_vol_h5_path, fot_vol_subfile, which_obs_id
+def functions_of_time_from_volume(
+    fot_vol_h5_path, fot_vol_subfile, match_time, which_obs_id
 ):
+    exp_func_and_2_derivs = []
+    exp_outer_bdry_func_and_2_derivs = []
+    rot_func_and_2_derivs = []
+
     with spectre_h5.H5File(fot_vol_h5_path, "r") as h5file:
         if fot_vol_subfile.split(".")[-1] == "vol":
             fot_vol_subfile = fot_vol_subfile.split(".")[0]
@@ -48,10 +57,8 @@ def get_volume_data_kinematic_functions_of_time(
             [coef for coef in x] for x in rot_func_and_2_derivs_tuple
         ]
 
-        match_time = fot_times[which_obs_id]
-
-        return (
-            exp_func_and_2_derivs,
-            exp_outer_bdry_func_and_2_derivs,
-            rot_func_and_2_derivs,
-        )
+    return (
+        exp_func_and_2_derivs,
+        exp_outer_bdry_func_and_2_derivs,
+        rot_func_and_2_derivs,
+    )
