@@ -216,7 +216,7 @@ struct TimeDependentMapOptions {
       std::optional<RotationMapOptions> rotation_map_options,
       std::optional<ExpansionMapOptions> expansion_map_options,
       std::optional<TranslationMapOptions> translation_map_options,
-      std::optional<double> initial_time_for_shape_map);
+      std::optional<double> initial_time_for_shape_map = std::nullopt);
 
   /*!
    * \brief Create the function of time map using the options that were

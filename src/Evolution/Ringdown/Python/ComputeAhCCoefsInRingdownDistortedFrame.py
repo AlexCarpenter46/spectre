@@ -60,13 +60,6 @@ def fit_to_a_cubic(times, coefs, match_time, zero_coefs):
     return fit_ahc, fit_dt_ahc, fit_dt2_ahc
 
 
-"""Function for Computing AhC Coefficients in the Ringdown Distorted Frame
-Todo: Add description and arguments list.
-"""
-
-
-# Todo: Change the arguments to be h5 files containing so that we don't have to
-# what's done in line 111 or 112
 def compute_ahc_coefs_in_ringdown_distorted_frame(
     ahc_reductions_path,
     ahc_subfile,
@@ -80,8 +73,8 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     settling_timescale,
     zero_coefs,
 ):
-    """Computes AhC Coefficients in the Ringdown Distorted Frame from functions
-    of time from AhC in inspiral distorted frame.
+    """Computes AhC Coefficients in the Ringdown distorted frame from functions
+    of time of AhC in inspiral distorted frame.
 
     Arugments:
     ahc_reductions_path: Path to reduction file where AhC Coefficients will be
@@ -133,10 +126,8 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     info_for_ringdown = {}
     legend_for_ringdown = {}
 
-    # This can go somewhere else :)
     # Transform AhC coefs to ringdown distorted frame and get other data
     # needed to start a ringdown, such as initial values for functions of time
-
     coefs_at_different_times = np.array(
         Ringdown.strahlkorper_coefs_in_ringdown_distorted_frame(
             ahc_reductions_path,
