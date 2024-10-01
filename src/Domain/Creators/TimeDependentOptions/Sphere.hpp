@@ -85,9 +85,9 @@ struct TimeDependentMapOptions {
         "The initial time of the functions of time"};
   };
 
-  /// \brief The initial time of the functions of time.
+  /// \brief The initial time of the shape function of time.
   struct InitialTimeForShapeMap {
-    using type = Options::Auto<double>;
+    using type = Options::Auto<double, Options::AutoLabel::None>;
     static constexpr Options::String help = {
         "The initial time of the shape functions of time."};
   };
