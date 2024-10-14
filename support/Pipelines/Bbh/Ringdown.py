@@ -183,19 +183,48 @@ def start_ringdown(
         )
     )
 
-    coefs, fot_info = compute_ahc_coefs_in_ringdown_distorted_frame(
-        str(ahc_reductions_path),
-        ahc_subfile,
-        fot_vol_expansion,
-        fot_vol_expansion_outer_boundary,
-        fot_vol_rotation,
-        str(path_to_output_h5),
-        output_subfile_prefix,
-        number_of_steps,
-        match_time,
-        settling_timescale,
-        zero_coefs,
+    ringdown_ylm_coefs, ringdown_ylm_legend, fot_info = (
+        compute_ahc_coefs_in_ringdown_distorted_frame(
+            str(ahc_reductions_path),
+            ahc_subfile,
+            fot_vol_expansion,
+            fot_vol_expansion_outer_boundary,
+            fot_vol_rotation,
+            number_of_steps,
+            match_time,
+            settling_timescale,
+            zero_coefs,
+        )
     )
+
+    # Setting up and writing the distorted coefficients output file.
+    output_subfile_ahc = output_subfile_prefix + "AhC_Ylm"
+    output_subfile_dt_ahc = output_subfile_prefix + "dtAhC_Ylm"
+    output_subfile_dt2_ahc = output_subfile_prefix + "dt2AhC_Ylm"
+
+    with spectre_h5.H5File(file_name=path_to_output_h5, mode="a") as h5file:
+        ahc_datfile = h5file.insert_dat(
+            path="/" + output_subfile_ahc,
+            legend=ringdown_ylm_legend[0],
+            version=0,
+        )
+        ahc_datfile.append(ringdown_ylm_coefs[0])
+
+    with spectre_h5.H5File(file_name=path_to_output_h5, mode="a") as h5file:
+        ahc_dt_datfile = h5file.insert_dat(
+            path="/" + output_subfile_dt_ahc,
+            legend=ringdown_ylm_legend[1],
+            version=0,
+        )
+        ahc_dt_datfile.append(ringdown_ylm_coefs[1])
+
+    with spectre_h5.H5File(file_name=path_to_output_h5, mode="a") as h5file:
+        ahc_dt2_datfile = h5file.insert_dat(
+            path="/" + output_subfile_dt2_ahc,
+            legend=ringdown_ylm_legend[2],
+            version=0,
+        )
+        ahc_dt2_datfile.append(ringdown_ylm_coefs[2])
     logger.info("Obtained ringdown coefs")
 
     ringdown_params["MatchTime"] = match_time

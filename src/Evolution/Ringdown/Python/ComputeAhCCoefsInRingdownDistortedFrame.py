@@ -66,15 +66,13 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     exp_func_and_2_derivs,
     exp_outer_bdry_func_and_2_derivs,
     rot_func_and_2_derivs,
-    path_to_output_h5,
-    output_subfile_prefix,
     number_of_steps,
     match_time,
     settling_timescale,
     zero_coefs,
 ):
-    """Computes AhC Coefficients in the Ringdown distorted frame from functions
-    of time of AhC in inspiral distorted frame.
+    """Computes the AhC Ylm Coefficients in the Ringdown distorted frame
+    from the functions of time of the AhC in the inspiral distorted frame.
 
     Arugments:
     ahc_reductions_path: Path to reduction file where AhC Coefficients will be
@@ -86,10 +84,6 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     exp_outer_bdry_func_and_2_derivs: Outer boundary expansion function of time
     from volume data
     rot_func_and_2_derivs: Rotation function of time from volume data
-    path_to_output_h5: Path to file where AhC coefficients in Ringdown distorted
-    frame will be written.
-    output_subfile_prefix: Subfile in output_h5 for AhC coefficients in Ringdown
-    distorted frame.
     number_of_steps: The number of steps from the last time in the
     simulation to look for AhC finds.
     match_time: Time to match functions of time.
@@ -98,33 +92,28 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
 
     """
 
-    shape_coefs = {}
-
     # Subfile for AhC data
     if ahc_subfile.split(".")[-1] == "dat":
         ahc_subfile = ahc_subfile.split(".")[0]
 
     # Setting up output with Distorted Subfile
-    output_subfile_ahc = output_subfile_prefix + "AhC_Ylm"
-    output_subfile_dt_ahc = output_subfile_prefix + "dtAhC_Ylm"
-    output_subfile_dt2_ahc = output_subfile_prefix + "dt2AhC_Ylm"
+    # output_subfile_ahc = output_subfile_prefix + "AhC_Ylm"
+    # output_subfile_dt_ahc = output_subfile_prefix + "dtAhC_Ylm"
+    # output_subfile_dt2_ahc = output_subfile_prefix + "dt2AhC_Ylm"
 
     ahc_times = []
-    ahc_legend = ""
     ahc_center = []
     ahc_lmax = 0
     with spectre_h5.H5File(ahc_reductions_path, "r") as h5file:
         datfile = h5file.get_dat("/" + ahc_subfile)
         datfile_np = np.array(datfile.get_data())
         ahc_times = datfile_np[:, 0]
-        ahc_legend = datfile.get_legend()
         ahc_center = [datfile_np[0][1], datfile_np[0][2], datfile_np[0][3]]
         ahc_lmax = int(datfile_np[0][4])
 
     # dict storing other info for starting a ringdown obtained in the process
     # of getting the ringdown-distorted-frame AhC coefficients
-    info_for_ringdown = {}
-    legend_for_ringdown = {}
+    fot_info_for_ringdown = {}
 
     # Transform AhC coefs to ringdown distorted frame and get other data
     # needed to start a ringdown, such as initial values for functions of time
@@ -149,49 +138,33 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     logger.info("Settling timescale: " + str(settling_timescale))
     logger.info("Lmax: " + str(ahc_lmax))
 
-    shape_coefs["Expansion"]: exp_func_and_2_derivs
-    shape_coefs["ExpansionOutrBdry"]: exp_outer_bdry_func_and_2_derivs
-    shape_coefs["Rotation"]: rot_func_and_2_derivs
-    shape_coefs["Match time"]: match_time
-    shape_coefs["Settling timescale"]: settling_timescale
-    shape_coefs["Lmax"]: ahc_lmax
-
-    legend_fot = ["FunctionOfTime", "dtFunctionOfTime", "dt2FunctionOfTime"]
-    legend_value = ["Value"]
-    info_for_ringdown["Expansion"] = exp_func_and_2_derivs
-    legend_for_ringdown["Expansion"] = legend_fot
-    info_for_ringdown["ExpansionOuterBdry"] = exp_outer_bdry_func_and_2_derivs
-    legend_for_ringdown["ExpansionOuterBdry"] = legend_fot
-    info_for_ringdown["Rotation0"] = [
+    fot_info_for_ringdown["Expansion"] = exp_func_and_2_derivs
+    fot_info_for_ringdown["ExpansionOuterBdry"] = (
+        exp_outer_bdry_func_and_2_derivs
+    )
+    fot_info_for_ringdown["Rotation0"] = [
         rot_func_and_2_derivs[0][0],
         rot_func_and_2_derivs[1][0],
         rot_func_and_2_derivs[2][0],
     ]
-    info_for_ringdown["Rotation1"] = [
+    fot_info_for_ringdown["Rotation1"] = [
         rot_func_and_2_derivs[0][1],
         rot_func_and_2_derivs[1][1],
         rot_func_and_2_derivs[2][1],
     ]
-    info_for_ringdown["Rotation2"] = [
+    fot_info_for_ringdown["Rotation2"] = [
         rot_func_and_2_derivs[0][2],
         rot_func_and_2_derivs[1][2],
         rot_func_and_2_derivs[2][2],
     ]
-    info_for_ringdown["Rotation3"] = [
+    fot_info_for_ringdown["Rotation3"] = [
         rot_func_and_2_derivs[0][3],
         rot_func_and_2_derivs[1][3],
         rot_func_and_2_derivs[2][3],
     ]
-    legend_for_ringdown["Rotation0"] = legend_fot
-    legend_for_ringdown["Rotation1"] = legend_fot
-    legend_for_ringdown["Rotation2"] = legend_fot
-    legend_for_ringdown["Rotation3"] = legend_fot
-    info_for_ringdown["MatchTime"] = [match_time]
-    legend_for_ringdown["MatchTime"] = legend_value
-    info_for_ringdown["SettlingTimescale"] = [settling_timescale]
-    legend_for_ringdown["SettlingTimescale"] = legend_value
-    info_for_ringdown["Lmax"] = [ahc_lmax]
-    legend_for_ringdown["Lmax"] = legend_value
+    fot_info_for_ringdown["MatchTime"] = [match_time]
+    fot_info_for_ringdown["SettlingTimescale"] = [settling_timescale]
+    fot_info_for_ringdown["Lmax"] = [ahc_lmax]
 
     # Do not include AhCs at times greater than the match time. Errors tend
     # to grow as time increases, so fit derivatives using the match time
@@ -247,7 +220,6 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
         zero_coefs,
     )
 
-    # output coefs to H5
     # Note: assumes no translation, so inertial and distorted centers are the
     # same, i.e. both are at the origin. A future update will incorporate
     # translation.
@@ -264,43 +236,26 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     fit_ahc_dt2_strahlkorper = Strahlkorper(
         ahc_lmax, ahc_lmax, fit_ahc_dt2_coef_mv, ahc_center
     )
-    legend_ahc, fit_ahc_coefs_to_write = ylm_legend_and_data(
+    legend_ahc, fit_ahc_ylm_coefs_to_write = ylm_legend_and_data(
         fit_ahc_strahlkorper, match_time, ahc_lmax
     )
-    legend_ahc_dt, fit_ahc_dt_coefs_to_write = ylm_legend_and_data(
+    legend_ahc_dt, fit_ahc_dt_ylm_coefs_to_write = ylm_legend_and_data(
         fit_ahc_dt_strahlkorper, match_time, ahc_lmax
     )
-    legend_ahc_dt2, fit_ahc_dt2_coefs_to_write = ylm_legend_and_data(
+    legend_ahc_dt2, fit_ahc_dt2_ylm_coefs_to_write = ylm_legend_and_data(
         fit_ahc_dt2_strahlkorper, match_time, ahc_lmax
     )
+
+    ringdown_ylm_coefs = [
+        fit_ahc_ylm_coefs_to_write,
+        fit_ahc_dt_ylm_coefs_to_write,
+        fit_ahc_dt2_ylm_coefs_to_write,
+    ]
+    ringdown_ylm_legend = [legend_ahc, legend_ahc_dt, legend_ahc_dt2]
 
     for i in range(1, 4, 1):
         legend_ahc[i] = legend_ahc[i].replace("Inertial", "Distorted")
         legend_ahc_dt[i] = legend_ahc_dt[i].replace("Inertial", "Distorted")
         legend_ahc_dt2[i] = legend_ahc_dt2[i].replace("Inertial", "Distorted")
 
-    with spectre_h5.H5File(file_name=path_to_output_h5, mode="a") as h5file:
-        ahc_datfile = h5file.insert_dat(
-            path="/" + output_subfile_ahc,
-            legend=legend_ahc,
-            version=0,
-        )
-        ahc_datfile.append(fit_ahc_coefs_to_write)
-
-    with spectre_h5.H5File(file_name=path_to_output_h5, mode="a") as h5file:
-        ahc_dt_datfile = h5file.insert_dat(
-            path="/" + output_subfile_dt_ahc,
-            legend=legend_ahc_dt,
-            version=0,
-        )
-        ahc_dt_datfile.append(fit_ahc_dt_coefs_to_write)
-
-    with spectre_h5.H5File(file_name=path_to_output_h5, mode="a") as h5file:
-        ahc_dt2_datfile = h5file.insert_dat(
-            path="/" + output_subfile_dt2_ahc,
-            legend=legend_ahc_dt2,
-            version=0,
-        )
-        ahc_dt2_datfile.append(fit_ahc_dt2_coefs_to_write)
-
-    return shape_coefs, info_for_ringdown
+    return ringdown_ylm_coefs, ringdown_ylm_legend, fot_info_for_ringdown

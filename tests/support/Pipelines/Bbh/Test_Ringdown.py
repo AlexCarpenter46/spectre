@@ -6,11 +6,19 @@ import shutil
 import unittest
 from pathlib import Path
 
+import numpy as np
 import yaml
 from click.testing import CliRunner
 
 import spectre.IO.H5 as spectre_h5
+from spectre import Spectral
+from spectre.DataStructures import DataVector
+from spectre.Domain import ElementId, ElementMap
+from spectre.Evolution.Ringdown.ComputeAhCCoefsInRingdownDistortedFrame import (
+    compute_ahc_coefs_in_ringdown_distorted_frame,
+)
 from spectre.Informer import unit_test_build_path
+from spectre.IO.H5 import ElementVolumeData, TensorComponent
 from spectre.Pipelines.Bbh.InitialData import generate_id
 from spectre.Pipelines.Bbh.Inspiral import start_inspiral
 from spectre.Pipelines.Bbh.Ringdown import (
@@ -63,6 +71,105 @@ class TestInitialData(unittest.TestCase):
             executable=str(self.bin_dir / "EvolveGhBinaryBlackHole"),
         )
         self.inspiral_dir = self.test_dir / "Inspiral" / "Segment_0000"
+        # Making fake reduction data with simple derivative
+        self.inspiral_reduction_data = self.inspiral_dir / "BbhReductions.h5"
+        with spectre_h5.H5File(
+            str(self.inspiral_reduction_data.resolve()), "a"
+        ) as reduction_file:
+            legend = [
+                "Time",
+                "InertialExpansionCenter_x",
+                "InertialExpansionCenter_y",
+                "InertialExpansionCenter_z",
+                "Lmax",
+                "coef(0,0)",
+                "coef(1,-1)",
+                "coef(1,0)",
+                "coef(1,1)",
+                "coef(2,-2)",
+                "coef(2,-1)",
+                "coef(2,0)",
+                "coef(2,1)",
+                "coef(2,2)",
+            ]
+            shape_coefs = [5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+            times = [4990, 4992, 4994, 4996, 4998, 5000]
+            reduction_dat = reduction_file.try_insert_dat(
+                "ObservationAhC_Ylm.dat", legend, 0
+            )
+            for x in range(0, 5):
+                reduction_dat.append(
+                    [
+                        [
+                            times[x],
+                            0.0,
+                            0.0,
+                            0.0,
+                            2,
+                            shape_coefs[x],
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                        ]
+                    ]
+                )
+            reduction_file.close_current_object()
+        # Making volume data for functions of time to be extracted
+        exp_inner_func_with_2_derivs = [1.0, 0.0, 0.0]
+        exp_outer_boundary_func_with_2_derivs = [1.0, -1e-6, 0.0]
+        rot_func_with_2_derivs = [
+            [0.0, 0.0, 0.0, 1.0],
+            [0.15, 0.0, 0.0, 0.02],
+            [0.06, 0.0, 0.0, 0.03],
+        ]
+        ringdown_ylm_coefs, ringdown_ylm_legend, fot_info = (
+            compute_ahc_coefs_in_ringdown_distorted_frame(
+                ahc_reductions_path=str(self.inspiral_reduction_data),
+                ahc_subfile="ObservationAhC_Ylm.dat",
+                exp_func_and_2_derivs=exp_inner_func_with_2_derivs,
+                exp_outer_bdry_func_and_2_derivs=(
+                    exp_outer_boundary_func_with_2_derivs
+                ),
+                rot_func_and_2_derivs=rot_func_with_2_derivs,
+                number_of_steps=5,
+                match_time=5000.0,
+                settling_timescale=10.0,
+                zero_coefs=None,
+            )
+        )
+
+        self.inspiral_volume_data = self.inspiral_dir / "BbhVolume0.h5"
+        functions_of_time = {
+            "Expansion": exp_inner_func_with_2_derivs,
+            "ExpansionOuterBoundary": exp_outer_boundary_func_with_2_derivs,
+            "Rotation": rot_func_with_2_derivs,
+        }
+        obs_values = [4990.0, 4992.0, 4994.0, 4996.0, 4998.0, 5000.0]
+        with spectre_h5.H5File(self.inspiral_volume_data, "w") as volume_file:
+            volfile = volume_file.insert_vol("ForContinuation", version=0)
+            for x in range(0, 5):
+                volfile.write_volume_data(
+                    observation_id=x,
+                    observation_value=obs_values[x],
+                    elements=ElementVolumeData(
+                        element_name="foo",
+                        components=[
+                            TensorComponent(
+                                "bar",
+                                np.random.rand(3),
+                            ),
+                        ],
+                        extents=[3],
+                        basis=[Spectral.Basis.Legendre],
+                        quadrature=[Spectral.Quadrature.GaussLobatto],
+                    ),
+                    serialized_functions_of_time=(functions_of_time),
+                )
 
     def tearDown(self):
         shutil.rmtree(self.test_dir, ignore_errors=True)
@@ -73,6 +180,7 @@ class TestInitialData(unittest.TestCase):
         params = ringdown_parameters(
             inspiral_input_file,
             self.inspiral_dir,
+            self.inspiral_volume_data,
             refinement_level=1,
             polynomial_order=5,
         )
@@ -89,7 +197,7 @@ class TestInitialData(unittest.TestCase):
         try:
             start_ringdown_command(
                 [
-                    str(self.inspiral_dir / "Inspiral.yaml"),
+                    str(self.inspiral_dir),
                     "--refinement-level",
                     "1",
                     "--polynomial-order",
@@ -98,6 +206,14 @@ class TestInitialData(unittest.TestCase):
                     str(self.test_dir / "Ringdown"),
                     "--no-submit",
                     "-E",
+                    "--match-time",
+                    "5000",
+                    "--number-of-steps",
+                    "5",
+                    "--settling-timescale",
+                    "10.0",
+                    "--path-to-output-h5",
+                    str(self.test_dir / "Ringdown" / "RingdownCoefs.h5"),
                     str(self.bin_dir / "EvolveGhSingleBlackHole"),
                 ]
             )
@@ -105,6 +221,11 @@ class TestInitialData(unittest.TestCase):
             self.assertEqual(e.code, 0)
         self.assertTrue(
             (self.test_dir / "Ringdown/Segment_0000/Ringdown.yaml").exists()
+        )
+        self.assertEqual(
+            (self.test_dir).resolve()
+            / "Ringdown"
+            / "RingdownCoefs.h5".exists(),
         )
 
 
