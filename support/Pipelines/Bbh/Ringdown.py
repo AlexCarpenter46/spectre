@@ -259,12 +259,7 @@ def start_ringdown(
     ringdown_params["FinalTime"] = (
         match_time + ringdown_params["OuterBdryRadius"] + 200.0
     )
-
     logger.info(f"Ringdown parameters: {pretty_repr(ringdown_params)}")
-
-    # Add additional parameters to substitute in ringdown template
-    # Primarily, these will initialize functions of time
-    extra_params = {}
 
     # Schedule!
     return schedule(
