@@ -46,7 +46,6 @@ DomainCreator:
     WhichWedges: All
     TimeDependentMaps:
       InitialTime: *InitialTime
-      InitialTimeForShapeMap: *InitialTime
       ShapeMap:
         LMax: &MaximumL {{ ShapeMapLMax }}
         InitialValues:
