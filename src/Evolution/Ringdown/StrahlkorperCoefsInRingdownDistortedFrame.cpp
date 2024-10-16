@@ -58,9 +58,8 @@ std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
   const domain::creators::sphere::TimeDependentMapOptions::RotationMapOptions
       rotation_map_options{rot_func_and_2_derivs, settling_timescale};
   const domain::creators::sphere::TimeDependentMapOptions
-      time_dependent_map_options{match_time,           std::nullopt,
-                                 rotation_map_options, expansion_map_options,
-                                 std::nullopt,         {gsl::at(ahc_times, 0)}};
+      time_dependent_map_options{match_time, std::nullopt, rotation_map_options,
+                                 expansion_map_options, std::nullopt};
   const domain::creators::Sphere domain_creator{
       0.01,
       200.0,
