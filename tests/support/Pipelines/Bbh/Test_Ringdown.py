@@ -2,6 +2,7 @@
 # See LICENSE.txt for details.
 
 import logging
+import math
 import shutil
 import unittest
 from pathlib import Path
@@ -13,7 +14,11 @@ from click.testing import CliRunner
 import spectre.IO.H5 as spectre_h5
 from spectre import Spectral
 from spectre.DataStructures import DataVector
-from spectre.Domain import serialize_functions_of_time
+from spectre.Domain import (
+    PiecewisePolynomial,
+    QuaternionFunctionOfTime,
+    serialize_functions_of_time,
+)
 from spectre.Evolution.Ringdown.ComputeAhCCoefsInRingdownDistortedFrame import (
     compute_ahc_coefs_in_ringdown_distorted_frame,
 )
@@ -119,36 +124,28 @@ class TestInitialData(unittest.TestCase):
                     ]
                 )
             reduction_file.close_current_object()
-        # Making volume data for functions of time to be extracted
-        exp_inner_func_with_2_derivs = [1.0, 0.0, 0.0]
-        exp_outer_boundary_func_with_2_derivs = [1.0, -1e-6, 0.0]
-        rot_func_with_2_derivs = [
-            [0.0, 0.0, 0.0, 1.0],
-            [0.15, 0.0, 0.0, 0.02],
-            [0.06, 0.0, 0.0, 0.03],
-        ]
-        ringdown_ylm_coefs, ringdown_ylm_legend, fot_info = (
-            compute_ahc_coefs_in_ringdown_distorted_frame(
-                ahc_reductions_path=str(self.inspiral_reduction_data),
-                ahc_subfile="ObservationAhC_Ylm.dat",
-                exp_func_and_2_derivs=exp_inner_func_with_2_derivs,
-                exp_outer_bdry_func_and_2_derivs=(
-                    exp_outer_boundary_func_with_2_derivs
-                ),
-                rot_func_and_2_derivs=rot_func_with_2_derivs,
-                number_of_steps=5,
-                match_time=5000.0,
-                settling_timescale=10.0,
-                zero_coefs=None,
-            )
-        )
 
+        # Making volume data for functions of time to be extracted
+        rotation_fot = QuaternionFunctionOfTime(
+            0.0,
+            [DataVector(size=4, fill=1.0)],
+            4 * [DataVector(size=3, fill=0.0)],
+            math.inf,
+        )
+        expansion_fot = PiecewisePolynomial(
+            0.0, 4 * [DataVector(size=1, fill=1.0)], math.inf
+        )
+        expansion_outer_fot = PiecewisePolynomial(
+            0.0, 4 * [DataVector(size=1, fill=1.0)], math.inf
+        )
+        serialized_fots = serialize_functions_of_time(
+            {
+                "Expansion": expansion_fot,
+                "ExpansionOuterBoundary": expansion_outer_fot,
+                "Rotation": rotation_fot,
+            }
+        )
         self.inspiral_volume_data = self.inspiral_dir / "BbhVolume0.h5"
-        functions_of_time = {
-            "Expansion": exp_inner_func_with_2_derivs,
-            "ExpansionOuterBoundary": exp_outer_boundary_func_with_2_derivs,
-            "Rotation": rot_func_with_2_derivs,
-        }
         obs_values = [4990.0, 4992.0, 4994.0, 4996.0, 4998.0, 5000.0]
         with spectre_h5.H5File(self.inspiral_volume_data, "w") as volume_file:
             volfile = volume_file.insert_vol("ForContinuation", version=0)
@@ -156,21 +153,21 @@ class TestInitialData(unittest.TestCase):
                 volfile.write_volume_data(
                     observation_id=x,
                     observation_value=obs_values[x],
-                    elements=ElementVolumeData(
-                        element_name="foo",
-                        components=[
-                            TensorComponent(
-                                "bar",
-                                np.random.rand(3),
-                            ),
-                        ],
-                        extents=[3],
-                        basis=[Spectral.Basis.Legendre],
-                        quadrature=[Spectral.Quadrature.GaussLobatto],
-                    ),
-                    serialized_functions_of_time=seralize_functions_of_time(
-                        functions_of_time
-                    ),
+                    elements=[
+                        ElementVolumeData(
+                            element_name="foo",
+                            components=[
+                                TensorComponent(
+                                    "bar",
+                                    np.random.rand(3),
+                                ),
+                            ],
+                            extents=[3],
+                            basis=[Spectral.Basis.Legendre],
+                            quadrature=[Spectral.Quadrature.GaussLobatto],
+                        )
+                    ],
+                    serialized_functions_of_time=serialized_fots,
                 )
 
     def tearDown(self):
@@ -205,29 +202,25 @@ class TestInitialData(unittest.TestCase):
                     "--polynomial-order",
                     "5",
                     "-O",
-                    str(self.test_dir / "Ringdown"),
-                    "--no-submit",
-                    "-E",
+                    str(self.test_dir),
                     "--match-time",
-                    "5000",
+                    "5000.0",
                     "--number-of-steps",
                     "5",
                     "--settling-timescale",
                     "10.0",
                     "--path-to-output-h5",
-                    str(self.test_dir / "Ringdown" / "RingdownCoefs.h5"),
+                    str(self.test_dir / "RingdownCoefs.h5"),
+                    "-E",
                     str(self.bin_dir / "EvolveGhSingleBlackHole"),
+                    "--no-submit",
                 ]
             )
         except SystemExit as e:
             self.assertEqual(e.code, 0)
+        self.assertTrue((self.test_dir / "Segment_0000/Ringdown.yaml").exists())
         self.assertTrue(
-            (self.test_dir / "Ringdown/Segment_0000/Ringdown.yaml").exists()
-        )
-        self.assertEqual(
-            (self.test_dir).resolve()
-            / "Ringdown"
-            / "RingdownCoefs.h5".exists(),
+            (self.test_dir / "RingdownCoefs.h5").exists(),
         )
 
 
