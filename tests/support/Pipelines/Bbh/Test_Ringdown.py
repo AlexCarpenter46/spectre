@@ -13,7 +13,7 @@ from click.testing import CliRunner
 import spectre.IO.H5 as spectre_h5
 from spectre import Spectral
 from spectre.DataStructures import DataVector
-from spectre.Domain import ElementId, ElementMap
+from spectre.Domain import serialize_functions_of_time
 from spectre.Evolution.Ringdown.ComputeAhCCoefsInRingdownDistortedFrame import (
     compute_ahc_coefs_in_ringdown_distorted_frame,
 )
@@ -168,7 +168,9 @@ class TestInitialData(unittest.TestCase):
                         basis=[Spectral.Basis.Legendre],
                         quadrature=[Spectral.Quadrature.GaussLobatto],
                     ),
-                    serialized_functions_of_time=(functions_of_time),
+                    serialized_functions_of_time=seralize_functions_of_time(
+                        functions_of_time
+                    ),
                 )
 
     def tearDown(self):

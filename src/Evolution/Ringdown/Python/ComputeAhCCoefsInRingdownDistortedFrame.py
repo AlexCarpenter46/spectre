@@ -31,6 +31,9 @@ def dt2_cubic(x, a, b, c, d):
     return 6 * a * x + 2 * b
 
 
+# Change zero_coefs to zero_coefs_eps :)
+
+
 # Cubic fit transformed coefs to get first and second time derivatives
 def fit_to_a_cubic(times, coefs, match_time, zero_coefs):
     fits = []
