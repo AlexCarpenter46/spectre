@@ -19,9 +19,6 @@ from spectre.Domain import (
     QuaternionFunctionOfTime,
     serialize_functions_of_time,
 )
-from spectre.Evolution.Ringdown.ComputeAhCCoefsInRingdownDistortedFrame import (
-    compute_ahc_coefs_in_ringdown_distorted_frame,
-)
 from spectre.Informer import unit_test_build_path
 from spectre.IO.H5 import ElementVolumeData, TensorComponent
 from spectre.Pipelines.Bbh.InitialData import generate_id
