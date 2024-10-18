@@ -176,7 +176,6 @@ class TestInitialData(unittest.TestCase):
         params = ringdown_parameters(
             inspiral_input_file,
             self.inspiral_dir,
-            self.inspiral_volume_data,
             refinement_level=1,
             polynomial_order=5,
         )

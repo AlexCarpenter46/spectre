@@ -31,11 +31,8 @@ def dt2_cubic(x, a, b, c, d):
     return 6 * a * x + 2 * b
 
 
-# Change zero_coefs to zero_coefs_eps :)
-
-
 # Cubic fit transformed coefs to get first and second time derivatives
-def fit_to_a_cubic(times, coefs, match_time, zero_coefs):
+def fit_to_a_cubic(times, coefs, match_time, zero_coefs_eps):
     fits = []
     fit_ahc = []
     fit_dt_ahc = []
@@ -43,7 +40,10 @@ def fit_to_a_cubic(times, coefs, match_time, zero_coefs):
     for j in np.arange(0, coefs.shape[-1], 1):
         # Optionally, avoid fitting coefficients sufficiently close to zero by
         # just setting these coefficients and their time derivatives to zero.
-        if zero_coefs is not None and sum(np.abs(coefs[:, j])) < zero_coefs:
+        if (
+            zero_coefs_eps is not None
+            and sum(np.abs(coefs[:, j])) < zero_coefs_eps
+        ):
             fits.append(np.zeros(4))
             fit_ahc.append(0.0)
             fit_dt_ahc.append(0.0)
@@ -72,7 +72,7 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     number_of_steps,
     match_time,
     settling_timescale,
-    zero_coefs,
+    zero_coefs_eps,
 ):
     """Computes the AhC Ylm Coefficients in the Ringdown distorted frame
     from the functions of time of the AhC in the inspiral distorted frame.
@@ -91,7 +91,7 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     simulation to look for AhC finds.
     match_time: Time to match functions of time.
     settling_timescale: Timescale for settle to constant functions of time.
-    zero_coefs: Coefficients to zero out
+    zero_coefs_eps: Approximate limit to compare coefficients to 0.0
 
     """
 
@@ -220,7 +220,7 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
         ahc_times_for_fit,
         coefs_at_different_times_for_fit,
         match_time,
-        zero_coefs,
+        zero_coefs_eps,
     )
 
     # Note: assumes no translation, so inertial and distorted centers are the

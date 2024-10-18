@@ -30,7 +30,6 @@ RINGDOWN_INPUT_FILE_TEMPLATE = Path(__file__).parent / "Ringdown.yaml"
 def ringdown_parameters(
     inspiral_input_file: dict,
     inspiral_run_dir: Union[str, Path],
-    fot_vol_subfile: str,
     refinement_level: int,
     polynomial_order: int,
 ) -> dict:
@@ -63,7 +62,7 @@ def start_ringdown(
     number_of_steps: int,
     match_time: float,
     settling_timescale: float,
-    zero_coefs: float,
+    zero_coefs_eps: float,
     refinement_level: int,
     polynomial_order: int,
     inspiral_input_file: Optional[Union[str, Path]] = None,
@@ -103,7 +102,8 @@ def start_ringdown(
         match_time: The time to match the time dependent maps at.
         settling_timescale: The settling timescale for the rotation and
         expansion maps.
-        zero_coefs: Coefficients to set to 0.0
+        zero_coefs_eps: Coefficients within zero_coefs_eps to 0.0 will be set to
+        0.0
         refinement_level: The initial H refinement level for ringdown.
         polynomial_order: The initial P refinement level for ringdown.
         inspiral_input_file: The input file used for during the Inspiral,
@@ -156,7 +156,6 @@ def start_ringdown(
     ringdown_params = ringdown_parameters(
         inspiral_input_file,
         inspiral_run_dir,
-        fot_vol_subfile,
         refinement_level=refinement_level,
         polynomial_order=polynomial_order,
     )
@@ -193,7 +192,7 @@ def start_ringdown(
             number_of_steps,
             match_time,
             settling_timescale,
-            zero_coefs,
+            zero_coefs_eps,
         )
     )
 
