@@ -6,4 +6,5 @@ spectre_add_python_bindings_test(
     Test_ComputeAhCCoefsInRingdownDistortedFrame.py
     "Python"
     None
+    foobar
 )
