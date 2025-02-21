@@ -97,6 +97,7 @@ void Shape::jacobian_helper(
                               interpolation_info);
   }
 
+  // G / r
   auto transition_func_over_radius =
       transition_func_->operator()(centered_coords, {1});
   auto transition_func_gradient_times_distortion =

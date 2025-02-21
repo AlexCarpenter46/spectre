@@ -7,6 +7,7 @@
 #include <array>
 #include <optional>
 #include <pup.h>
+#include <vector>
 
 #include "DataStructures/Blaze/IntegerPow.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
@@ -139,7 +140,7 @@ std::optional<double> SphereTransition::original_radius_over_radius(
             -2.0 * sqrt(Q) * cos((theta - 2.0 * M_PI) / 3.0)};
 
         // Radii are positive
-        alg::remove_if(roots, [](const double root) { return root < 0.0; });
+        std::erase_if(roots, [](const double root) { return root < 0.0; });
 
         // Since the root of this is the original radius over target radius, it
         // will be of order unity and not something super large, so we take the

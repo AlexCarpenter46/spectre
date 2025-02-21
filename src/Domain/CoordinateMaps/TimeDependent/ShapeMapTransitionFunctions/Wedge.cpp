@@ -11,6 +11,7 @@
 #include <pup.h>
 #include <pup_stl.h>
 #include <type_traits>
+#include <vector>
 
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Tensor/Tensor.hpp"
@@ -485,7 +486,7 @@ std::optional<double> Wedge::original_radius_over_radius(
             -2.0 * sqrt(Q) * cos((theta - 2.0 * M_PI) / 3.0)};
 
         // Radii are positive
-        alg::remove_if(roots, [](const double root) { return root < 0.0; });
+        std::erase_if(roots, [](const double root) { return root < 0.0; });
 
         // Since the root of this is the original radius over target radius, it
         // will be of order unity and not something super large, so we take the
