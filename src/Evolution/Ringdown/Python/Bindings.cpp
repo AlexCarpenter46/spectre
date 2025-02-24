@@ -8,6 +8,7 @@
 #include "Domain/Creators/Sphere.hpp"
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
+#include "Evolution/Ringdown/MinimumAhCExcisionRadius.hpp"
 #include "Evolution/Ringdown/StrahlkorperCoefsInRingdownDistortedFrame.hpp"
 #include "Utilities/ErrorHandling/SegfaultHandler.hpp"
 #include "Utilities/Serialization/RegisterDerivedClassesWithCharm.hpp"
@@ -32,6 +33,28 @@ void bind_strahlkorper_coefs_in_ringdown_distorted_frame(py::module& m) {
         py::arg("exp_outer_bdry_func_and_2_derivs"),
         py::arg("rot_func_and_2_derivs"), py::arg("trans_func_and_2_derivs"));
 }
+
+void bind_minimum_ahc_excision_radius(py::module& m);
+
+void bind_minimum_ahc_excision_radius(py::module& m) {
+  domain::creators::register_derived_with_charm();
+  domain::creators::time_dependence::register_derived_with_charm();
+  domain::FunctionsOfTime::register_derived_with_charm();
+
+  m.def("minimum_ahc_excision_radius",
+        &evolution::Ringdown::minimum_ahc_excision_radius,
+        py::arg("path_to_volume_data"), py::arg("volume_subfile_name"),
+        py::arg("path_to_horizons_h5"), py::arg("surface_subfile_name"),
+        py::arg("path_to_ahc_distorted_h5"),
+        py::arg("ahc_distorted_subfile_names"),
+        py::arg("requested_number_of_times_from_end"), py::arg("match_time"),
+        py::arg("settling_timescale"), py::arg("excision_a_radius"),
+        py::arg("excision_b_radius"), py::arg("excision_a_center"),
+        py::arg("excision_b_center"), py::arg("excision_l_max"),
+        py::arg("exp_func_and_2_derivs"),
+        py::arg("exp_outer_bdry_func_and_2_derivs"),
+        py::arg("rot_func_and_2_derivs"), py::arg("trans_func_and_2_derivs"));
+}
 }  // namespace evolution::Ringdown::py_bindings
 
 PYBIND11_MODULE(_Pybindings, m) {  // NOLINT
@@ -40,4 +63,5 @@ PYBIND11_MODULE(_Pybindings, m) {  // NOLINT
   py::module_::import("spectre.DataStructures");
   evolution::Ringdown::py_bindings::
       bind_strahlkorper_coefs_in_ringdown_distorted_frame(m);
+  evolution::Ringdown::py_bindings::bind_minimum_ahc_excision_radius(m);
 }
