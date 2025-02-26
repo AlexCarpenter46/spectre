@@ -59,9 +59,9 @@ def ringdown_parameters(
         "L": refinement_level,
         "P": polynomial_order,
         # Store target parameters in the input file
-        # "TargetParams": yaml.safe_dump(
-        #     {"TargetParams": inspiral_metadata["TargetParams"]}
-        # ).strip(),
+        "TargetParams": yaml.safe_dump(
+            {"TargetParams": inspiral_metadata["TargetParams"]}
+        ).strip(),
     }
 
 
@@ -177,6 +177,7 @@ def start_ringdown(
         str(fot_vol_h5_path), fot_vol_subfile, match_time
     )
     match_time = evaluated_fot_dict["MatchTime"]
+    print("Match time " + str(match_time))
 
     # This section checks for functions of time in the dictionary. It also
     # alters some values in the evaluated functions of time dictionary. The
@@ -197,6 +198,7 @@ def start_ringdown(
             [0.0, 0.0, 0.0, 0.0],
         ]
     evaluated_fot_dict["Expansion"] = [1.0, 0.0, 0.0]
+    # if "Translation" not in evaluated_fot_dict:
     evaluated_fot_dict["Translation"] = [
         [0.0, 0.0, 0.0],
         [0.0, 0.0, 0.0],
@@ -273,22 +275,6 @@ def start_ringdown(
         center_of_mass_offset_y,
         center_of_mass_offset_z,
     ]
-    # excision_center_A = [
-    #     excision_A_x_coord,
-    #     0,
-    #     0,
-    # ]
-    # excision_center_B = [
-    #     excision_B_x_coord,
-    #     0,
-    #     0,
-    # ]
-
-    # This should maybe be altered to A/B since we'll probably have different
-    # lmaxes in the future with unequal masses.
-    excision_l_max = inspiral_input_file["DomainCreator"][
-        "BinaryCompactObject"
-    ]["TimeDependentMaps"]["ShapeMapA"]["LMax"]
 
     ahc_excision_radius = Ringdown.minimum_ahc_excision_radius(
         str(fot_vol_h5_path),
@@ -304,7 +290,6 @@ def start_ringdown(
         excision_radius_B,
         excision_center_A,
         excision_center_B,
-        excision_l_max,
         evaluated_fot_dict["Expansion"],
         evaluated_fot_dict["ExpansionOuterBoundary"],
         evaluated_fot_dict["Rotation"],

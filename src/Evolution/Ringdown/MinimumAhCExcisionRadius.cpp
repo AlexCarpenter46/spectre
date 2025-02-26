@@ -16,6 +16,8 @@
 #include "DataStructures/Tensor/Tensor.hpp"
 #include "Domain/BlockLogicalCoordinates.hpp"
 #include "Domain/CoordinateMaps/Distribution.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/SphereTransition.hpp"
 #include "Domain/CoordsToDifferentFrame.hpp"
 #include "Domain/Creators/BinaryCompactObject.hpp"
 #include "Domain/Creators/Sphere.hpp"
@@ -46,7 +48,7 @@ double minimum_ahc_excision_radius(
     size_t requested_number_of_times_from_end, double match_time,
     double settling_timescale, double excision_A_radius,
     double excision_B_radius, std::array<double, 3> excision_A_center,
-    std::array<double, 3> excision_B_center, size_t excision_l_max,
+    std::array<double, 3> excision_B_center,
     const std::optional<std::array<double, 3>>& exp_func_and_2_derivs,
     const std::optional<std::array<double, 3>>&
         exp_outer_bdry_func_and_2_derivs,
@@ -122,6 +124,7 @@ double minimum_ahc_excision_radius(
 
   const double rAH = ahc_inertial_at_match_time.average_radius();
 
+  std::cout << "rAH: " << rAH << std::endl;
   std::cout << "match time: " << match_time << std::endl;
   std::cout << "excision A radius: " << excision_A_radius << std::endl;
   std::cout << "excision B radius: " << excision_B_radius << std::endl;
@@ -162,14 +165,14 @@ double minimum_ahc_excision_radius(
   double q = abs(excision_A_center[0] / excision_B_center[0]);
   std::cout << "Poor man's mass ratio: " << q << std::endl;
   double eps = 1e-3 / q;
-  bool converged = false;
+  bool outer_converged = false;
   size_t current_outer_iteration = 0;
   size_t max_iterations = 10;
   size_t current_l_max = 20;
   double rminfac = 0.94;
 
   // Start of outer loop
-  while (not converged and current_outer_iteration < max_iterations) {
+  while (not outer_converged and current_outer_iteration < max_iterations) {
     // Section for constructing strahlkorpers for AhA/AhB
     ylm::Strahlkorper<Frame::Grid> excision_a_inspiral_grid(
         current_l_max, excision_A_radius, excision_A_center);
@@ -192,9 +195,10 @@ double minimum_ahc_excision_radius(
     // Loop section finding the correct rmin_fac
     double old_rminfac = rminfac;
     size_t current_inner_iteration = 0;
+    bool inner_converged = false;
 
     // Start of the inner loop!
-    while (not converged and current_inner_iteration < max_iterations) {
+    while (not inner_converged and current_inner_iteration < max_iterations) {
       const domain::creators::Sphere ringdown_rmin_domain_creator{
           rAH * rminfac,
           200.0,
@@ -213,8 +217,6 @@ double minimum_ahc_excision_radius(
           ringdown_rmin_domain_creator.create_domain();
       const auto ringdown_rmin_functions_of_time =
           ringdown_rmin_domain_creator.functions_of_time();
-      std::cout << "Do you successfully make the ringdown domain?" << std::endl;
-
       const auto exc_a_block_logical = block_logical_coordinates(
           temporary_ringdown_rmin_domain, excision_a_inspiral_inertial_points,
           match_time, ringdown_rmin_functions_of_time);
@@ -222,35 +224,124 @@ double minimum_ahc_excision_radius(
           temporary_ringdown_rmin_domain, excision_b_inspiral_inertial_points,
           match_time, ringdown_rmin_functions_of_time);
 
-      bool all_points_inside_ahc = true;
+      tnsr::I<DataVector, 3, Frame::Inertial> excision_a_ringdown_grid_points{
+          get<0>(ylm::cartesian_coords(excision_a_inspiral_grid)).size()};
+      tnsr::I<DataVector, 3, Frame::Inertial> excision_b_ringdown_grid_points{
+          get<0>(ylm::cartesian_coords(excision_b_inspiral_grid)).size()};
+
+      double min_excision_radius = 0.0;
+      tnsr::I<double, 3, Frame::Inertial> exc_a_inspiral_inertial_point{};
+      tnsr::I<double, 3, Frame::Grid> exc_a_ringdown_grid_point{};
+      tnsr::I<double, 3, Frame::Inertial> exc_b_inspiral_inertial_point{};
+      tnsr::I<double, 3, Frame::Grid> exc_b_ringdown_grid_point{};
       for (size_t s = 0; s < get<0>(excision_a_inspiral_inertial_points).size();
            ++s) {
-        const auto cartesian_points_ringdown_grid_exc_a =
-            ylm::cartesian_coords(exc_a_ringdown_grid_frame);
-        const auto cartesian_points_ringdown_grid_exc_b =
-            ylm::cartesian_coords(exc_b_ringdown_grid_frame);
+        get<0>(exc_a_inspiral_inertial_point) =
+            get<0>(excision_a_inspiral_inertial_points)[s];
+        get<1>(exc_a_inspiral_inertial_point) =
+            get<1>(excision_a_inspiral_inertial_points)[s];
+        get<2>(exc_a_inspiral_inertial_point) =
+            get<2>(excision_a_inspiral_inertial_points)[s];
+        get<0>(exc_b_inspiral_inertial_point) =
+            get<0>(excision_b_inspiral_inertial_points)[s];
+        get<1>(exc_b_inspiral_inertial_point) =
+            get<1>(excision_b_inspiral_inertial_points)[s];
+        get<2>(exc_b_inspiral_inertial_point) =
+            get<2>(excision_b_inspiral_inertial_points)[s];
 
-        double max_excision_radius = 0.0;
-        for (double x_coord_a : cartesian_points_ringdown_grid_exc_a[0]) {
-          if (x_coord_a > max_excision_radius) {
-            max_excision_radius = x_coord_a;
+        if (exc_a_block_logical[s].has_value()) {
+          const auto& block_id_and_coords = exc_a_block_logical[s].value();
+          const auto& block = temporary_ringdown_rmin_domain
+                                  .blocks()[block_id_and_coords.id.get_index()];
+          const auto& grid_to_inertial_map =
+              block.moving_mesh_grid_to_inertial_map();
+          const auto inv_point = grid_to_inertial_map.inverse(
+              exc_a_inspiral_inertial_point, match_time,
+              ringdown_rmin_functions_of_time);
+          if (inv_point.has_value()) {
+            exc_a_ringdown_grid_point = inv_point.value();
+          } else {
+            ERROR("Map from Frame::Inertial to Frame::Grid is not invertible");
+          }
+        } else {
+          // This point is inside the excision which is why it couldn't be
+          // mapped to a block. Now we must use the shape map inverse to
+          // determine where this point is.
+          const auto inv_point =
+              temporary_ringdown_rmin_domain.excision_spheres()
+                  .at("ExcisionSphere")
+                  .moving_mesh_grid_to_inertial_map()
+                  .inverse(exc_a_inspiral_inertial_point, match_time,
+                           ringdown_rmin_functions_of_time);
+          if (inv_point.has_value()) {
+            get<0>(exc_a_ringdown_grid_point) = inv_point.value()[0];
+            get<1>(exc_a_ringdown_grid_point) = inv_point.value()[1];
+            get<2>(exc_a_ringdown_grid_point) = inv_point.value()[2];
+          } else {
+            ERROR("Map from Frame::Inertial to Frame::Grid is not invertible");
           }
         }
-        for (double x_coord_b : cartesian_points_ringdown_grid_exc_b[0]) {
-          if (abs(x_coord_b) > max_excision_radius) {
-            max_excision_radius = x_coord_b;
+        if (exc_b_block_logical[s].has_value()) {
+          const auto& block_id_and_coords = exc_b_block_logical[s].value();
+          const auto& block = temporary_ringdown_rmin_domain
+                                  .blocks()[block_id_and_coords.id.get_index()];
+          const auto& grid_to_inertial_map =
+              block.moving_mesh_grid_to_inertial_map();
+          const auto inv_point = grid_to_inertial_map.inverse(
+              exc_b_inspiral_inertial_point, match_time,
+              ringdown_rmin_functions_of_time);
+          if (inv_point.has_value()) {
+            exc_b_ringdown_grid_point = inv_point.value();
+          } else {
+            ERROR("Map from Frame::Inertial to Frame::Grid is not invertible");
+          }
+        } else {
+          // This point is inside the excision which is why it couldn't be
+          // mapped to a block. Now we must use the shape map inverse to
+          // determine where this point is.
+          const auto inv_point =
+              temporary_ringdown_rmin_domain.excision_spheres()
+                  .at("ExcisionSphere")
+                  .moving_mesh_grid_to_inertial_map()
+                  .inverse(exc_b_inspiral_inertial_point, match_time,
+                           ringdown_rmin_functions_of_time);
+          if (inv_point.has_value()) {
+            get<0>(exc_b_ringdown_grid_point) = inv_point.value()[0];
+            get<1>(exc_b_ringdown_grid_point) = inv_point.value()[1];
+            get<2>(exc_b_ringdown_grid_point) = inv_point.value()[2];
+          } else {
+            ERROR("Map from Frame::Inertial to Frame::Grid is not invertible");
           }
         }
-        const double min_rminfac = max_excision_radius / rAH;
-        rminfac = 1.0 - 0.25 * (1.0 - min_rminfac);
-        if (current_inner_iteration != 0 and
-            abs(rminfac - old_rminfac) <= eps) {
-          std::cout << "Did it converge?" << std::endl;
-          converged = true;
+        const double excision_a_point_radius =
+            sqrt(square(get<0>(exc_a_ringdown_grid_point)) +
+                 square(get<1>(exc_a_ringdown_grid_point)) +
+                 square(get<2>(exc_a_ringdown_grid_point)));
+        const double excision_b_point_radius =
+            sqrt(square(get<0>(exc_b_ringdown_grid_point)) +
+                 square(get<1>(exc_b_ringdown_grid_point)) +
+                 square(get<2>(exc_b_ringdown_grid_point)));
+
+        if (excision_a_point_radius > min_excision_radius) {
+          min_excision_radius = excision_a_point_radius;
         }
+        if (excision_b_point_radius > min_excision_radius) {
+          min_excision_radius = excision_b_point_radius;
+        }
+      }
+      const double min_rminfac = min_excision_radius / rAH;
+      rminfac = 1.0 - 0.25 * (1.0 - min_rminfac);
+      if (current_inner_iteration != 0 and
+          abs(rminfac - old_rminfac) <= 0.5 * eps) {
+        inner_converged = true;
+      }
         current_inner_iteration++;
         old_rminfac = rminfac;
-      }
+    }
+    if (current_outer_iteration != 0 and
+        abs(rminfac - old_rminfac) <= 0.5 * eps) {
+      outer_converged = true;
+    }
       current_outer_iteration++;
       // Increment l max by 6 every iteration.
       current_l_max += 6;
@@ -259,9 +350,17 @@ double minimum_ahc_excision_radius(
             "Max Iterations for finding a suitable excision radius exceeded. "
             "Going to sleep.");
       }
-    }
-    const double excision_radius = rAH * rminfac;
-
-    return excision_radius;
   }
+  double safe_rminfac = rminfac / eps;
+  safe_rminfac *= eps;
+  safe_rminfac += eps;
+  if (safe_rminfac - rminfac < 0.5 * eps) {
+    safe_rminfac += eps;
+  }
+  const double excision_radius =
+      rminfac > safe_rminfac ? rAH * rminfac : rAH * safe_rminfac;
+  std::cout << "AhC Excision Radius: " << excision_radius << std::endl;
+
+  return excision_radius;
+}
 }  // namespace evolution::Ringdown

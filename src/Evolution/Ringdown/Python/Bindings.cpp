@@ -50,8 +50,7 @@ void bind_minimum_ahc_excision_radius(py::module& m) {
         py::arg("requested_number_of_times_from_end"), py::arg("match_time"),
         py::arg("settling_timescale"), py::arg("excision_a_radius"),
         py::arg("excision_b_radius"), py::arg("excision_a_center"),
-        py::arg("excision_b_center"), py::arg("excision_l_max"),
-        py::arg("exp_func_and_2_derivs"),
+        py::arg("excision_b_center"), py::arg("exp_func_and_2_derivs"),
         py::arg("exp_outer_bdry_func_and_2_derivs"),
         py::arg("rot_func_and_2_derivs"), py::arg("trans_func_and_2_derivs"));
 }

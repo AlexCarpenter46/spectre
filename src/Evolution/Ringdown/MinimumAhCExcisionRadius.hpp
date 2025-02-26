@@ -34,7 +34,7 @@ double minimum_ahc_excision_radius(
     size_t requested_number_of_times_from_end, double match_time,
     double settling_timescale, double excision_A_radius,
     double excision_B_radius, std::array<double, 3> excision_A_center,
-    std::array<double, 3> excision_B_center, size_t excision_l_max,
+    std::array<double, 3> excision_B_center,
     const std::optional<std::array<double, 3>>& exp_func_and_2_derivs =
         std::nullopt,
     const std::optional<std::array<double, 3>>&
