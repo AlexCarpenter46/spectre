@@ -382,12 +382,12 @@ double Wedge::operator()(
   const double outer_distance = magnitude(outer_surface_vector);
 
   // Check if the point we were passed is within the transition region
-  if (centered_coords_magnitude < inner_distance - eps_) {
+  if (centered_coords_magnitude < (1.0 - eps_) * inner_distance) {
     ERROR("Wedge transition called with centered coordinate "
           << source_coords << " (with radius " << centered_coords_magnitude
           << ") which is inside the inner surface (" << inner_distance
           << ") while the axis was not 'Interior' (" << axis_ << ")");
-  } else if (centered_coords_magnitude > outer_distance + eps_) {
+  } else if (centered_coords_magnitude > (1.0 + eps_) * outer_distance) {
     ERROR("Wedge transition called with centered coordinate "
           << source_coords << " (with radius " << centered_coords_magnitude
           << ") which is outside the outer surface (" << outer_distance
@@ -457,7 +457,8 @@ std::optional<double> Wedge::original_radius_over_radius(
   if (not reverse_) {
     // Check if we are within the interior region or at the inner surface. The
     // formula is simplified at the inner surface
-    if (centered_coords_magnitude + radial_distortion < inner_distance - eps_) {
+    if (centered_coords_magnitude + radial_distortion <
+        (1.0 - eps_) * inner_distance) {
       // Int: Unless the axis_ is Interior, this block doesn't contain this
       // point
       if (axis_ != Axis::Interior) {
@@ -520,8 +521,10 @@ std::optional<double> Wedge::original_radius_over_radius(
   // transition region. If we are reversed and inside the inner surface, we
   // return nullopt. If we aren't reversed and beyond the outer surface we
   // return nullopt because we could still be in the interior region.
-  if ((not reverse_ and centered_coords_magnitude > outer_distance + eps_) or
-      (reverse_ and centered_coords_magnitude < inner_distance - eps_)) {
+  if ((not reverse_ and
+       centered_coords_magnitude > (1.0 + eps_) * outer_distance) or
+      (reverse_ and
+       centered_coords_magnitude < (1.0 - eps_) * inner_distance)) {
     return std::nullopt;
   }
 
@@ -566,7 +569,7 @@ std::optional<double> Wedge::original_radius_over_radius(
   if (reverse_) {
     if (equal_within_roundoff(original_radius, outer_distance)) {
       return {1.0 + radial_distortion / centered_coords_magnitude};
-    } else if (original_radius > outer_distance + eps_) {
+    } else if (original_radius > (1.0 + eps_) * outer_distance) {
       return std::nullopt;
     }
   }
@@ -610,12 +613,12 @@ std::array<double, 3> Wedge::gradient(
   const double outer_distance = magnitude(outer_surface_vector);
 
   // Check if the point we were passed is within the transition region
-  if (centered_coords_magnitude < inner_distance - eps_) {
+  if (centered_coords_magnitude < (1.0 - eps_) * inner_distance) {
     ERROR("Wedge transition called with centered coordinate "
           << source_coords << " (with radius " << centered_coords_magnitude
           << ") which is inside the inner surface (" << inner_distance
           << ") while the axis was not 'Interior' (" << axis_ << ")");
-  } else if (centered_coords_magnitude > outer_distance + eps_) {
+  } else if (centered_coords_magnitude > (1.0 + eps_) * outer_distance) {
     ERROR("Wedge transition called with centered coordinate "
           << source_coords << " (with radius " << centered_coords_magnitude
           << ") which is outside the outer surface (" << outer_distance

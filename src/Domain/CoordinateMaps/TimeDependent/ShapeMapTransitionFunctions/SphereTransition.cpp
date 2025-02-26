@@ -70,12 +70,12 @@ double SphereTransition::operator()(
                                            one_over_radius_power.value() - 2)));
   }
 
-  if (UNLIKELY(mag < r_min_ - eps_)) {
+  if (UNLIKELY(mag < (1.0 - eps_) * r_min_)) {
     ERROR("SphereTransition coord " << source_coords << " with radius " << mag
                                     << " is within r_min of " << r_min_
                                     << ", but the class was not constructed "
                                        "for the interior of the sphere.");
-  } else if (UNLIKELY(mag > r_max_ + eps_)) {
+  } else if (UNLIKELY(mag > (1.0 + eps_) * r_max_)) {
     ERROR("SphereTransition coord " << source_coords << " with radius " << mag
                                     << "is beyond r_max of " << r_max_ << ".");
   }
@@ -114,7 +114,7 @@ std::optional<double> SphereTransition::original_radius_over_radius(
   // a_ being positive is a sentinel for reversed.
   // If we aren't reversed, check near or within r_min_.
   if (a_ < 0.0) {
-    if (mag + radial_distortion < r_min_ - eps_) {
+    if (mag + radial_distortion < (1.0 - eps_) * r_min_) {
       if (not interior_) {
         return std::nullopt;
       }
@@ -160,8 +160,8 @@ std::optional<double> SphereTransition::original_radius_over_radius(
   }
 
   // Beyond the range of validity for both reversed and not reversed
-  if ((a_ < 0.0 and mag > r_max_ + eps_) or
-      (a_ > 0.0 and mag < r_min_ - eps_)) {
+  if ((a_ < 0.0 and mag > (1.0 + eps_) * r_max_) or
+      (a_ > 0.0 and mag < (1.0 - eps_) * r_min_)) {
     return std::nullopt;
   }
 
@@ -188,7 +188,7 @@ std::optional<double> SphereTransition::original_radius_over_radius(
   if (a_ > 0.0) {
     if (equal_within_roundoff(original_radius, r_max_)) {
       return std::optional{1.0 + radial_distortion / mag};
-    } else if (original_radius > r_max_ + eps_) {
+    } else if (original_radius > (1.0 + eps_) * r_max_) {
       return std::nullopt;
     }
   }
@@ -212,13 +212,13 @@ std::array<double, 3> SphereTransition::gradient(
           << " with radius zero in SphereTransition gradient.");
   }
 
-  if (UNLIKELY(mag < r_min_ - eps_)) {
+  if (UNLIKELY(mag < (1.0 - eps_) * r_min_)) {
     ERROR("SphereTransition gradient coord "
           << source_coords << " with radius " << mag << " is within r_min of "
           << r_min_
           << ", but the class was not constructed for the interior of the "
              "sphere.");
-  } else if (UNLIKELY(mag > r_max_ + eps_)) {
+  } else if (UNLIKELY(mag > (1.0 + eps_) * r_max_)) {
     ERROR("SphereTransition gradient coord " << source_coords << " with radius "
                                              << mag << "is beyond r_max of "
                                              << r_max_ << ".");

@@ -32,11 +32,12 @@ SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.Shape.SphereTransition",
       std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<0>>(
           0.0, std::array{DataVector{num_coefs, 1.e-3}}, 10.0);
 
-  const std::vector<std::array<double, 3>> test_points{{2., 0., 0.},
-                                                       {2. - eps, 0., 0.},
-                                                       {3., 0., 0.},
-                                                       {4., 0., 0.},
-                                                       {4. + eps, 0., 0.}};
+  const std::vector<std::array<double, 3>> test_points{
+      {2., 0., 0.},
+      {(1.0 - eps) * 2., 0., 0.},
+      {3., 0., 0.},
+      {4., 0., 0.},
+      {(1.0 + eps) * 4., 0., 0.}};
 
   {
     INFO("Sphere transition");
@@ -80,8 +81,9 @@ SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.Shape.SphereTransition",
     // Check close, but not at, center and r_min
     test_inverse_map(shape_map_interior, std::array{2.0 * eps, 0.0, 0.0}, time,
                      functions_of_time);
-    test_inverse_map(shape_map_interior, std::array{2.0 - 2.0 * eps, 0.0, 0.0},
-                     time, functions_of_time);
+    test_inverse_map(shape_map_interior,
+                     std::array{(1.0 - eps) * 2.0, 0.0, 0.0}, time,
+                     functions_of_time);
   }
   {
     INFO("Reverse sphere transition");

@@ -517,7 +517,7 @@ void test_in_shape_map_no_offset(const gsl::not_null<Generator*> generator,
   for (const auto& point :
        {center, center + std::array{0.0, 2.0 * eps, 0.0},
         center + std::array{0.0, 0.5 * inner_radius, 0.0},
-        center + std::array{0.0, inner_radius - 2.0 * eps, 0.0},
+        center + std::array{0.0, (1.0 - 2.0 * eps) * inner_radius, 0.0},
         center + std::array{0.0, inner_radius, 0.0}}) {
     test_points_shape_map(1.0, 0.0, center, center, Wedge::Axis::Interior,
                           check_time, fot_name, functions_of_time, point);
@@ -683,7 +683,7 @@ void test_in_shape_map_offset(const gsl::not_null<Generator*> generator,
     for (const auto& point :
          {inner_center, inner_center + std::array{0.0, 2.0 * eps, 0.0},
           inner_center + std::array{0.0, 0.5 * inner_radius, 0.0},
-          inner_center + std::array{0.0, inner_radius - 2.0 * eps, 0.0},
+          inner_center + std::array{0.0, (1.0 - 2.0 * eps) * inner_radius, 0.0},
           inner_center + std::array{0.0, inner_radius, 0.0}}) {
       test_points_shape_map(1.0, outer_sphericity, inner_center, outer_center,
                             Wedge::Axis::Interior, check_time, fot_name,
