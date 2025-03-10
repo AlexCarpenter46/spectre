@@ -19,12 +19,12 @@
 namespace DomainCreators_detail {
 template <>
 struct domain_creators<3> {
-  using type =
-      tmpl::list<domain::creators::AlignedLattice<3>,
-                 domain::creators::BinaryCompactObject<false>,
-                 domain::creators::Brick, domain::creators::Cylinder,
-                 domain::creators::CylindricalBinaryCompactObject,
-                 domain::creators::FrustalCloak,
-                 domain::creators::RotatedBricks, domain::creators::Sphere>;
+  using type = tmpl::list<domain::creators::AlignedLattice<3>,
+                          domain::creators::BinaryCompactObject<false, false>,
+                          domain::creators::Brick, domain::creators::Cylinder,
+                          domain::creators::CylindricalBinaryCompactObject,
+                          domain::creators::FrustalCloak,
+                          domain::creators::RotatedBricks,
+                          domain::creators::Sphere<false>>;
 };
 }  // namespace DomainCreators_detail

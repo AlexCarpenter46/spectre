@@ -195,8 +195,8 @@ struct TransitionEndsAtCube {
  * \details This is needed because the regular `FromVolumeFile` doesn't have
  * options for domain settings like `TransitionEndsAtCube` or `LMax`.
  */
-template <ObjectLabel Object>
-struct FromVolumeFileShapeSize : public FromVolumeFile {
+template <ObjectLabel Object, bool AllowReplay>
+struct FromVolumeFileShapeSize : public FromVolumeFile<AllowReplay> {
  public:
   struct LMax {
     using type = Options::Auto<size_t>;
@@ -205,13 +205,15 @@ struct FromVolumeFileShapeSize : public FromVolumeFile {
         "distortion map. If set to 'Auto', will use the LMax from the shape "
         "function of time in the volume file."};
   };
-  using options = tmpl::push_front<FromVolumeFile::options, LMax,
-                                   detail::TransitionEndsAtCube>;
+  using options =
+      tmpl::push_front<typename FromVolumeFile<AllowReplay>::options, LMax,
+                       detail::TransitionEndsAtCube>;
 
   FromVolumeFileShapeSize() = default;
   FromVolumeFileShapeSize(const std::optional<size_t>& l_max_in,
                           bool transition_ends_at_cube_in,
-                          std::string h5_filename, std::string subfile_name);
+                          std::string h5_filename, std::string subfile_name,
+                          const Options::Context& context = {});
 
   size_t l_max{};
   bool transition_ends_at_cube{};
@@ -233,12 +235,14 @@ struct FromVolumeFileShapeSize : public FromVolumeFile {
  * `domain::ObjectLabel::None` if there is only a single object in your
  * simulation.
  */
-template <bool IncludeTransitionEndsAtCube, domain::ObjectLabel Object>
+template <bool IncludeTransitionEndsAtCube, domain::ObjectLabel Object,
+          bool AllowReplay = false>
 struct ShapeMapOptions {
-  using type = Options::Auto<
-      std::variant<ShapeMapOptions<IncludeTransitionEndsAtCube, Object>,
-                   FromVolumeFileShapeSize<Object>>,
-      Options::AutoLabel::None>;
+  using type =
+      Options::Auto<std::variant<ShapeMapOptions<IncludeTransitionEndsAtCube,
+                                                 Object, AllowReplay>,
+                                 FromVolumeFileShapeSize<Object, AllowReplay>>,
+                    Options::AutoLabel::None>;
   static std::string name() { return "ShapeMap" + get_output(Object); }
   static constexpr Options::String help = {
       "Options for a time-dependent distortion (shape) map about the "
@@ -301,19 +305,23 @@ struct ShapeMapOptions {
  * \brief Helper function to get LMax from the different variants that the shape
  * map options could be.
  */
-template <bool IncludeTransitionEndsAtCube, domain::ObjectLabel Object>
+template <bool IncludeTransitionEndsAtCube, domain::ObjectLabel Object,
+          bool AllowReplay>
 size_t l_max_from_shape_options(
-    const std::variant<ShapeMapOptions<IncludeTransitionEndsAtCube, Object>,
-                       FromVolumeFileShapeSize<Object>>& shape_map_options);
+    const std::variant<
+        ShapeMapOptions<IncludeTransitionEndsAtCube, Object, AllowReplay>,
+        FromVolumeFileShapeSize<Object, AllowReplay>>& shape_map_options);
 
 /*!
  * \brief Helper function to get whether the shape map transition function ends
  * at the cube from the different variants that the shape map options could be.
  */
-template <bool IncludeTransitionEndsAtCube, domain::ObjectLabel Object>
+template <bool IncludeTransitionEndsAtCube, domain::ObjectLabel Object,
+          bool AllowReplay>
 bool transition_ends_at_cube_from_shape_options(
-    const std::variant<ShapeMapOptions<IncludeTransitionEndsAtCube, Object>,
-                       FromVolumeFileShapeSize<Object>>& shape_map_options);
+    const std::variant<
+        ShapeMapOptions<IncludeTransitionEndsAtCube, Object, AllowReplay>,
+        FromVolumeFileShapeSize<Object, AllowReplay>>& shape_map_options);
 
 /*!
  * \brief Helper function that takes the variant of the shape map options, and
@@ -323,10 +331,12 @@ bool transition_ends_at_cube_from_shape_options(
  * new \p initial_time, \p shape_expiration_time, and \p size_expiration_time.
  * The \p deformed_radius is only used for the non-volume file variants.
  */
-template <bool IncludeTransitionEndsAtCube, domain::ObjectLabel Object>
+template <bool IncludeTransitionEndsAtCube, domain::ObjectLabel Object,
+          bool AllowReplay>
 FunctionsOfTimeMap get_shape_and_size(
-    const std::variant<ShapeMapOptions<IncludeTransitionEndsAtCube, Object>,
-                       FromVolumeFileShapeSize<Object>>& shape_map_options,
+    const std::variant<
+        ShapeMapOptions<IncludeTransitionEndsAtCube, Object, AllowReplay>,
+        FromVolumeFileShapeSize<Object, AllowReplay>>& shape_map_options,
     double initial_time, double shape_expiration_time,
     double size_expiration_time, double deformed_radius);
 }  // namespace domain::creators::time_dependent_options

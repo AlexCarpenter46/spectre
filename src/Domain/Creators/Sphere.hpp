@@ -170,6 +170,7 @@ namespace domain::creators {
  * `TimeDependentMaps: None`.
  *
  */
+template <bool AllowReplay = false>
 class Sphere : public DomainCreator<3> {
  private:
   using Affine = CoordinateMaps::Affine;
@@ -194,7 +195,7 @@ class Sphere : public DomainCreator<3> {
           domain::CoordinateMap<Frame::BlockLogical, Frame::Inertial,
                                 CoordinateMaps::Wedge<3>,
                                 CoordinateMaps::EquatorialCompression>>,
-      typename sphere::TimeDependentMapOptions::maps_list>;
+      typename sphere::TimeDependentMapOptions<AllowReplay>::maps_list>;
 
   struct InnerRadius {
     using type = double;
@@ -319,7 +320,7 @@ class Sphere : public DomainCreator<3> {
   };
 
   using TimeDepOptionType = std::variant<
-      sphere::TimeDependentMapOptions,
+      sphere::TimeDependentMapOptions<AllowReplay>,
       std::unique_ptr<domain::creators::time_dependence::TimeDependence<3>>>;
 
   struct TimeDependentMaps {

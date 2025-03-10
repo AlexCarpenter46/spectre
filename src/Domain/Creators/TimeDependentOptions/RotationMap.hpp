@@ -26,10 +26,11 @@ namespace domain::creators::time_dependent_options {
  * \details This class can also be used as an option tag with the \p type type
  * alias, `name()` function, and \p help string.
  */
-template <bool AllowSettleFoTs>
+template <bool AllowSettleFoTs, bool AllowReplay = false>
 struct RotationMapOptions {
   using type = Options::Auto<
-      std::variant<RotationMapOptions<AllowSettleFoTs>, FromVolumeFile>,
+      std::variant<RotationMapOptions<AllowSettleFoTs, AllowReplay>,
+                   FromVolumeFile<AllowReplay>>,
       Options::AutoLabel::None>;
   static std::string name() { return "RotationMap"; }
   static constexpr Options::String help = {
@@ -86,12 +87,12 @@ struct RotationMapOptions {
  * \brief Helper function that takes the variant of the rotation map options,
  * and returns the fully constructed rotation function of time.
  *
- * \details Even if the function of time is read from a file, it will have a
- * new \p initial_time and \p expiration_time.
+ * \details The function of time will have a new \p initial_time and \p
+ * expiration_time, unless it is read from a file and is replaying.
  */
-template <bool AllowSettleFoTs>
+template <bool AllowSettleFoTs, bool AllowReplay>
 std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> get_rotation(
-    const std::variant<RotationMapOptions<AllowSettleFoTs>, FromVolumeFile>&
-        rotation_map_options,
+    const std::variant<RotationMapOptions<AllowSettleFoTs, AllowReplay>,
+                       FromVolumeFile<AllowReplay>>& rotation_map_options,
     double initial_time, double expiration_time);
 }  // namespace domain::creators::time_dependent_options

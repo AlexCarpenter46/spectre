@@ -24,14 +24,16 @@ namespace domain::creators::time_dependent_options {
  * \details This class can also be used as an option tag with the \p type type
  * alias, `name()` function, and \p help string.
  */
+template <bool AllowReplay = false>
 struct SkewMapOptions {
  private:
   struct Y {};
   struct Z {};
 
  public:
-  using type = Options::Auto<std::variant<SkewMapOptions, FromVolumeFile>,
-                             Options::AutoLabel::None>;
+  using type =
+      Options::Auto<std::variant<SkewMapOptions, FromVolumeFile<AllowReplay>>,
+                    Options::AutoLabel::None>;
   static std::string name() { return "SkewMap"; }
   static constexpr Options::String help = {
       "Options for a time-dependent skew of the x coordinate (y and z "
@@ -64,7 +66,9 @@ struct SkewMapOptions {
  * \details Even if the function of time is read from a file, it will have a
  * new \p initial_time and \p expiration_time.
  */
+template <bool AllowReplay>
 std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> get_skew(
-    const std::variant<SkewMapOptions, FromVolumeFile>& skew_map_options,
+    const std::variant<SkewMapOptions<AllowReplay>,
+                       FromVolumeFile<AllowReplay>>& skew_map_options,
     double initial_time, double expiration_time);
 }  // namespace domain::creators::time_dependent_options

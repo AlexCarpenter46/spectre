@@ -64,8 +64,7 @@ struct BlockLogical;
 }  // namespace Frame
 /// \endcond
 
-namespace domain {
-namespace creators {
+namespace domain::creators {
 namespace bco {
 /*!
  * \brief Create a set of centers of objects for the binary domains.
@@ -156,7 +155,7 @@ create_grid_anchors(const std::array<double, 3>& center_a,
  * true, some of the functions of time will be `IntegratedFunctionOfTime` used
  * to control the orbit of the worldtube.
  */
-template <bool UseWorldtube = false>
+template <bool UseWorldtube = false, bool AllowReplay = false>
 class BinaryCompactObject : public DomainCreator<3> {
  private:
   // Time-independent maps
@@ -223,7 +222,7 @@ class BinaryCompactObject : public DomainCreator<3> {
   };
 
   /// Options for one of the two objects in the binary domain
-  struct Object {
+  struct Object {  // NOLINT
     static constexpr Options::String help = {
         "Options for an object in a binary domain."};
     struct InnerRadius {
@@ -449,10 +448,10 @@ class BinaryCompactObject : public DomainCreator<3> {
 
   // This is for optional time dependent maps
   struct TimeDependentMaps {
-    using type = Options::Auto<bco::TimeDependentMapOptions<false>,
+    using type = Options::Auto<bco::TimeDependentMapOptions<false, AllowReplay>,
                                Options::AutoLabel::None>;
     static constexpr Options::String help =
-        bco::TimeDependentMapOptions<false>::help;
+        bco::TimeDependentMapOptions<false, AllowReplay>::help;
   };
 
   template <typename Metavariables>
@@ -506,7 +505,7 @@ class BinaryCompactObject : public DomainCreator<3> {
       CoordinateMaps::Distribution radial_distribution_outer_shell =
           CoordinateMaps::Distribution::Linear,
       double opening_angle_in_degrees = 90.0,
-      std::optional<bco::TimeDependentMapOptions<false>>
+      std::optional<bco::TimeDependentMapOptions<false, AllowReplay>>
           time_dependent_options = std::nullopt,
       std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>
           outer_boundary_condition = nullptr,
@@ -587,8 +586,8 @@ class BinaryCompactObject : public DomainCreator<3> {
   bool is_excised_b_ = false;
   bool use_single_block_a_ = false;
   bool use_single_block_b_ = false;
-  std::optional<bco::TimeDependentMapOptions<false>> time_dependent_options_{};
+  std::optional<bco::TimeDependentMapOptions<false, AllowReplay>>
+      time_dependent_options_{};
   double opening_angle_ = std::numeric_limits<double>::signaling_NaN();
 };
-}  // namespace creators
-}  // namespace domain
+}  // namespace domain::creators

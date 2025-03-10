@@ -25,6 +25,7 @@ namespace domain::creators::time_dependent_options {
  * \details The H5 file will only be accessed in the `retrieve_function_of_time`
  * function.
  */
+template <bool AllowReplay>
 struct FromVolumeFile {
   struct H5Filename {
     using type = std::string;
@@ -39,12 +40,22 @@ struct FromVolumeFile {
         "subfile."};
   };
 
-  using options = tmpl::list<H5Filename, SubfileName>;
+  struct Replay {
+    using type = bool;
+    static constexpr Options::String help{
+        "Read in function of time directly from volume file. Reads in all of "
+        "the history and expiration time as well."};
+  };
+
+  using options = tmpl::append<
+      tmpl::list<H5Filename, SubfileName>,
+      tmpl::conditional_t<AllowReplay, tmpl::list<Replay>, tmpl::list<>>>;
   static constexpr Options::String help =
       "Read function of time coefficients from a volume subfile of an H5 file.";
 
   FromVolumeFile() = default;
-  FromVolumeFile(std::string h5_filename, std::string subfile_name);
+  FromVolumeFile(std::string h5_filename, std::string subfile_name,
+                 bool replay = false, const Options::Context& context = {});
 
   /*!
    * \brief Searches the last observation in the volume subfile and returns
@@ -58,9 +69,16 @@ struct FromVolumeFile {
       const std::unordered_set<std::string>& function_of_time_names,
       const std::optional<double>& time) const;
 
+  /*!
+   * \brief Whether the function of time from the volume file should just be
+   * replayed (read in and unmodified), or not.
+   */
+  bool replay() const { return replay_; }
+
  private:
   std::string h5_filename_;
   std::string subfile_name_;
+  bool replay_{false};
 };
 /// @}
 }  // namespace domain::creators::time_dependent_options

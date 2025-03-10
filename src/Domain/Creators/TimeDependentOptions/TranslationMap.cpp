@@ -16,8 +16,8 @@
 #include "Utilities/GenerateInstantiations.hpp"
 
 namespace domain::creators::time_dependent_options {
-template <size_t Dim>
-TranslationMapOptions<Dim>::TranslationMapOptions(
+template <size_t Dim, bool AllowReplay>
+TranslationMapOptions<Dim, AllowReplay>::TranslationMapOptions(
     const std::array<std::array<double, Dim>, 3>& initial_values_in,
     const Options::Context& context) {
   if (initial_values_in.empty() or initial_values_in.size() > 3) {
@@ -32,18 +32,19 @@ TranslationMapOptions<Dim>::TranslationMapOptions(
   }
 }
 
-template <size_t Dim>
+template <size_t Dim, bool AllowReplay>
 std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> get_translation(
-    const std::variant<TranslationMapOptions<Dim>, FromVolumeFile>&
-        translation_map_options,
+    const std::variant<TranslationMapOptions<Dim, AllowReplay>,
+                       FromVolumeFile<AllowReplay>>& translation_map_options,
     const double initial_time, const double expiration_time) {
   const std::string name = "Translation";
   std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> result{};
 
-  if (std::holds_alternative<FromVolumeFile>(translation_map_options)) {
+  if (std::holds_alternative<FromVolumeFile<AllowReplay>>(
+          translation_map_options)) {
     const auto& from_vol_file =
-        std::get<FromVolumeFile>(translation_map_options);
-    const auto volume_fot =
+        std::get<FromVolumeFile<AllowReplay>>(translation_map_options);
+    auto volume_fot =
         from_vol_file.retrieve_function_of_time({name}, initial_time);
 
     // It must be a PiecewisePolynomial
@@ -55,11 +56,17 @@ std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> get_translation(
           "map.");
     }
 
-    result = volume_fot.at(name)->create_at_time(initial_time, expiration_time);
-  } else if (std::holds_alternative<TranslationMapOptions<Dim>>(
+    if (from_vol_file.replay()) {
+      result = std::move(volume_fot.at(name));
+    } else {
+      result =
+          volume_fot.at(name)->create_at_time(initial_time, expiration_time);
+    }
+  } else if (std::holds_alternative<TranslationMapOptions<Dim, AllowReplay>>(
                  translation_map_options)) {
     const auto& hard_coded_options =
-        std::get<TranslationMapOptions<Dim>>(translation_map_options);
+        std::get<TranslationMapOptions<Dim, AllowReplay>>(
+            translation_map_options);
 
     result = std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<2>>(
         initial_time, hard_coded_options.initial_values, expiration_time);
@@ -71,16 +78,20 @@ std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> get_translation(
 }
 
 #define DIM(data) BOOST_PP_TUPLE_ELEM(0, data)
+#define REPLAY(data) BOOST_PP_TUPLE_ELEM(1, data)
 
-#define INSTANTIATE(_, data)                                                   \
-  template class TranslationMapOptions<DIM(data)>;                             \
-  template std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>            \
-  get_translation(const std::variant<TranslationMapOptions<DIM(data)>,         \
-                                     FromVolumeFile>& translation_map_options, \
-                  double initial_time, double expiration_time);
+#define INSTANTIATE(_, data)                                             \
+  template class TranslationMapOptions<DIM(data), REPLAY(data)>;         \
+  template std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>      \
+  get_translation(                                                       \
+      const std::variant<TranslationMapOptions<DIM(data), REPLAY(data)>, \
+                         FromVolumeFile<REPLAY(data)>>&                  \
+          translation_map_options,                                       \
+      double initial_time, double expiration_time);
 
-GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3))
+GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3), (true, false))
 
 #undef INSTANTIATE
+#undef REPLAY
 #undef DIM
 }  // namespace domain::creators::time_dependent_options

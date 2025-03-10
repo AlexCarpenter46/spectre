@@ -70,7 +70,8 @@ struct DistributionVisitor {
 };
 }  // namespace
 
-Sphere::Sphere(
+template <bool AllowReplay>
+Sphere<AllowReplay>::Sphere(
     double inner_radius, double outer_radius,
     std::variant<Excision, InnerCube> interior,
     const typename InitialRefinement::type& initial_refinement,
@@ -253,17 +254,19 @@ Sphere::Sphere(
 
   if (time_dependent_options_.has_value()) {
     use_hard_coded_maps_ =
-        std::holds_alternative<sphere::TimeDependentMapOptions>(
+        std::holds_alternative<sphere::TimeDependentMapOptions<AllowReplay>>(
             time_dependent_options_.value());
     if (use_hard_coded_maps_) {
-      std::get<sphere::TimeDependentMapOptions>(time_dependent_options_.value())
+      std::get<sphere::TimeDependentMapOptions<AllowReplay>>(
+          time_dependent_options_.value())
           .build_maps(std::array{0.0, 0.0, 0.0}, fill_interior_, inner_radius_,
                       radial_partitioning_, outer_radius_);
     }
   }
 }
 
-Domain<3> Sphere::create_domain() const {
+template <bool AllowReplay>
+Domain<3> Sphere<AllowReplay>::create_domain() const {
   std::vector<std::array<size_t, 8>> corners =
       corners_for_radially_layered_domains(num_shells_, fill_interior_,
                                            {{1, 2, 3, 4, 5, 6, 7, 8}},
@@ -358,7 +361,7 @@ Domain<3> Sphere::create_domain() const {
 
     if (use_hard_coded_maps_) {
       const auto& hard_coded_options =
-          std::get<sphere::TimeDependentMapOptions>(
+          std::get<sphere::TimeDependentMapOptions<AllowReplay>>(
               time_dependent_options_.value());
 
       const size_t first_block_outer_shell =
@@ -415,9 +418,10 @@ Domain<3> Sphere::create_domain() const {
   return domain;
 }
 
+template <bool AllowReplay>
 std::vector<DirectionMap<
     3, std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>>>
-Sphere::external_boundary_conditions() const {
+Sphere<AllowReplay>::external_boundary_conditions() const {
   if (outer_boundary_condition_ == nullptr) {
     return {};
   }
@@ -452,13 +456,15 @@ Sphere::external_boundary_conditions() const {
   return boundary_conditions;
 }
 
+template <bool AllowReplay>
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-Sphere::functions_of_time(const std::unordered_map<std::string, double>&
-                              initial_expiration_times) const {
+Sphere<AllowReplay>::functions_of_time(
+    const std::unordered_map<std::string, double>& initial_expiration_times)
+    const {
   if (time_dependent_options_.has_value()) {
     if (use_hard_coded_maps_) {
-      return std::get<sphere::TimeDependentMapOptions>(
+      return std::get<sphere::TimeDependentMapOptions<AllowReplay>>(
                  time_dependent_options_.value())
           .create_functions_of_time(initial_expiration_times);
     } else {
@@ -471,4 +477,7 @@ Sphere::functions_of_time(const std::unordered_map<std::string, double>&
     return {};
   }
 }
+
+template struct Sphere<true>;
+template struct Sphere<false>;
 }  // namespace domain::creators

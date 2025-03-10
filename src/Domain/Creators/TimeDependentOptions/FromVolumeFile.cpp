@@ -81,12 +81,23 @@ std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> get_function_of_time(
 }
 }  // namespace
 
-FromVolumeFile::FromVolumeFile(std::string h5_filename,
-                               std::string subfile_name)
+template <bool AllowReplay>
+FromVolumeFile<AllowReplay>::FromVolumeFile(std::string h5_filename,
+                                            std::string subfile_name,
+                                            const bool replay,
+                                            const Options::Context& context)
     : h5_filename_(std::move(h5_filename)),
-      subfile_name_(std::move(subfile_name)) {}
+      subfile_name_(std::move(subfile_name)),
+      replay_(replay) {
+  if (not AllowReplay and replay_) {
+    PARSE_ERROR(context,
+                "FromVolumeFile not constructed to allow replay, but "
+                "'replay=true' was passed to constructor");
+  }
+}
 
-FunctionsOfTimeMap FromVolumeFile::retrieve_function_of_time(
+template <bool AllowReplay>
+FunctionsOfTimeMap FromVolumeFile<AllowReplay>::retrieve_function_of_time(
     const std::unordered_set<std::string>& function_of_time_names,
     const std::optional<double>& time) const {
   FunctionsOfTimeMap result{};
@@ -97,4 +108,7 @@ FunctionsOfTimeMap FromVolumeFile::retrieve_function_of_time(
 
   return result;
 }
+
+template struct FromVolumeFile<true>;
+template struct FromVolumeFile<false>;
 }  // namespace domain::creators::time_dependent_options

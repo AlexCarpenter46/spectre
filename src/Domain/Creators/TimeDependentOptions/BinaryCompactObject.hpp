@@ -107,7 +107,7 @@ using produce_all_maps = tmpl::transform<
  * \note This struct contains no information about what blocks the time
  * dependent maps will go in.
  */
-template <bool IsCylindrical>
+template <bool IsCylindrical, bool AllowReplay = false>
 struct TimeDependentMapOptions {
  private:
   template <typename SourceFrame, typename TargetFrame>
@@ -156,32 +156,35 @@ struct TimeDependentMapOptions {
   /// the outer boundary of the Domain, so there is no option
   /// here to set the outer boundary radius.
   using ExpansionMapOptions =
-      domain::creators::time_dependent_options::ExpansionMapOptions<false>;
+      domain::creators::time_dependent_options::ExpansionMapOptions<
+          false, AllowReplay>;
   using ExpansionMapOptionType = typename ExpansionMapOptions::type::value_type;
 
   /// \brief Options for the rotation map
   using RotationMapOptions =
-      domain::creators::time_dependent_options::RotationMapOptions<false>;
+      domain::creators::time_dependent_options::RotationMapOptions<false,
+                                                                   AllowReplay>;
   using RotationMapOptionType = typename RotationMapOptions::type::value_type;
 
   /// \brief Options for the Translation Map, the outer radius is always set to
   /// the outer boundary of the Domain, so there's no option needed for outer
   /// boundary.
   using TranslationMapOptions =
-      domain::creators::time_dependent_options::TranslationMapOptions<3>;
+      domain::creators::time_dependent_options::TranslationMapOptions<
+          3, AllowReplay>;
   using TranslationMapOptionType =
       typename TranslationMapOptions::type::value_type;
 
   /// \brief Options for the Skew map
   using SkewMapOptions =
-      domain::creators::time_dependent_options::SkewMapOptions;
+      domain::creators::time_dependent_options::SkewMapOptions<AllowReplay>;
   using SkewMapOptionType = typename SkewMapOptions::type::value_type;
 
   /// \brief Options for the shape map
   template <domain::ObjectLabel Object>
   using ShapeMapOptions =
       domain::creators::time_dependent_options::ShapeMapOptions<
-          not IsCylindrical, Object>;
+          not IsCylindrical, Object, AllowReplay>;
   template <domain::ObjectLabel Object>
   using ShapeMapOptionType = typename ShapeMapOptions<Object>::type::value_type;
 

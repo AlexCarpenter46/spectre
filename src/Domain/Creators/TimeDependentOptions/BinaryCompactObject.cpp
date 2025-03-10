@@ -37,8 +37,8 @@
 #include "Utilities/StdArrayHelpers.hpp"
 
 namespace domain::creators::bco {
-template <bool IsCylindrical>
-TimeDependentMapOptions<IsCylindrical>::TimeDependentMapOptions(
+template <bool IsCylindrical, bool AllowReplay>
+TimeDependentMapOptions<IsCylindrical, AllowReplay>::TimeDependentMapOptions(
     double initial_time, ExpansionMapOptionType expansion_map_options,
     RotationMapOptionType rotation_map_options,
     TranslationMapOptionType translation_map_options,
@@ -83,11 +83,11 @@ TimeDependentMapOptions<IsCylindrical>::TimeDependentMapOptions(
   check_l_max(shape_options_B_, domain::ObjectLabel::B);
 }
 
-template <bool IsCylindrical>
+template <bool IsCylindrical, bool AllowReplay>
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-TimeDependentMapOptions<IsCylindrical>::create_worldtube_functions_of_time()
-    const {
+TimeDependentMapOptions<
+    IsCylindrical, AllowReplay>::create_worldtube_functions_of_time() const {
   if (translation_map_options_.has_value()) {
     ERROR("Translation map is not implemented for worldtube evolutions.");
   }
@@ -106,7 +106,7 @@ TimeDependentMapOptions<IsCylindrical>::create_worldtube_functions_of_time()
   }
 
   const auto& expansion_map_opts =
-      std::get<time_dependent_options::ExpansionMapOptions<false>>(
+      std::get<time_dependent_options::ExpansionMapOptions<false, AllowReplay>>(
           expansion_map_options_.value());
   result[expansion_name] =
       std::make_unique<FunctionsOfTime::IntegratedFunctionOfTime>(
@@ -126,7 +126,7 @@ TimeDependentMapOptions<IsCylindrical>::create_worldtube_functions_of_time()
         "the worldtube.");
   }
   const auto& rotation_map_opts =
-      std::get<time_dependent_options::RotationMapOptions<false>>(
+      std::get<time_dependent_options::RotationMapOptions<false, AllowReplay>>(
           rotation_map_options_.value());
 
   result[rotation_name] =
@@ -143,9 +143,11 @@ TimeDependentMapOptions<IsCylindrical>::create_worldtube_functions_of_time()
         "the worldtube.");
   }
   const auto& shape_opts_A = std::get<time_dependent_options::ShapeMapOptions<
-      not IsCylindrical, domain::ObjectLabel::A>>(shape_options_A_.value());
+      not IsCylindrical, domain::ObjectLabel::A, AllowReplay>>(
+      shape_options_A_.value());
   const auto& shape_opts_B = std::get<time_dependent_options::ShapeMapOptions<
-      not IsCylindrical, domain::ObjectLabel::B>>(shape_options_B_.value());
+      not IsCylindrical, domain::ObjectLabel::B, AllowReplay>>(
+      shape_options_B_.value());
   for (size_t i = 0; i < shape_names.size(); i++) {
     const auto make_initial_size_values = [](const auto& lambda_options) {
       return std::array<double, 2>{
@@ -171,16 +173,17 @@ TimeDependentMapOptions<IsCylindrical>::create_worldtube_functions_of_time()
   return result;
 }
 
-template <bool IsCylindrical>
+template <bool IsCylindrical, bool AllowReplay>
 template <bool UseWorldtube>
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-TimeDependentMapOptions<IsCylindrical>::create_functions_of_time(
+TimeDependentMapOptions<IsCylindrical, AllowReplay>::create_functions_of_time(
     const std::unordered_map<std::string, double>& initial_expiration_times)
     const {
   if constexpr (UseWorldtube) {
-    static_assert(not IsCylindrical,
-                  "Cylindrical map not supported with worldtube");
+    if (IsCylindrical) {
+      ERROR("Cylindrical map not supported with worldtube");
+    }
     if (not initial_expiration_times.empty()) {
       ERROR(
           "Initial expiration times were specified with worldtube functions of "
@@ -276,8 +279,8 @@ TimeDependentMapOptions<IsCylindrical>::create_functions_of_time(
   return result;
 }
 
-template <bool IsCylindrical>
-void TimeDependentMapOptions<IsCylindrical>::build_maps(
+template <bool IsCylindrical, bool AllowReplay>
+void TimeDependentMapOptions<IsCylindrical, AllowReplay>::build_maps(
     const std::array<std::array<double, 3>, 2>& object_centers,
     const std::optional<std::array<double, 3>>& cube_A_center,
     const std::optional<std::array<double, 3>>& cube_B_center,
@@ -471,9 +474,9 @@ void TimeDependentMapOptions<IsCylindrical>::build_maps(
   }
 }
 
-template <bool IsCylindrical>
-bool TimeDependentMapOptions<IsCylindrical>::has_distorted_frame_options(
-    domain::ObjectLabel object) const {
+template <bool IsCylindrical, bool AllowReplay>
+bool TimeDependentMapOptions<IsCylindrical, AllowReplay>::
+    has_distorted_frame_options(domain::ObjectLabel object) const {
   ASSERT(object == domain::ObjectLabel::A or object == domain::ObjectLabel::B,
          "object label for TimeDependentMapOptions must be either A or B, not"
              << object);
@@ -481,11 +484,11 @@ bool TimeDependentMapOptions<IsCylindrical>::has_distorted_frame_options(
                                           : shape_options_B_.has_value();
 }
 
-template <bool IsCylindrical>
+template <bool IsCylindrical, bool AllowReplay>
 template <domain::ObjectLabel Object>
-typename TimeDependentMapOptions<IsCylindrical>::template MapType<
+typename TimeDependentMapOptions<IsCylindrical, AllowReplay>::template MapType<
     Frame::Distorted, Frame::Inertial>
-TimeDependentMapOptions<IsCylindrical>::distorted_to_inertial_map(
+TimeDependentMapOptions<IsCylindrical, AllowReplay>::distorted_to_inertial_map(
     const IncludeDistortedMapType& include_distorted_map,
     const bool use_rigid_map) const {
   bool block_has_shape_map = false;
@@ -540,11 +543,11 @@ TimeDependentMapOptions<IsCylindrical>::distorted_to_inertial_map(
   }
 }
 
-template <bool IsCylindrical>
+template <bool IsCylindrical, bool AllowReplay>
 template <domain::ObjectLabel Object>
-typename TimeDependentMapOptions<IsCylindrical>::template MapType<
+typename TimeDependentMapOptions<IsCylindrical, AllowReplay>::template MapType<
     Frame::Grid, Frame::Distorted>
-TimeDependentMapOptions<IsCylindrical>::grid_to_distorted_map(
+TimeDependentMapOptions<IsCylindrical, AllowReplay>::grid_to_distorted_map(
     const IncludeDistortedMapType& include_distorted_map) const {
   bool block_has_shape_map = Object == domain::ObjectLabel::A
                                  ? shape_options_A_.has_value()
@@ -588,11 +591,11 @@ TimeDependentMapOptions<IsCylindrical>::grid_to_distorted_map(
   }
 }
 
-template <bool IsCylindrical>
+template <bool IsCylindrical, bool AllowReplay>
 template <domain::ObjectLabel Object>
-typename TimeDependentMapOptions<IsCylindrical>::template MapType<
+typename TimeDependentMapOptions<IsCylindrical, AllowReplay>::template MapType<
     Frame::Grid, Frame::Inertial>
-TimeDependentMapOptions<IsCylindrical>::grid_to_inertial_map(
+TimeDependentMapOptions<IsCylindrical, AllowReplay>::grid_to_inertial_map(
     const IncludeDistortedMapType& include_distorted_map,
     const bool use_rigid_map, const bool return_excision_map) const {
   bool block_has_shape_map = Object == domain::ObjectLabel::A
@@ -686,8 +689,8 @@ TimeDependentMapOptions<IsCylindrical>::grid_to_inertial_map(
   }
 }
 
-template <bool IsCylindrical>
-size_t TimeDependentMapOptions<IsCylindrical>::get_index(
+template <bool IsCylindrical, bool AllowReplay>
+size_t TimeDependentMapOptions<IsCylindrical, AllowReplay>::get_index(
     const domain::ObjectLabel object) {
   ASSERT(object == domain::ObjectLabel::A or object == domain::ObjectLabel::B,
          "object label for TimeDependentMapOptions must be either A or B, not"
@@ -695,48 +698,59 @@ size_t TimeDependentMapOptions<IsCylindrical>::get_index(
   return object == domain::ObjectLabel::A ? 0_st : 1_st;
 }
 
-template class TimeDependentMapOptions<true>;
-template class TimeDependentMapOptions<false>;
-
 #define ISCYL(data) BOOST_PP_TUPLE_ELEM(0, data)
-#define OBJECT(data) BOOST_PP_TUPLE_ELEM(1, data)
+#define REPLAY(data) BOOST_PP_TUPLE_ELEM(1, data)
+
+#define INSTANTIATE(_, data) \
+  template class TimeDependentMapOptions<ISCYL(data), REPLAY(data)>;
+
+GENERATE_INSTANTIATIONS(INSTANTIATE, (true, false), (true, false))
+
+#undef INSTANTIATE
+#define OBJECT(data) BOOST_PP_TUPLE_ELEM(2, data)
 
 #define INSTANTIATE(_, data)                                                 \
-  template TimeDependentMapOptions<ISCYL(data)>::MapType<Frame::Distorted,   \
-                                                         Frame::Inertial>    \
-  TimeDependentMapOptions<ISCYL(data)>::distorted_to_inertial_map<OBJECT(    \
-      data)>(                                                                \
-      const TimeDependentMapOptions<ISCYL(data)>::IncludeDistortedMapType&,  \
-      const bool) const;                                                     \
-  template TimeDependentMapOptions<ISCYL(data)>::MapType<Frame::Grid,        \
-                                                         Frame::Distorted>   \
-  TimeDependentMapOptions<ISCYL(data)>::grid_to_distorted_map<OBJECT(data)>( \
-      const TimeDependentMapOptions<ISCYL(data)>::IncludeDistortedMapType&)  \
+  template TimeDependentMapOptions<ISCYL(data), REPLAY(data)>::MapType<      \
+      Frame::Distorted, Frame::Inertial>                                     \
+  TimeDependentMapOptions<ISCYL(data), REPLAY(data)>::                       \
+      distorted_to_inertial_map<OBJECT(data)>(                               \
+          const TimeDependentMapOptions<                                     \
+              ISCYL(data), REPLAY(data)>::IncludeDistortedMapType&,          \
+          const bool) const;                                                 \
+  template TimeDependentMapOptions<ISCYL(data), REPLAY(data)>::MapType<      \
+      Frame::Grid, Frame::Distorted>                                         \
+  TimeDependentMapOptions<ISCYL(data), REPLAY(data)>::grid_to_distorted_map< \
+      OBJECT(data)>(                                                         \
+      const TimeDependentMapOptions<ISCYL(data),                             \
+                                    REPLAY(data)>::IncludeDistortedMapType&) \
       const;                                                                 \
-  template TimeDependentMapOptions<ISCYL(data)>::MapType<Frame::Grid,        \
-                                                         Frame::Inertial>    \
-  TimeDependentMapOptions<ISCYL(data)>::grid_to_inertial_map<OBJECT(data)>(  \
-      const TimeDependentMapOptions<ISCYL(data)>::IncludeDistortedMapType&,  \
-      const bool, const bool) const;
+  template TimeDependentMapOptions<ISCYL(data), REPLAY(data)>::MapType<      \
+      Frame::Grid, Frame::Inertial>                                          \
+  TimeDependentMapOptions<ISCYL(data), REPLAY(data)>::grid_to_inertial_map<  \
+      OBJECT(data)>(                                                         \
+      const TimeDependentMapOptions<ISCYL(data),                             \
+                                    REPLAY(data)>::IncludeDistortedMapType&, \
+      const bool) const;
 
-GENERATE_INSTANTIATIONS(INSTANTIATE, (true, false),
+GENERATE_INSTANTIATIONS(INSTANTIATE, (true, false), (true, false),
                         (domain::ObjectLabel::A, domain::ObjectLabel::B,
                          domain::ObjectLabel::None))
 
 #undef OBJECT
-#undef ISCYL
 #undef INSTANTIATE
 
-template std::unordered_map<
-    std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-TimeDependentMapOptions<false>::create_functions_of_time<true>(
-    const std::unordered_map<std::string, double>&) const;
-template std::unordered_map<
-    std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-TimeDependentMapOptions<false>::create_functions_of_time<false>(
-    const std::unordered_map<std::string, double>&) const;
-template std::unordered_map<
-    std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-TimeDependentMapOptions<true>::create_functions_of_time<false>(
-    const std::unordered_map<std::string, double>&) const;
+#define WORLDTUBE(data) BOOST_PP_TUPLE_ELEM(2, data)
+
+#define INSTANTIATE(_, data)                                                 \
+  template std::unordered_map<                                               \
+      std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> \
+  TimeDependentMapOptions<ISCYL(data), REPLAY(data)>::                       \
+      create_functions_of_time<WORLDTUBE(data)>(                             \
+          const std::unordered_map<std::string, double>&) const;
+
+GENERATE_INSTANTIATIONS(INSTANTIATE, (true, false), (true, false),
+                        (true, false))
+
+#undef REPLAY
+#undef INSTANTIATE
 }  // namespace domain::creators::bco

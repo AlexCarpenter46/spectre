@@ -31,7 +31,8 @@
 
 namespace domain::creators::sphere {
 
-TimeDependentMapOptions::TimeDependentMapOptions(
+template <bool AllowReplay>
+TimeDependentMapOptions<AllowReplay>::TimeDependentMapOptions(
     const double initial_time, ShapeMapOptionType shape_map_options,
     RotationMapOptionType rotation_map_options,
     ExpansionMapOptionType expansion_map_options,
@@ -44,9 +45,10 @@ TimeDependentMapOptions::TimeDependentMapOptions(
       translation_map_options_(std::move(translation_map_options)),
       transition_rot_scale_trans_(transition_rot_scale_trans) {}
 
+template <bool AllowReplay>
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-TimeDependentMapOptions::create_functions_of_time(
+TimeDependentMapOptions<AllowReplay>::create_functions_of_time(
     const std::unordered_map<std::string, double>& initial_expiration_times)
     const {
   std::unordered_map<std::string,
@@ -103,7 +105,8 @@ TimeDependentMapOptions::create_functions_of_time(
   return result;
 }
 
-void TimeDependentMapOptions::build_maps(
+template <bool AllowReplay>
+void TimeDependentMapOptions<AllowReplay>::build_maps(
     const std::array<double, 3>& center, const bool filled,
     const double inner_radius, const std::vector<double>& radial_partitions,
     const double outer_radius) {
@@ -225,8 +228,9 @@ void TimeDependentMapOptions::build_maps(
 
 // If you edit any of the functions below, be sure to update the documentation
 // in the Sphere domain creator as well as this class' documentation.
-TimeDependentMapOptions::MapType<Frame::Distorted, Frame::Inertial>
-TimeDependentMapOptions::distorted_to_inertial_map(
+template <bool AllowReplay>
+TimeDependentMapOptions<AllowReplay>::MapType<Frame::Distorted, Frame::Inertial>
+TimeDependentMapOptions<AllowReplay>::distorted_to_inertial_map(
     const size_t block_number, const bool is_inner_cube) const {
   const bool block_has_shape_map = shape_map_options_.has_value() and
                                    block_number < (filled_ ? 12 : 6) and
@@ -239,9 +243,10 @@ TimeDependentMapOptions::distorted_to_inertial_map(
   }
 }
 
-TimeDependentMapOptions::MapType<Frame::Grid, Frame::Distorted>
-TimeDependentMapOptions::grid_to_distorted_map(const size_t block_number,
-                                               const bool is_inner_cube) const {
+template <bool AllowReplay>
+TimeDependentMapOptions<AllowReplay>::MapType<Frame::Grid, Frame::Distorted>
+TimeDependentMapOptions<AllowReplay>::grid_to_distorted_map(
+    const size_t block_number, const bool is_inner_cube) const {
   const bool block_has_shape_map = shape_map_options_.has_value() and
                                    block_number < (filled_ ? 12 : 6) and
                                    not is_inner_cube;
@@ -258,10 +263,11 @@ TimeDependentMapOptions::grid_to_distorted_map(const size_t block_number,
   }
 }
 
-TimeDependentMapOptions::MapType<Frame::Grid, Frame::Inertial>
-TimeDependentMapOptions::grid_to_inertial_map(
+template <bool AllowReplay>
+TimeDependentMapOptions<AllowReplay>::MapType<Frame::Grid, Frame::Inertial>
+TimeDependentMapOptions<AllowReplay>::grid_to_inertial_map(
     const size_t block_number, const bool is_outer_shell,
-    const bool is_central_region) const {
+    const bool is_inner_cube) const {
   const bool block_has_shape_map = shape_map_options_.has_value() and
                                    block_number < (filled_ ? 12 : 6) and
                                    not(is_central_region and filled_);
@@ -283,9 +289,13 @@ TimeDependentMapOptions::grid_to_inertial_map(
   }
 }
 
-bool TimeDependentMapOptions::using_distorted_frame() const {
+template <bool AllowReplay>
+bool TimeDependentMapOptions<AllowReplay>::using_distorted_frame() const {
   // We use shape map options and not the shape map just in case this is called
   // before `build_maps` is called.
   return shape_map_options_.has_value();
 }
+
+template struct TimeDependentMapOptions<true>;
+template struct TimeDependentMapOptions<false>;
 }  // namespace domain::creators::sphere

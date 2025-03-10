@@ -67,13 +67,14 @@ create_grid_anchors(const std::array<double, 3>& center_a,
 }
 }  // namespace bco
 
-template <bool UseWorldtube>
-bool BinaryCompactObject<UseWorldtube>::Object::is_excised() const {
+template <bool UseWorldtube, bool AllowReplay>
+bool BinaryCompactObject<UseWorldtube, AllowReplay>::Object::is_excised()
+    const {
   return inner_boundary_condition.has_value();
 }
 
-template <bool UseWorldtube>
-BinaryCompactObject<UseWorldtube>::BinaryCompactObject(
+template <bool UseWorldtube, bool AllowReplay>
+BinaryCompactObject<UseWorldtube, AllowReplay>::BinaryCompactObject(
     typename ObjectA::type object_A, typename ObjectB::type object_B,
     std::array<double, 2> center_of_mass_offset, const double envelope_radius,
     const double outer_radius, const double cube_scale,
@@ -83,7 +84,8 @@ BinaryCompactObject<UseWorldtube>::BinaryCompactObject(
     const CoordinateMaps::Distribution radial_distribution_envelope,
     const CoordinateMaps::Distribution radial_distribution_outer_shell,
     const double opening_angle_in_degrees,
-    std::optional<bco::TimeDependentMapOptions<false>> time_dependent_options,
+    std::optional<bco::TimeDependentMapOptions<false, AllowReplay>>
+        time_dependent_options,
     std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>
         outer_boundary_condition,
     const Options::Context& context)
@@ -398,8 +400,9 @@ BinaryCompactObject<UseWorldtube>::BinaryCompactObject(
   }
 }
 
-template <bool UseWorldtube>
-Domain<3> BinaryCompactObject<UseWorldtube>::create_domain() const {
+template <bool UseWorldtube, bool AllowReplay>
+Domain<3> BinaryCompactObject<UseWorldtube, AllowReplay>::create_domain()
+    const {
   const double inner_sphericity_A = is_excised_a_ ? 1.0 : 0.0;
   const double inner_sphericity_B = is_excised_b_ ? 1.0 : 0.0;
 
@@ -701,23 +704,23 @@ Domain<3> BinaryCompactObject<UseWorldtube>::create_domain() const {
     // use the same time-dependent map instead.
     grid_to_inertial_block_maps[final_block_outer_shell] =
         time_dependent_options_
-            ->grid_to_inertial_map<domain::ObjectLabel::None>(std::nullopt,
-                                                              false);
+            ->template grid_to_inertial_map<domain::ObjectLabel::None>(
+                std::nullopt, false);
     if (final_block_outer_shell < number_of_blocks_ - 1) {
       grid_to_inertial_block_maps[number_of_blocks_ - 1] =
           time_dependent_options_
-              ->grid_to_inertial_map<domain::ObjectLabel::None>(std::nullopt,
-                                                                true);
+              ->template grid_to_inertial_map<domain::ObjectLabel::None>(
+                  std::nullopt, true);
     }
     size_t final_block_envelope = first_outer_shell_block_ - 1;
 
     grid_to_inertial_block_maps[final_block_envelope] =
         time_dependent_options_
-            ->grid_to_inertial_map<domain::ObjectLabel::None>(std::nullopt,
-                                                              true);
-    // Inside the excision sphere we add a special grid to inertial map that can
-    // be evaluated at the center. This allows the center of the
-    // excisions/horizons to be mapped properly to the inertial frame.
+            ->template grid_to_inertial_map<domain::ObjectLabel::None>(
+                std::nullopt, true);
+    // Inside the excision sphere we add the grid to inertial map from the
+    // envelope. This allows the center of the excisions/horizons to be mapped
+    // properly to the inertial frame.
     if (is_excised_a_ and
         grid_to_inertial_block_maps[number_of_blocks_ - 1] != nullptr) {
       domain.inject_time_dependent_map_for_excision_sphere(
@@ -750,30 +753,30 @@ Domain<3> BinaryCompactObject<UseWorldtube>::create_domain() const {
         const size_t block_for_distorted_frame = block;
         grid_to_inertial_block_maps[block] =
             time_dependent_options_
-                ->grid_to_inertial_map<domain::ObjectLabel::A>(
+                ->template grid_to_inertial_map<domain::ObjectLabel::A>(
                     block_for_distorted_frame, true);
         grid_to_distorted_block_maps[block] =
             time_dependent_options_
-                ->grid_to_distorted_map<domain::ObjectLabel::A>(
+                ->template grid_to_distorted_map<domain::ObjectLabel::A>(
                     block_for_distorted_frame);
         distorted_to_inertial_block_maps[block] =
             time_dependent_options_
-                ->distorted_to_inertial_map<domain::ObjectLabel::A>(
+                ->template distorted_to_inertial_map<domain::ObjectLabel::A>(
                     block_for_distorted_frame, true);
       } else if ((not use_single_block_b_) and block >= first_block_object_B and
                  block < first_block_object_B + 12) {
         const size_t block_for_distorted_frame = block - first_block_object_B;
         grid_to_inertial_block_maps[block] =
             time_dependent_options_
-                ->grid_to_inertial_map<domain::ObjectLabel::B>(
+                ->template grid_to_inertial_map<domain::ObjectLabel::B>(
                     block_for_distorted_frame, true);
         grid_to_distorted_block_maps[block] =
             time_dependent_options_
-                ->grid_to_distorted_map<domain::ObjectLabel::B>(
+                ->template grid_to_distorted_map<domain::ObjectLabel::B>(
                     block_for_distorted_frame);
         distorted_to_inertial_block_maps[block] =
             time_dependent_options_
-                ->distorted_to_inertial_map<domain::ObjectLabel::B>(
+                ->template distorted_to_inertial_map<domain::ObjectLabel::B>(
                     block_for_distorted_frame, true);
         // check if block is less than outer shell block for rigid
         // expansion/translation, but no distorted map
@@ -816,10 +819,11 @@ Domain<3> BinaryCompactObject<UseWorldtube>::create_domain() const {
   return domain;
 }
 
-template <bool UseWorldtube>
+template <bool UseWorldtube, bool AllowReplay>
 std::vector<DirectionMap<
     3, std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>>>
-BinaryCompactObject<UseWorldtube>::external_boundary_conditions() const {
+BinaryCompactObject<UseWorldtube, AllowReplay>::external_boundary_conditions()
+    const {
   if (outer_boundary_condition_ == nullptr) {
     return {};
   }
@@ -855,20 +859,23 @@ BinaryCompactObject<UseWorldtube>::external_boundary_conditions() const {
   return boundary_conditions;
 }
 
-template <bool UseWorldtube>
+template <bool UseWorldtube, bool AllowReplay>
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-BinaryCompactObject<UseWorldtube>::functions_of_time(
+BinaryCompactObject<UseWorldtube, AllowReplay>::functions_of_time(
     const std::unordered_map<std::string, double>& initial_expiration_times)
     const {
   return time_dependent_options_.has_value()
-             ? time_dependent_options_->create_functions_of_time<UseWorldtube>(
-                   initial_expiration_times)
+             ? time_dependent_options_
+                   ->template create_functions_of_time<UseWorldtube>(
+                       initial_expiration_times)
              : std::unordered_map<
                    std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>{};
 }
 
-template class BinaryCompactObject<true>;
-template class BinaryCompactObject<false>;
+template class BinaryCompactObject<true, true>;
+template class BinaryCompactObject<true, false>;
+template class BinaryCompactObject<false, true>;
+template class BinaryCompactObject<false, false>;
 }  // namespace domain::creators

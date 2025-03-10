@@ -21,16 +21,17 @@
 #include "Utilities/MakeArray.hpp"
 
 namespace domain::creators::time_dependent_options {
-template <bool AllowSettleFoTs>
-void RotationMapOptions<AllowSettleFoTs>::initialize_angles_and_quats() {
+template <bool AllowSettleFoTs, bool AllowReplay>
+void RotationMapOptions<AllowSettleFoTs,
+                        AllowReplay>::initialize_angles_and_quats() {
   quaternions = make_array<3, DataVector>(DataVector{4, 0.0});
   // Defautl to the identity quaternion
   quaternions[0][0] = 1.0;
   angles = make_array<4, DataVector>(DataVector{3, 0.0});
 }
 
-template <bool AllowSettleFoTs>
-RotationMapOptions<AllowSettleFoTs>::RotationMapOptions(
+template <bool AllowSettleFoTs, bool AllowReplay>
+RotationMapOptions<AllowSettleFoTs, AllowReplay>::RotationMapOptions(
     const std::array<double, 3>& initial_angular_velocity,
     const Options::Context& /*context*/) {
   initialize_angles_and_quats();
@@ -38,8 +39,8 @@ RotationMapOptions<AllowSettleFoTs>::RotationMapOptions(
   angles[1] = DataVector{initial_angular_velocity};
 }
 
-template <bool AllowSettleFoTs>
-RotationMapOptions<AllowSettleFoTs>::RotationMapOptions(
+template <bool AllowSettleFoTs, bool AllowReplay>
+RotationMapOptions<AllowSettleFoTs, AllowReplay>::RotationMapOptions(
     const std::vector<std::array<double, 4>>& initial_quaternions,
     const double decay_timescale_in, const Options::Context& context)
     : decay_timescale(decay_timescale_in) {
@@ -56,17 +57,19 @@ RotationMapOptions<AllowSettleFoTs>::RotationMapOptions(
   }
 }
 
-template <bool AllowSettleFoTs>
+template <bool AllowSettleFoTs, bool AllowReplay>
 std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> get_rotation(
-    const std::variant<RotationMapOptions<AllowSettleFoTs>, FromVolumeFile>&
-        rotation_map_options,
+    const std::variant<RotationMapOptions<AllowSettleFoTs, AllowReplay>,
+                       FromVolumeFile<AllowReplay>>& rotation_map_options,
     const double initial_time, const double expiration_time) {
   const std::string name = "Rotation";
   std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> result{};
 
-  if (std::holds_alternative<FromVolumeFile>(rotation_map_options)) {
-    const auto& from_vol_file = std::get<FromVolumeFile>(rotation_map_options);
-    const auto volume_fot =
+  if (std::holds_alternative<FromVolumeFile<AllowReplay>>(
+          rotation_map_options)) {
+    const auto& from_vol_file =
+        std::get<FromVolumeFile<AllowReplay>>(rotation_map_options);
+    auto volume_fot =
         from_vol_file.retrieve_function_of_time({name}, initial_time);
 
     // It must be either a QuaternionFoT or a SettleToConstant
@@ -84,11 +87,18 @@ std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> get_rotation(
           "use it to initialize the rotation map.");
     }
 
-    result = volume_fot.at(name)->create_at_time(initial_time, expiration_time);
-  } else if (std::holds_alternative<RotationMapOptions<AllowSettleFoTs>>(
+    if (from_vol_file.replay()) {
+      result = std::move(volume_fot.at(name));
+    } else {
+      result =
+          volume_fot.at(name)->create_at_time(initial_time, expiration_time);
+    }
+  } else if (std::holds_alternative<
+                 RotationMapOptions<AllowSettleFoTs, AllowReplay>>(
                  rotation_map_options)) {
     const auto& hard_coded_options =
-        std::get<RotationMapOptions<AllowSettleFoTs>>(rotation_map_options);
+        std::get<RotationMapOptions<AllowSettleFoTs, AllowReplay>>(
+            rotation_map_options);
 
     if (hard_coded_options.decay_timescale.has_value()) {
       result =
@@ -109,16 +119,19 @@ std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> get_rotation(
 }
 
 #define ALLOWSETTLE(data) BOOST_PP_TUPLE_ELEM(0, data)
+#define REPLAY(data) BOOST_PP_TUPLE_ELEM(1, data)
 
-#define INSTANTIATE(_, data)                                             \
-  template struct RotationMapOptions<ALLOWSETTLE(data)>;                 \
-  template std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>      \
-  get_rotation(const std::variant<RotationMapOptions<ALLOWSETTLE(data)>, \
-                                  FromVolumeFile>& rotation_map_options, \
-               double initial_time, double expiration_time);
+#define INSTANTIATE(_, data)                                                  \
+  template struct RotationMapOptions<ALLOWSETTLE(data), REPLAY(data)>;        \
+  template std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>           \
+  get_rotation(                                                               \
+      const std::variant<RotationMapOptions<ALLOWSETTLE(data), REPLAY(data)>, \
+                         FromVolumeFile<REPLAY(data)>>& rotation_map_options, \
+      double initial_time, double expiration_time);
 
-GENERATE_INSTANTIATIONS(INSTANTIATE, (true, false))
+GENERATE_INSTANTIATIONS(INSTANTIATE, (true, false), (true, false))
 
 #undef INSTANTIATE
+#undef REPLAY
 #undef ALLOWSETTLE
 }  // namespace domain::creators::time_dependent_options

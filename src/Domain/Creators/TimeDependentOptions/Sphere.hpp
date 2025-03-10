@@ -39,6 +39,7 @@ namespace domain::creators::sphere {
  * \brief This holds all options related to the time dependent maps of the
  * domain::creators::Sphere domain creator.
  */
+template <bool AllowReplay = false>
 struct TimeDependentMapOptions {
  private:
   template <typename SourceFrame, typename TargetFrame>
@@ -83,17 +84,20 @@ struct TimeDependentMapOptions {
   };
 
   using ShapeMapOptions =
-      time_dependent_options::ShapeMapOptions<false, domain::ObjectLabel::None>;
+      time_dependent_options::ShapeMapOptions<false, domain::ObjectLabel::None,
+                                              AllowReplay>;
   using ShapeMapOptionType = typename ShapeMapOptions::type::value_type;
 
-  using RotationMapOptions = time_dependent_options::RotationMapOptions<true>;
+  using RotationMapOptions =
+      time_dependent_options::RotationMapOptions<true, AllowReplay>;
   using RotationMapOptionType = typename RotationMapOptions::type::value_type;
 
-  using ExpansionMapOptions = time_dependent_options::ExpansionMapOptions<true>;
+  using ExpansionMapOptions =
+      time_dependent_options::ExpansionMapOptions<true, AllowReplay>;
   using ExpansionMapOptionType = typename ExpansionMapOptions::type::value_type;
 
   using TranslationMapOptions =
-      time_dependent_options::TranslationMapOptions<3>;
+      time_dependent_options::TranslationMapOptions<3, AllowReplay>;
   using TranslationMapOptionType =
       typename TranslationMapOptions::type::value_type;
 

@@ -26,10 +26,11 @@ namespace domain::creators::time_dependent_options {
  * \details This class can also be used as an option tag with the \p type type
  * alias, `name()` function, and \p help string.
  */
-template <bool AllowSettleFoTs>
+template <bool AllowSettleFoTs, bool AllowReplay = false>
 struct ExpansionMapOptions {
   using type = Options::Auto<
-      std::variant<ExpansionMapOptions<AllowSettleFoTs>, FromVolumeFile>,
+      std::variant<ExpansionMapOptions<AllowSettleFoTs, AllowReplay>,
+                   FromVolumeFile<AllowReplay>>,
       Options::AutoLabel::None>;
   static std::string name() { return "ExpansionMap"; }
   static constexpr Options::String help = {
@@ -105,13 +106,12 @@ struct ExpansionMapOptions {
  * \brief Helper functions that take the variant of the expansion map options,
  * and return the fully constructed expansion functions of time.
  *
- * \details Even if the functions of time are read from a file, they will have a
- * new \p initial_time and \p expiration_time (no expiration time for the outer
- * boundary function of time though).
+ * \details The function of time will have a new \p initial_time and \p
+ * expiration_time, unless it is read from a file and is replaying.
  */
-template <bool AllowSettleFoTs>
+template <bool AllowSettleFoTs, bool AllowReplay>
 FunctionsOfTimeMap get_expansion(
-    const std::variant<ExpansionMapOptions<AllowSettleFoTs>, FromVolumeFile>&
-        expansion_map_options,
+    const std::variant<ExpansionMapOptions<AllowSettleFoTs, AllowReplay>,
+                       FromVolumeFile<AllowReplay>>& expansion_map_options,
     double initial_time, double expiration_time);
 }  // namespace domain::creators::time_dependent_options

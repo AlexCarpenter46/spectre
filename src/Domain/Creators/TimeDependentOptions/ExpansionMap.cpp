@@ -25,8 +25,8 @@ namespace domain::creators::time_dependent_options {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif  // defined(__GNUC__) && !defined(__clang__)
-template <bool AllowSettleFoTs>
-ExpansionMapOptions<AllowSettleFoTs>::ExpansionMapOptions(
+template <bool AllowSettleFoTs, bool AllowReplay>
+ExpansionMapOptions<AllowSettleFoTs, AllowReplay>::ExpansionMapOptions(
     const std::array<double, 3>& initial_values_in,
     double decay_timescale_outer_boundary_in,
     const std::array<double, 3>& initial_values_outer_boundary_in,
@@ -52,8 +52,8 @@ ExpansionMapOptions<AllowSettleFoTs>::ExpansionMapOptions(
 #pragma GCC diagnostic pop
 #endif  // defined(__GNUC__) && !defined(__clang__)
 
-template <bool AllowSettleFoTs>
-ExpansionMapOptions<AllowSettleFoTs>::ExpansionMapOptions(
+template <bool AllowSettleFoTs, bool AllowReplay>
+ExpansionMapOptions<AllowSettleFoTs, AllowReplay>::ExpansionMapOptions(
     const std::array<double, 3>& initial_values_in,
     double decay_timescale_outer_boundary_in,
     double asymptotic_velocity_outer_boundary_in,
@@ -68,18 +68,20 @@ ExpansionMapOptions<AllowSettleFoTs>::ExpansionMapOptions(
       std::array{DataVector{1.0}, DataVector{0.0}, DataVector{0.0}};
 }
 
-template <bool AllowSettleFoTs>
+template <bool AllowSettleFoTs, bool AllowReplay>
 FunctionsOfTimeMap get_expansion(
-    const std::variant<ExpansionMapOptions<AllowSettleFoTs>, FromVolumeFile>&
-        expansion_map_options,
+    const std::variant<ExpansionMapOptions<AllowSettleFoTs, AllowReplay>,
+                       FromVolumeFile<AllowReplay>>& expansion_map_options,
     const double initial_time, const double expiration_time) {
   const std::string name{"Expansion"};
   const std::string name_outer_boundary{"ExpansionOuterBoundary"};
   FunctionsOfTimeMap result{};
 
-  if (std::holds_alternative<FromVolumeFile>(expansion_map_options)) {
-    const auto& from_vol_file = std::get<FromVolumeFile>(expansion_map_options);
-    const auto volume_fot = from_vol_file.retrieve_function_of_time(
+  if (std::holds_alternative<FromVolumeFile<AllowReplay>>(
+          expansion_map_options)) {
+    const auto& from_vol_file =
+        std::get<FromVolumeFile<AllowReplay>>(expansion_map_options);
+    auto volume_fot = from_vol_file.retrieve_function_of_time(
         {name, name_outer_boundary}, initial_time);
 
     // Expansion must be either a PiecewisePolynomial or a SettleToConstant
@@ -97,8 +99,12 @@ FunctionsOfTimeMap get_expansion(
           "initialize the expansion map.");
     }
 
-    result[name] =
-        volume_fot.at(name)->create_at_time(initial_time, expiration_time);
+    if (from_vol_file.replay()) {
+      result[name] = std::move(volume_fot.at(name));
+    } else {
+      result[name] =
+          volume_fot.at(name)->create_at_time(initial_time, expiration_time);
+    }
 
     // Outer boundary must be either a FixedSpeedCubic or a SettleToConstant
     const auto* outer_boundary_cubic_volume_fot =
@@ -121,12 +127,18 @@ FunctionsOfTimeMap get_expansion(
            "SettleToConstant, but SettleToConstant functions of time aren't "
            "allowed.");
 
-    result[name_outer_boundary] =
-        volume_fot.at(name_outer_boundary)->get_clone();
-  } else if (std::holds_alternative<ExpansionMapOptions<AllowSettleFoTs>>(
+    if (from_vol_file.replay()) {
+      result[name] = std::move(volume_fot.at(name_outer_boundary));
+    } else {
+      result[name_outer_boundary] =
+          volume_fot.at(name_outer_boundary)->get_clone();
+    }
+  } else if (std::holds_alternative<
+                 ExpansionMapOptions<AllowSettleFoTs, AllowReplay>>(
                  expansion_map_options)) {
     const auto& hard_coded_options =
-        std::get<ExpansionMapOptions<AllowSettleFoTs>>(expansion_map_options);
+        std::get<ExpansionMapOptions<AllowSettleFoTs, AllowReplay>>(
+            expansion_map_options);
 
     if (hard_coded_options.asymptotic_velocity_outer_boundary.has_value()) {
       result[name] =
@@ -159,16 +171,18 @@ FunctionsOfTimeMap get_expansion(
 }
 
 #define ALLOWSETTLE(data) BOOST_PP_TUPLE_ELEM(0, data)
+#define REPLAY(data) BOOST_PP_TUPLE_ELEM(1, data)
 
-#define INSTANTIATE(_, data)                                     \
-  template struct ExpansionMapOptions<ALLOWSETTLE(data)>;        \
-  template FunctionsOfTimeMap get_expansion(                     \
-      const std::variant<ExpansionMapOptions<ALLOWSETTLE(data)>, \
-                         FromVolumeFile>& expansion_map_options, \
+#define INSTANTIATE(_, data)                                                   \
+  template struct ExpansionMapOptions<ALLOWSETTLE(data), REPLAY(data)>;        \
+  template FunctionsOfTimeMap get_expansion(                                   \
+      const std::variant<ExpansionMapOptions<ALLOWSETTLE(data), REPLAY(data)>, \
+                         FromVolumeFile<REPLAY(data)>>& expansion_map_options, \
       double initial_time, double expiration_time);
 
-GENERATE_INSTANTIATIONS(INSTANTIATE, (true, false))
+GENERATE_INSTANTIATIONS(INSTANTIATE, (true, false), (true, false))
 
 #undef INSTANTIATE
+#undef REPLAY
 #undef ALLOWSETTLE
 }  // namespace domain::creators::time_dependent_options
