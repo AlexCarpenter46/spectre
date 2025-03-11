@@ -170,7 +170,7 @@ namespace domain::creators {
  * `TimeDependentMaps: None`.
  *
  */
-template <bool AllowReplay = false>
+template <bool AllowReplay>
 class Sphere : public DomainCreator<3> {
  private:
   using Affine = CoordinateMaps::Affine;

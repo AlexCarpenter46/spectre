@@ -236,7 +236,7 @@ struct FromVolumeFileShapeSize : public FromVolumeFile<AllowReplay> {
  * simulation.
  */
 template <bool IncludeTransitionEndsAtCube, domain::ObjectLabel Object,
-          bool AllowReplay = false>
+          bool AllowReplay>
 struct ShapeMapOptions {
   using type =
       Options::Auto<std::variant<ShapeMapOptions<IncludeTransitionEndsAtCube,

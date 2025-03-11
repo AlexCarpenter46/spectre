@@ -24,7 +24,7 @@ namespace domain::creators::time_dependent_options {
  * \details This class can also be used as an option tag with the \p type type
  * alias, `name()` function, and \p help string.
  */
-template <bool AllowReplay = false>
+template <bool AllowReplay>
 struct SkewMapOptions {
  private:
   struct Y {};

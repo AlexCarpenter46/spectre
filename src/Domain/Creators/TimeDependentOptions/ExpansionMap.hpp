@@ -26,7 +26,7 @@ namespace domain::creators::time_dependent_options {
  * \details This class can also be used as an option tag with the \p type type
  * alias, `name()` function, and \p help string.
  */
-template <bool AllowSettleFoTs, bool AllowReplay = false>
+template <bool AllowSettleFoTs, bool AllowReplay>
 struct ExpansionMapOptions {
   using type = Options::Auto<
       std::variant<ExpansionMapOptions<AllowSettleFoTs, AllowReplay>,

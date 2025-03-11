@@ -194,7 +194,7 @@ class BinaryCompactObject : public DomainCreator<3> {
                             Affine3D>,
       domain::CoordinateMap<Frame::BlockLogical, Frame::Inertial,
                             CoordinateMaps::Wedge<3>, Affine3D>,
-      bco::TimeDependentMapOptions<false>::maps_list>>;
+      typename bco::TimeDependentMapOptions<false, AllowReplay>::maps_list>>;
 
   /// Options for an excision region in the domain
   struct Excision {

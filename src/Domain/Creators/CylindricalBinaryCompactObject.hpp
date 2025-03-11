@@ -185,7 +185,7 @@ class CylindricalBinaryCompactObject : public DomainCreator<3> {
                                                     CoordinateMaps::Interval>,
                      CoordinateMaps::UniformCylindricalSide,
                      CoordinateMaps::DiscreteRotation<3>>,
-                 bco::TimeDependentMapOptions<true>::maps_list>>;
+                 bco::TimeDependentMapOptions<true, false>::maps_list>>;
 
   struct CenterA {
     using type = std::array<double, 3>;
@@ -281,10 +281,10 @@ class CylindricalBinaryCompactObject : public DomainCreator<3> {
   };
 
   struct TimeDependentMaps {
-    using type = Options::Auto<bco::TimeDependentMapOptions<true>,
+    using type = Options::Auto<bco::TimeDependentMapOptions<true, false>,
                                Options::AutoLabel::None>;
     static constexpr Options::String help =
-        bco::TimeDependentMapOptions<true>::help;
+        bco::TimeDependentMapOptions<true, false>::help;
   };
 
   template <typename Metavariables>
@@ -318,8 +318,8 @@ class CylindricalBinaryCompactObject : public DomainCreator<3> {
       double outer_radius, bool use_equiangular_map,
       const typename InitialRefinement::type& initial_refinement,
       const typename InitialGridPoints::type& initial_grid_points,
-      std::optional<bco::TimeDependentMapOptions<true>> time_dependent_options =
-          std::nullopt,
+      std::optional<bco::TimeDependentMapOptions<true, false>>
+          time_dependent_options = std::nullopt,
       std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>
           inner_boundary_condition = nullptr,
       std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>
@@ -404,6 +404,7 @@ class CylindricalBinaryCompactObject : public DomainCreator<3> {
   std::unordered_map<std::string, tnsr::I<double, 3, Frame::Grid>>
       grid_anchors_{};
   // FunctionsOfTime options
-  std::optional<bco::TimeDependentMapOptions<true>> time_dependent_options_{};
+  std::optional<bco::TimeDependentMapOptions<true, false>>
+      time_dependent_options_{};
 };
 }  // namespace domain::creators

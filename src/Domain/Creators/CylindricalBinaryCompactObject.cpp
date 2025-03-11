@@ -64,7 +64,8 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
     bool use_equiangular_map,
     const typename InitialRefinement::type& initial_refinement,
     const typename InitialGridPoints::type& initial_grid_points,
-    std::optional<bco::TimeDependentMapOptions<true>> time_dependent_options,
+    std::optional<bco::TimeDependentMapOptions<true, false>>
+        time_dependent_options,
     std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>
         inner_boundary_condition,
     std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>

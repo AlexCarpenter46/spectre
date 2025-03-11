@@ -39,7 +39,7 @@ namespace domain::creators::sphere {
  * \brief This holds all options related to the time dependent maps of the
  * domain::creators::Sphere domain creator.
  */
-template <bool AllowReplay = false>
+template <bool AllowReplay>
 struct TimeDependentMapOptions {
  private:
   template <typename SourceFrame, typename TargetFrame>

@@ -24,7 +24,7 @@ namespace domain::creators::time_dependent_options {
  * \details This class can also be used as an option tag with the \p type type
  * alias, `name()` function, and \p help string.
  */
-template <size_t Dim, bool AllowReplay = false>
+template <size_t Dim, bool AllowReplay>
 struct TranslationMapOptions {
   using type =
       Options::Auto<std::variant<TranslationMapOptions<Dim, AllowReplay>,

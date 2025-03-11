@@ -107,7 +107,7 @@ using produce_all_maps = tmpl::transform<
  * \note This struct contains no information about what blocks the time
  * dependent maps will go in.
  */
-template <bool IsCylindrical, bool AllowReplay = false>
+template <bool IsCylindrical, bool AllowReplay>
 struct TimeDependentMapOptions {
  private:
   template <typename SourceFrame, typename TargetFrame>
