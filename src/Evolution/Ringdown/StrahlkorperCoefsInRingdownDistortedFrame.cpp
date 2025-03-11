@@ -11,17 +11,25 @@
 #include "Domain/CoordinateMaps/Distribution.hpp"
 #include "Domain/Creators/Sphere.hpp"
 #include "Domain/Creators/TimeDependentOptions/ExpansionMap.hpp"
+#include "Domain/Creators/TimeDependentOptions/FromVolumeFile.hpp"
 #include "Domain/Creators/TimeDependentOptions/RotationMap.hpp"
 #include "Domain/Creators/TimeDependentOptions/Sphere.hpp"
+#include "Domain/Creators/TimeDependentOptions/TranslationMap.hpp"
+#include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
 #include "Domain/StrahlkorperTransformations.hpp"
 #include "IO/H5/Dat.hpp"
 #include "IO/H5/File.hpp"
+#include "IO/H5/VolumeData.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/IO/ReadSurfaceYlm.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "Utilities/Gsl.hpp"
+#include "Utilities/Serialization/Serialize.hpp"
 
 namespace evolution::Ringdown {
-std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
+std::array<std::vector<DataVector>, 2>
+strahlkorper_coefs_in_ringdown_distorted_frame(
+    const std::string& path_to_volume_data,
+    const std::string& volume_subfile_name,
     const std::string& path_to_horizons_h5,
     const std::string& surface_subfile_name,
     const size_t requested_number_of_times_from_end, const double match_time,
@@ -50,6 +58,35 @@ std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
       ahc_times.push_back(coefs_for_times(i, 0));
     }
   }
+  // Getting the translation fot from inspiral volume data
+  const h5::H5File<h5::AccessType::ReadOnly> volume_file{path_to_volume_data};
+  const auto& volume_data =
+      volume_file.get<h5::VolumeData>(volume_subfile_name);
+  const auto obs_ids = volume_data.list_observation_ids();
+  size_t obs_id_at_match_time = 0;
+  for (const auto obs_id : obs_ids) {
+    if (volume_data.get_observation_value(obs_id) == match_time) {
+      obs_id_at_match_time = obs_id;
+    }
+  }
+
+  const auto serialized_inspiral_domain =
+      volume_data.get_domain(obs_id_at_match_time);
+  if (not serialized_inspiral_domain.has_value()) {
+    ERROR("No domain in volume files. Goodnight");
+  }
+  const auto inspiral_domain =
+      deserialize<Domain<3>>(serialized_inspiral_domain->data());
+
+  const auto serialized_inspiral_functions_of_time =
+      volume_data.get_functions_of_time(obs_id_at_match_time);
+  if (not serialized_inspiral_functions_of_time.has_value()) {
+    ERROR("No functions of time in volume files. Goodnight");
+  }
+  const auto inspiral_functions_of_time = deserialize<std::unordered_map<
+      std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>>(
+      serialized_inspiral_functions_of_time->data());
+
   // Create a time-dependent domain; only the the time-dependent map options
   // matter; the domain is just a spherical shell with inner and outer
   // radii chosen so any conceivable common horizon will fit between them.
@@ -69,12 +106,15 @@ std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
                                    settling_timescale}
           : std::optional<domain::creators::time_dependent_options::
                               RotationMapOptions<true>>{};
+  const auto& translation_fot = inspiral_functions_of_time.at("Translation");
   const auto translation_map_options =
       trans_func_and_2_derivs.has_value()
-          ? domain::creators::sphere::TimeDependentMapOptions::
-                TranslationMapOptions{trans_func_and_2_derivs.value()}
+          ? domain::creators::time_dependent_options::
+                TranslationMapOptions{translation_fot->func_and_2_derivs(
+                    translation_fot->time_bounds()[0])}
           : std::optional<domain::creators::sphere::TimeDependentMapOptions::
                               TranslationMapOptions>{};
+
   const domain::creators::sphere::TimeDependentMapOptions
       time_dependent_map_options{match_time,
                                  std::nullopt,
@@ -91,7 +131,7 @@ std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
       static_cast<size_t>(5),
       false,
       std::nullopt,
-      {100.0},
+      {50.0},
       domain::CoordinateMaps::Distribution::Linear,
       ShellWedges::All,
       time_dependent_map_options};

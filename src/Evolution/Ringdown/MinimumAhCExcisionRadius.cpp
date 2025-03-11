@@ -83,11 +83,12 @@ double minimum_ahc_excision_radius(
   // matter; the domain is just a spherical shell with inner and outer
   // radii chosen so any conceivable common horizon will fit between them.
 
-  // Make sure to change l_max at some point :)
+  // Make sure to change l_max at some point :) WhY 20??? Maybe make parameter
+  // but check pl script first.
   const auto shape_map_options =
       domain::creators::time_dependent_options::ShapeMapOptions<
           false, domain::ObjectLabel::None>{
-          20,
+          33,
           domain::creators::time_dependent_options::YlmsFromFile{
               path_to_AhC_distorted_h5, AhC_distorted_subfile_names, match_time,
               1.e-10, true, true},
@@ -162,7 +163,7 @@ double minimum_ahc_excision_radius(
       serialized_inspiral_functions_of_time->data());
 
   // Poor-man's mass ratio.
-  double q = abs(excision_A_center[0] / excision_B_center[0]);
+  double q = abs(excision_B_center[0] / excision_A_center[0]);
   std::cout << "Poor man's mass ratio: " << q << std::endl;
   double eps = 1e-3 / q;
   bool outer_converged = false;
@@ -208,7 +209,8 @@ double minimum_ahc_excision_radius(
           static_cast<size_t>(5),
           false,
           std::nullopt,
-          {100.0},
+          // make this an option at some point soon :)
+          {50.0},
           domain::CoordinateMaps::Distribution::Linear,
           ShellWedges::All,
           ringdown_time_dependent_map_options};
@@ -314,13 +316,19 @@ double minimum_ahc_excision_radius(
           }
         }
         const double excision_a_point_radius =
-            sqrt(square(get<0>(exc_a_ringdown_grid_point)) +
-                 square(get<1>(exc_a_ringdown_grid_point)) +
-                 square(get<2>(exc_a_ringdown_grid_point)));
+            sqrt(square(get<0>(exc_a_ringdown_grid_point) -
+                        trans_func_and_2_derivs.value()[0][0]) +
+                 square(get<1>(exc_a_ringdown_grid_point) -
+                        trans_func_and_2_derivs.value()[0][1]) +
+                 square(get<2>(exc_a_ringdown_grid_point) -
+                        trans_func_and_2_derivs.value()[0][2]));
         const double excision_b_point_radius =
-            sqrt(square(get<0>(exc_b_ringdown_grid_point)) +
-                 square(get<1>(exc_b_ringdown_grid_point)) +
-                 square(get<2>(exc_b_ringdown_grid_point)));
+            sqrt(square(get<0>(exc_b_ringdown_grid_point) -
+                        trans_func_and_2_derivs.value()[0][0]) +
+                 square(get<1>(exc_b_ringdown_grid_point) -
+                        trans_func_and_2_derivs.value()[0][1]) +
+                 square(get<2>(exc_b_ringdown_grid_point) -
+                        trans_func_and_2_derivs.value()[0][2]));
 
         if (excision_a_point_radius > min_excision_radius) {
           min_excision_radius = excision_a_point_radius;

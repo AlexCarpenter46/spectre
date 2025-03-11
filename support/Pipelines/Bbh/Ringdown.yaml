@@ -43,6 +43,7 @@ DomainCreator:
     # The radial partitioning split has been tested for
     # equal-mass, zero spin, quasi-circular, but not
     # yet for other cases.
+    # Do something with this :)
     RadialPartitioning: [50.0]
     RadialDistribution: [Logarithmic, Linear]
     WhichWedges: All

@@ -23,6 +23,7 @@
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "NumericalAlgorithms/RootFinding/RootBracketing.hpp"
 #include "NumericalAlgorithms/RootFinding/TOMS748.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/ChangeCenterOfStrahlkorper.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Spherepack.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/StrahlkorperFunctions.hpp"
@@ -40,7 +41,7 @@ void strahlkorper_in_different_frame(
     const std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time,
-    const double time) {
+    const double time, const bool recenter_strahlkorper) {
   // Temporary storage; reduce the number of allocations.
   Variables<
       tmpl::list<::Tags::Tempi<0, 2, ::Frame::Spherical<SrcFrame>>,
@@ -209,6 +210,11 @@ void strahlkorper_in_different_frame(
   *dest_strahlkorper = ylm::Strahlkorper<DestFrame>(
       src_strahlkorper.l_max(), src_strahlkorper.m_max(), radius_at_each_angle,
       center_dest);
+
+  if (recenter_strahlkorper) {
+    ylm::change_expansion_center_of_strahlkorper_to_physical(
+        *dest_strahlkorper);
+  }
 }
 
 template <typename SrcFrame, typename DestFrame>

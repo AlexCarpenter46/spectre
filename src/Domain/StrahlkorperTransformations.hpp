@@ -53,7 +53,7 @@ void strahlkorper_in_different_frame(
     const std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time,
-    double time);
+    double time, bool recenter_strahlkorper = false);
 
 /// \brief Transforms a Strahlkorper from SrcFrame to DestFrame, for easy maps.
 ///

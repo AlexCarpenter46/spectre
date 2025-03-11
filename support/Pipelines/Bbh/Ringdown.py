@@ -198,23 +198,26 @@ def start_ringdown(
             [0.0, 0.0, 0.0, 0.0],
         ]
     evaluated_fot_dict["Expansion"] = [1.0, 0.0, 0.0]
-    # if "Translation" not in evaluated_fot_dict:
-    evaluated_fot_dict["Translation"] = [
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-    ]
+    if "Translation" not in evaluated_fot_dict:
+        evaluated_fot_dict["Translation"] = [
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+        ]
 
-    ringdown_ylm_coefs, ringdown_ylm_legend = (
-        compute_ahc_coefs_in_ringdown_distorted_frame(
-            str(ahc_reductions_path),
-            ahc_subfile,
-            evaluated_fot_dict,
-            number_of_ahc_finds_for_fit,
-            match_time,
-            settling_timescale,
-            zero_coefs_eps,
-        )
+    (
+        ringdown_ylm_coefs,
+        ringdown_ylm_legend,
+        ahc_translation_fot,
+        ahc_inertial_center_at_match_time,
+    ) = compute_ahc_coefs_in_ringdown_distorted_frame(
+        str(ahc_reductions_path),
+        ahc_subfile,
+        evaluated_fot_dict,
+        number_of_ahc_finds_for_fit,
+        match_time,
+        settling_timescale,
+        zero_coefs_eps,
     )
 
     # Setting up and writing the distorted coefficients output file.
@@ -293,7 +296,7 @@ def start_ringdown(
         evaluated_fot_dict["Expansion"],
         evaluated_fot_dict["ExpansionOuterBoundary"],
         evaluated_fot_dict["Rotation"],
-        None,
+        ahc_translation_fot,
     )
 
     logger.debug("Obtained ringdown coefs")
