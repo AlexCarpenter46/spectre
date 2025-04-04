@@ -27,6 +27,7 @@ void bind_strahlkorper_coefs_in_ringdown_distorted_frame(py::module& m) {
 
   m.def("strahlkorper_coefs_in_ringdown_distorted_frame",
         &evolution::Ringdown::strahlkorper_coefs_in_ringdown_distorted_frame,
+        py::arg("path_to_volume_data"), py::arg("volume_subfile_name"),
         py::arg("path_to_horizons_h5"), py::arg("surface_subfile_name"),
         py::arg("requested_number_of_times_from_end"), py::arg("match_time"),
         py::arg("settling_timescale"), py::arg("exp_func_and_2_derivs"),

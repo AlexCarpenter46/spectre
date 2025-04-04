@@ -32,7 +32,7 @@ namespace evolution::Ringdown {
  * the ringdown-distorted-frame coefficients are used to initialize
  * the shape map for the ringdown domain.
  */
-std::array<std::vector<DataVector>, 2>
+std::pair<std::vector<DataVector>, std::vector<std::array<double, 3>>>
 strahlkorper_coefs_in_ringdown_distorted_frame(
     const std::string& path_to_volume_data,
     const std::string& volume_subfile_name,

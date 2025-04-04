@@ -375,20 +375,6 @@ void TimeDependentMapOptions<IsCylindrical, AllowReplay>::build_maps(
                                       std::move(transition_func),
                                       gsl::at(shape_names, i),
                                       gsl::at(size_names, i)};
-
-      transition_func =
-          std::make_unique<domain::CoordinateMaps::ShapeMapTransitionFunctions::
-                               SphereTransition>(radii[0], radii[1], false,
-                                                 true);
-
-      // Last two are the interior maps
-      gsl::at(shape_maps_, shape_maps_.size() - 2 + i) =
-          Shape{gsl::at(object_centers, i),
-                initial_l_max,
-                initial_l_max,
-                std::move(transition_func),
-                gsl::at(shape_names, i),
-                gsl::at(size_names, i)};
     } else {
       // These must match the order of orientations_for_sphere_wrappings() in
       // DomainHelpers.hpp. The values must match that of Wedge::Axis
@@ -454,21 +440,6 @@ void TimeDependentMapOptions<IsCylindrical, AllowReplay>::build_maps(
                                                     std::move(transition_func),
                                                     gsl::at(shape_names, i),
                                                     gsl::at(size_names, i)};
-      }
-
-      // Add the interior maps if we are excised (aka not filled)
-      if (not filled) {
-        transition_func = std::make_unique<Wedge>(
-            inner_center, inner_radius, inner_sphericity, outer_center,
-            outer_radius, outer_sphericity, Wedge::Axis::Interior);
-
-        gsl::at(gsl::at(shape_maps_, i), gsl::at(shape_maps_, i).size() - 1) =
-            Shape{inner_center,
-                  initial_l_max,
-                  initial_l_max,
-                  std::move(transition_func),
-                  gsl::at(shape_names, i),
-                  gsl::at(size_names, i)};
       }
     }
   }
@@ -597,7 +568,7 @@ typename TimeDependentMapOptions<IsCylindrical, AllowReplay>::template MapType<
     Frame::Grid, Frame::Inertial>
 TimeDependentMapOptions<IsCylindrical, AllowReplay>::grid_to_inertial_map(
     const IncludeDistortedMapType& include_distorted_map,
-    const bool use_rigid_map, const bool return_excision_map) const {
+    const bool use_rigid_map) const {
   bool block_has_shape_map = Object == domain::ObjectLabel::A
                                  ? shape_options_A_.has_value()
                                  : shape_options_B_.has_value();
@@ -605,12 +576,6 @@ TimeDependentMapOptions<IsCylindrical, AllowReplay>::grid_to_inertial_map(
   if constexpr (IsCylindrical) {
     block_has_shape_map = block_has_shape_map and include_distorted_map;
   } else if (block_has_shape_map) {
-    if (return_excision_map and include_distorted_map.value_or(6) >= 6) {
-      ERROR(
-          "If 'return_excision_map' is true, then 'include_distorted_map' must "
-          "be less than 6.");
-    }
-
     const bool transition_ends_at_cube =
         Object == domain::ObjectLabel::A
             ? time_dependent_options::
@@ -621,8 +586,7 @@ TimeDependentMapOptions<IsCylindrical, AllowReplay>::grid_to_inertial_map(
                       shape_options_B_.value());
     block_has_shape_map =
         block_has_shape_map and include_distorted_map.has_value() and
-        (transition_ends_at_cube or include_distorted_map.value() < 6 or
-         return_excision_map);
+        (transition_ends_at_cube or include_distorted_map.value() < 6);
   }
 
   const auto& rot_scale_trans = rot_scale_trans_map_.has_value()
@@ -635,9 +599,7 @@ TimeDependentMapOptions<IsCylindrical, AllowReplay>::grid_to_inertial_map(
     const size_t index = get_index(Object);
     const std::optional<Shape>* shape{};
     if constexpr (IsCylindrical) {
-      shape = &gsl::at(shape_maps_, return_excision_map
-                                        ? shape_maps_.size() - 2 + index
-                                        : index);
+      shape = &gsl::at(shape_maps_, index);
     } else {
       if (include_distorted_map.value() >= 12) {
         ERROR(
@@ -646,9 +608,7 @@ TimeDependentMapOptions<IsCylindrical, AllowReplay>::grid_to_inertial_map(
             << include_distorted_map.value());
       }
       shape =
-          &gsl::at(gsl::at(shape_maps_, index),
-                   return_excision_map ? gsl::at(shape_maps_, index).size() - 1
-                                       : include_distorted_map.value());
+          &gsl::at(gsl::at(shape_maps_, index), include_distorted_map.value());
     }
     ASSERT(shape->has_value(), "Shape map was requested but not built.");
     // The skew map is only applied within the envelope, which is also where we

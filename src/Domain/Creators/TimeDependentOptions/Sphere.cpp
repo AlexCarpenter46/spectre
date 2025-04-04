@@ -267,7 +267,7 @@ template <bool AllowReplay>
 TimeDependentMapOptions<AllowReplay>::MapType<Frame::Grid, Frame::Inertial>
 TimeDependentMapOptions<AllowReplay>::grid_to_inertial_map(
     const size_t block_number, const bool is_outer_shell,
-    const bool is_inner_cube) const {
+    const bool is_central_region) const {
   const bool block_has_shape_map = shape_map_options_.has_value() and
                                    block_number < (filled_ ? 12 : 6) and
                                    not(is_central_region and filled_);

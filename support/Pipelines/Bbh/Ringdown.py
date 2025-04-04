@@ -211,6 +211,8 @@ def start_ringdown(
         ahc_translation_fot,
         ahc_inertial_center_at_match_time,
     ) = compute_ahc_coefs_in_ringdown_distorted_frame(
+        fot_vol_h5_path,
+        fot_vol_subfile,
         str(ahc_reductions_path),
         ahc_subfile,
         evaluated_fot_dict,
@@ -279,25 +281,26 @@ def start_ringdown(
         center_of_mass_offset_z,
     ]
 
-    ahc_excision_radius = Ringdown.minimum_ahc_excision_radius(
-        str(fot_vol_h5_path),
-        fot_vol_subfile,
-        str(ahc_reductions_path),
-        ahc_subfile,
-        str(path_to_output_h5),
-        [output_subfile_ahc, output_subfile_dt_ahc, output_subfile_dt2_ahc],
-        number_of_ahc_finds_for_fit,
-        match_time,
-        settling_timescale,
-        excision_radius_A,
-        excision_radius_B,
-        excision_center_A,
-        excision_center_B,
-        evaluated_fot_dict["Expansion"],
-        evaluated_fot_dict["ExpansionOuterBoundary"],
-        evaluated_fot_dict["Rotation"],
-        ahc_translation_fot,
-    )
+    # ahc_excision_radius = Ringdown.minimum_ahc_excision_radius(
+    #     str(fot_vol_h5_path),
+    #     fot_vol_subfile,
+    #     str(ahc_reductions_path),
+    #     ahc_subfile,
+    #     str(path_to_output_h5),
+    #     [output_subfile_ahc, output_subfile_dt_ahc, output_subfile_dt2_ahc],
+    #     number_of_ahc_finds_for_fit,
+    #     match_time,
+    #     settling_timescale,
+    #     excision_radius_A,
+    #     excision_radius_B,
+    #     excision_center_A,
+    #     excision_center_B,
+    #     evaluated_fot_dict["Expansion"],
+    #     evaluated_fot_dict["ExpansionOuterBoundary"],
+    #     evaluated_fot_dict["Rotation"],
+    #     ahc_translation_fot,
+    # )
+    print("AhC Translation FoT In Ringdown.py: " + str(ahc_translation_fot))
 
     logger.debug("Obtained ringdown coefs")
     # Print out coefficients for insertion into BBH domain
@@ -326,12 +329,12 @@ def start_ringdown(
         width=float("inf"),
     ).strip()
     ringdown_params["Translation"] = yaml.safe_dump(
-        evaluated_fot_dict["Translation"],
+        ahc_translation_fot,
         default_flow_style=True,
         width=float("inf"),
     ).strip()
 
-    ringdown_params["InnerBdryRadius"] = ahc_excision_radius
+    ringdown_params["InnerBdryRadius"] = 1.45
     # To avoid interpolation errors, put outer boundary of ringdown domain
     # slightly inside the outer boundary of the inspiral domain
     ringdown_params["OuterBdryRadius"] = (

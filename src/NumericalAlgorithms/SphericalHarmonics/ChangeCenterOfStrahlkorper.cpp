@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include "DataStructures/DataVector.hpp"
+#include "DataStructures/Tensor/IndexType.hpp"
 #include "DataStructures/Tensor/Tensor.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "NumericalAlgorithms/RootFinding/TOMS748.hpp"
@@ -124,7 +125,7 @@ void change_expansion_center_of_strahlkorper_to_physical(
   // In the random number tests, it never needed more than 7
   // iterations to converge to relative error of roundoff.  Allow 14
   // iterations to be safe.
-  const size_t maxiter = 14;
+  const size_t maxiter = 21;
   for (size_t iter = 0; iter < maxiter; ++iter) {
     const auto phys_center = strahlkorper->physical_center();
     const auto exp_center = strahlkorper->expansion_center();
@@ -133,7 +134,7 @@ void change_expansion_center_of_strahlkorper_to_physical(
                                        square(exp_center[1] - phys_center[1]) +
                                        square(exp_center[2] - phys_center[2])) /
                                   average_radius;
-    if (relative_error <= 2.0 * std::numeric_limits<double>::epsilon()) {
+    if (relative_error <= 2.0e-8) {
       return;
     }
     change_expansion_center(strahlkorper, phys_center, r_hat);
@@ -149,7 +150,8 @@ void change_expansion_center_of_strahlkorper_to_physical(
   template void change_expansion_center_of_strahlkorper_to_physical( \
       const gsl::not_null<Strahlkorper<FRAME(data)>*> strahlkorper);
 
-GENERATE_INSTANTIATIONS(INSTANTIATE, (::Frame::Inertial))
+GENERATE_INSTANTIATIONS(INSTANTIATE,
+                        (::Frame::Inertial, ::Frame::Distorted, ::Frame::Grid))
 
 #undef INSTANTIATE
 #undef FRAME

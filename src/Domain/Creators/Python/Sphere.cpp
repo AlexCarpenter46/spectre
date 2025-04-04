@@ -16,7 +16,7 @@ namespace py = pybind11;
 
 namespace domain::creators::py_bindings {
 void bind_sphere(py::module& m) {
-  py::class_<Sphere, DomainCreator<3>>(m, "Sphere")
+  py::class_<Sphere<false>, DomainCreator<3>>(m, "Sphere")
       .def(py::init([](const double inner_radius, const double outer_radius,
                        const size_t initial_refinement,
                        const size_t initial_num_points,
@@ -29,16 +29,17 @@ void bind_sphere(py::module& m) {
                    "Specify either 'inner_cube_sphericity' or 'excise=True'.");
              }
              auto interior = [&inner_cube_sphericity]()
-                 -> std::variant<Sphere::Excision, Sphere::InnerCube> {
+                 -> std::variant<Sphere<false>::Excision,
+                                 Sphere<false>::InnerCube> {
                if (inner_cube_sphericity.has_value()) {
-                 return Sphere::InnerCube{inner_cube_sphericity.value()};
+                 return Sphere<false>::InnerCube{inner_cube_sphericity.value()};
                } else {
-                 return Sphere::Excision{};
+                 return Sphere<false>::Excision{};
                }
              }();
-             return Sphere{inner_radius,        outer_radius,
-                           std::move(interior), initial_refinement,
-                           initial_num_points,  use_equiangular_map};
+             return Sphere<false>{inner_radius,        outer_radius,
+                                  std::move(interior), initial_refinement,
+                                  initial_num_points,  use_equiangular_map};
            }),
            py::arg("inner_radius"), py::arg("outer_radius"),
            py::arg("initial_refinement"),

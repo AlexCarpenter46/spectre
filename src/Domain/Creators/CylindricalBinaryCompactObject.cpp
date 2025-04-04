@@ -30,7 +30,6 @@
 #include "Domain/FunctionsOfTime/QuaternionFunctionOfTime.hpp"
 #include "Domain/Structure/Direction.hpp"
 #include "Domain/Structure/DirectionMap.hpp"
-#include "Domain/Structure/ObjectLabel.hpp"
 #include "Domain/Structure/OrientationMap.hpp"
 #include "NumericalAlgorithms/RootFinding/QuadraticEquation.hpp"
 #include "Options/ParseError.hpp"
@@ -928,13 +927,9 @@ Domain<3> CylindricalBinaryCompactObject::create_domain() const {
     // outer shell. This allows the center of the excisions/horizons to be
     // mapped properly to the inertial frame.
     domain.inject_time_dependent_map_for_excision_sphere(
-        "ExcisionSphereA",
-        time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::A>(
-            true, true, true));
+        "ExcisionSphereA", grid_to_inertial_block_maps[0]->get_clone());
     domain.inject_time_dependent_map_for_excision_sphere(
-        "ExcisionSphereB",
-        time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::B>(
-            true, true, true));
+        "ExcisionSphereB", grid_to_inertial_block_maps[0]->get_clone());
 
     // Because we require that both objects have inner shells, object A
     // corresponds to blocks 46-59 and object B corresponds to blocks 60-73.

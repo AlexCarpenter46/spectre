@@ -212,8 +212,7 @@ void strahlkorper_in_different_frame(
       center_dest);
 
   if (recenter_strahlkorper) {
-    ylm::change_expansion_center_of_strahlkorper_to_physical(
-        *dest_strahlkorper);
+    ylm::change_expansion_center_of_strahlkorper_to_physical(dest_strahlkorper);
   }
 }
 
@@ -358,7 +357,7 @@ void strahlkorper_coords_in_different_frame(
           std::string,                                               \
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>& \
           functions_of_time,                                         \
-      const double time);
+      const double time, const bool recenter_strahlkorper);
 
 GENERATE_INSTANTIATIONS(INSTANTIATEGENERAL, (::Frame::Grid),
                         (::Frame::Inertial))
@@ -375,7 +374,7 @@ template void strahlkorper_in_different_frame(
     const std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time,
-    const double time);
+    const double time, const bool recenter_strahlkorper);
 template void strahlkorper_in_different_frame(
     const gsl::not_null<ylm::Strahlkorper<::Frame::Grid>*> dest_strahlkorper,
     const ylm::Strahlkorper<::Frame::Inertial>& src_strahlkorper,
@@ -383,7 +382,7 @@ template void strahlkorper_in_different_frame(
     const std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time,
-    const double time);
+    const double time, const bool recenter_strahlkorper);
 
 #define INSTANTIATEALIGNED(_, data)                                  \
   template void strahlkorper_in_different_frame_aligned(             \

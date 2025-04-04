@@ -87,7 +87,7 @@ double minimum_ahc_excision_radius(
   // but check pl script first.
   const auto shape_map_options =
       domain::creators::time_dependent_options::ShapeMapOptions<
-          false, domain::ObjectLabel::None>{
+          false, domain::ObjectLabel::None, false>{
           33,
           domain::creators::time_dependent_options::YlmsFromFile{
               path_to_AhC_distorted_h5, AhC_distorted_subfile_names, match_time,
@@ -97,25 +97,25 @@ double minimum_ahc_excision_radius(
   const auto expansion_map_options =
       exp_func_and_2_derivs.has_value()
           ? domain::creators::time_dependent_options::ExpansionMapOptions<
-                true>{exp_func_and_2_derivs.value(), settling_timescale,
-                      exp_outer_bdry_func_and_2_derivs.value(),
-                      settling_timescale}
+                true, false>{exp_func_and_2_derivs.value(), settling_timescale,
+                             exp_outer_bdry_func_and_2_derivs.value(),
+                             settling_timescale}
           : std::optional<domain::creators::time_dependent_options::
-                              ExpansionMapOptions<true>>{};
+                              ExpansionMapOptions<true, false>>{};
   const auto rotation_map_options =
       rot_func_and_2_derivs.has_value()
           ? domain::creators::time_dependent_options::RotationMapOptions<
-                true>{rot_func_and_2_derivs.value(), settling_timescale}
+                true, false>{rot_func_and_2_derivs.value(), settling_timescale}
           : std::optional<domain::creators::time_dependent_options::
-                              RotationMapOptions<true>>{};
+                              RotationMapOptions<true, false>>{};
   const auto translation_map_options =
       trans_func_and_2_derivs.has_value()
-          ? domain::creators::sphere::TimeDependentMapOptions::
-                TranslationMapOptions{trans_func_and_2_derivs.value()}
-          : std::optional<domain::creators::sphere::TimeDependentMapOptions::
-                              TranslationMapOptions>{};
+          ? domain::creators::sphere::TimeDependentMapOptions<
+                false>::TranslationMapOptions{trans_func_and_2_derivs.value()}
+          : std::optional<domain::creators::sphere::TimeDependentMapOptions<
+                false>::TranslationMapOptions>{};
 
-  const domain::creators::sphere::TimeDependentMapOptions
+  const domain::creators::sphere::TimeDependentMapOptions<false>
       ringdown_time_dependent_map_options{match_time,
                                           shape_map_options,
                                           rotation_map_options,
@@ -200,11 +200,11 @@ double minimum_ahc_excision_radius(
 
     // Start of the inner loop!
     while (not inner_converged and current_inner_iteration < max_iterations) {
-      const domain::creators::Sphere ringdown_rmin_domain_creator{
+      const domain::creators::Sphere<false> ringdown_rmin_domain_creator{
           rAH * rminfac,
           200.0,
           // nullptr because no boundary condition
-          domain::creators::Sphere::Excision{nullptr},
+          domain::creators::Sphere<false>::Excision{nullptr},
           static_cast<size_t>(0),
           static_cast<size_t>(5),
           false,

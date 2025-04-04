@@ -725,15 +725,13 @@ Domain<3> BinaryCompactObject<UseWorldtube, AllowReplay>::create_domain()
         grid_to_inertial_block_maps[number_of_blocks_ - 1] != nullptr) {
       domain.inject_time_dependent_map_for_excision_sphere(
           "ExcisionSphereA",
-          time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::A>(
-              {0}, true, true));
+          grid_to_inertial_block_maps[final_block_envelope]->get_clone());
     }
     if (is_excised_b_ and
         grid_to_inertial_block_maps[number_of_blocks_ - 1] != nullptr) {
       domain.inject_time_dependent_map_for_excision_sphere(
           "ExcisionSphereB",
-          time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::B>(
-              {0}, true, true));
+          grid_to_inertial_block_maps[final_block_envelope]->get_clone());
     }
 
     const size_t first_block_object_B = use_single_block_a_ ? 1 : 12;
