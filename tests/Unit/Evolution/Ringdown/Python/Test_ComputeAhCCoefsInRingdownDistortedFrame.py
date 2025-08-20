@@ -2,17 +2,31 @@
 # See LICENSE.txt for details.
 
 import logging
+import math
 import shutil
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 import spectre.IO.H5 as spectre_h5
 from spectre import Spectral
 from spectre.DataStructures import DataVector, ModalVector
+from spectre.Domain import (
+    PiecewisePolynomial2,
+    PiecewisePolynomial3,
+    QuaternionFunctionOfTime,
+    deserialize_domain,
+    deserialize_functions_of_time,
+    serialize_domain,
+    serialize_functions_of_time,
+)
+from spectre.Domain.Creators import DomainCreator3D, Sphere
 from spectre.Evolution.Ringdown.ComputeAhCCoefsInRingdownDistortedFrame import (
     compute_ahc_coefs_in_ringdown_distorted_frame,
 )
 from spectre.Informer import unit_test_build_path
+from spectre.IO.H5 import ElementVolumeData, TensorComponent
 from spectre.SphericalHarmonics import Frame, Strahlkorper, ylm_legend_and_data
 from spectre.support.Logging import configure_logging
 
@@ -84,8 +98,77 @@ class TestComputeAhCCoefs(unittest.TestCase):
             [0.15, 0.0, 0.0, 0.02],
             [0.06, 0.0, 0.0, 0.03],
         ]
-        ringdown_ylm_coefs, ringdown_ylm_legend = (
+        fot_dict["Translation"] = [
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+        ]
+
+        # Making volume data for functions of time to be extracted
+        rotation_fot = QuaternionFunctionOfTime(
+            time=4990.0,
+            initial_quat_func=[DataVector(size=4, fill=1.0)],
+            initial_angle_func=4 * [DataVector(size=3, fill=0.0)],
+            expiration_time=math.inf,
+        )
+        expansion_fot = PiecewisePolynomial3(
+            4990.0, 4 * [DataVector(size=1, fill=1.0)], math.inf
+        )
+        expansion_outer_fot = PiecewisePolynomial3(
+            4990.0, 4 * [DataVector(size=1, fill=1.0)], math.inf
+        )
+        translation_fot = PiecewisePolynomial2(
+            4990.0, 3 * [DataVector(size=1, fill=0.0)], math.inf
+        )
+        serialized_fots = serialize_functions_of_time(
+            {
+                "Expansion": expansion_fot,
+                "ExpansionOuterBoundary": expansion_outer_fot,
+                "Rotation": rotation_fot,
+                "Translation": translation_fot,
+            }
+        )
+        sphere_domain = Sphere(
+            inner_radius=0.001,
+            outer_radius=200.0,
+            excise=True,
+            initial_refinement=1,
+            initial_number_of_grid_points=3,
+            use_equiangular_map=False,
+        ).create_domain()
+        serialized_sphere_domain = serialize_domain(sphere_domain)
+
+        self.inspiral_volume_data = self.test_dir / "BbhVolume0.h5"
+        obs_values = [4990.0, 4992.0, 4994.0, 4996.0, 4998.0, 5000.0]
+        with spectre_h5.H5File(self.inspiral_volume_data, "w") as volume_file:
+            volfile = volume_file.insert_vol("ForContinuation", version=0)
+            for x in range(0, 6):
+                volfile.write_volume_data(
+                    observation_id=x,
+                    observation_value=obs_values[x],
+                    elements=[
+                        ElementVolumeData(
+                            element_name="WhatTheFreak",
+                            components=[
+                                TensorComponent(
+                                    "IsGoingOnHere",
+                                    np.random.rand(3),
+                                ),
+                            ],
+                            extents=[3],
+                            basis=[Spectral.Basis.Legendre],
+                            quadrature=[Spectral.Quadrature.GaussLobatto],
+                        )
+                    ],
+                    serialized_domain=serialized_sphere_domain,
+                    serialized_functions_of_time=serialized_fots,
+                )
+        volume_file.close_current_object()
+
+        ringdown_ylm_coefs, ringdown_ylm_legend, ahc_translation_fot = (
             compute_ahc_coefs_in_ringdown_distorted_frame(
+                path_to_volume_data=str(self.inspiral_volume_data),
+                volume_subfile_name="ForContinuation",
                 ahc_reductions_path=str(self.inspiral_reduction_data),
                 ahc_subfile="ObservationAhC_Ylm.dat",
                 evaluated_fot_dict=fot_dict,

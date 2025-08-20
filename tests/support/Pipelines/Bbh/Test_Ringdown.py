@@ -138,11 +138,15 @@ class TestInitialData(unittest.TestCase):
         expansion_outer_fot = PiecewisePolynomial3(
             0.0, 4 * [DataVector(size=1, fill=1.0)], math.inf
         )
+        translation_fot = PiecewisePolynomial3(
+            0.0, 4 * [DataVector(size=1, fill=0.0)], math.inf
+        )
         serialized_fots = serialize_functions_of_time(
             {
                 "Expansion": expansion_fot,
                 "ExpansionOuterBoundary": expansion_outer_fot,
                 "Rotation": rotation_fot,
+                "Translation": translation_fot,
             }
         )
         self.inspiral_volume_data = self.inspiral_dir / "BbhVolume0.h5"

@@ -14,6 +14,7 @@
 
 #include "DataStructures/DataVector.hpp"
 #include "Domain/CoordinateMaps/Distribution.hpp"
+#include "Domain/Creators/BinaryCompactObject.hpp"
 #include "Domain/Creators/Sphere.hpp"
 #include "Domain/Creators/TimeDependentOptions/ExpansionMap.hpp"
 #include "Domain/Creators/TimeDependentOptions/RotationMap.hpp"
@@ -24,15 +25,21 @@
 #include "Evolution/Ringdown/StrahlkorperCoefsInRingdownDistortedFrame.hpp"
 #include "Framework/TestHelpers.hpp"
 #include "Helpers/DataStructures/MakeWithRandomValues.hpp"
+#include "IO/H5/AccessType.hpp"
 #include "IO/H5/Dat.hpp"
 #include "IO/H5/File.hpp"
+#include "IO/H5/TensorData.hpp"
+#include "IO/H5/VolumeData.hpp"
+#include "NumericalAlgorithms/Spectral/Basis.hpp"
+#include "NumericalAlgorithms/Spectral/LogicalCoordinates.hpp"
+#include "NumericalAlgorithms/Spectral/Quadrature.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/IO/FillYlmLegendAndData.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Spherepack.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "PointwiseFunctions/GeneralRelativity/KerrHorizon.hpp"
 #include "Utilities/FileSystem.hpp"
 #include "Utilities/Gsl.hpp"
-#include "Utilities/StdHelpers.hpp"
+#include "Utilities/Serialization/Serialize.hpp"
 
 // [[TimeOut, 10]]
 SPECTRE_TEST_CASE(
@@ -155,18 +162,70 @@ SPECTRE_TEST_CASE(
     coefs_file.append(strahlkorper_ringdown_inertial_coefs);
   }
 
+  // Okay so I need to make a volume data file. I should start by making a
+  // binary domain and I can use the functions of time above for it. Then I
+  // guess I'll write volume data for each time above. Then I guess I can pass
+  // that. This actually doesn't sound so bad. Let's give it a whirl.
+  domain::creators::time_dependent_options::RotationMapOptions<false>
+      rotation_map_options_bco{std::array{0.0, 0.0, 0.0}};
+  const domain::creators::bco::TimeDependentMapOptions<false>
+      time_dependent_map_options_bco{
+          match_time,   std::nullopt, rotation_map_options_bco,
+          std::nullopt, std::nullopt, std::nullopt,
+          std::nullopt, std::nullopt};
+
+  using Object = domain::creators::BinaryCompactObject<false>::Object;
+  const domain::creators::BinaryCompactObject<false> domain_creator_bco{
+      Object{0.75, 6., 8., true, true},
+      Object{1.0, 6, -6., true, true},
+      std::array<double, 2>{{0., 0.}},
+      60.,
+      300.,
+      1.0,
+      0_st,
+      6_st,
+      true,
+      domain::CoordinateMaps::Distribution::Projective,
+      std::vector<double>{},
+      domain::CoordinateMaps::Distribution::Inverse,
+      120.};
+  const auto domain_bco = domain_creator_bco.create_domain();
+  const auto functions_of_time_bco = domain_creator_bco.functions_of_time();
+  auto serialized_fots_bco = serialize(functions_of_time_bco);
+  auto serialized_domain_bco = serialize(domain_bco);
+
+  if (file_system::check_if_file_exists("BbhVolume0.h5")) {
+    file_system::rm("BbhVolume0.h5", true);
+  }
+  h5::H5File<h5::AccessType::ReadWrite> h5_file{"BbhVolume0.h5", true};
+  auto& vol_file = h5_file.insert<h5::VolumeData>("ForContinuation");
+
+  vol_file.write_volume_data(
+      0, match_time,
+      {ElementVolumeData{"blah",
+                         {TensorComponent{"RandomTensor", DataVector{3, 0.0}}},
+                         {3},
+                         {Spectral::Basis::Legendre},
+                         {Spectral::Quadrature::GaussLobatto}}},
+      std::nullopt, serialized_fots_bco);
+
   // Call strahlkorper_coefs_in_ringdown_distorted_frame()
   constexpr size_t times_to_retrieve{number_of_times - 2};
-  const std::vector<DataVector> distorted_coefs =
-      evolution::Ringdown::strahlkorper_coefs_in_ringdown_distorted_frame(
-          horizons_file_name, horizons_subfile_name, times_to_retrieve,
-          match_time, settling_timescale, exp_func_and_2_derivs,
-          exp_outer_bdry_func_and_2_derivs, rot_func_and_2_derivs);
+  std::pair<std::vector<DataVector>, std::vector<std::array<double, 3>>>
+      distorted_and_translation_coefs =
+          evolution::Ringdown::strahlkorper_coefs_in_ringdown_distorted_frame(
+              "BbhVolume0.h5", "ForContinuation", horizons_file_name,
+              horizons_subfile_name, times_to_retrieve, match_time,
+              settling_timescale, exp_func_and_2_derivs,
+              exp_outer_bdry_func_and_2_derivs, rot_func_and_2_derivs);
 
   // Checks
   // std::vector is the expected size
-  const size_t times_retrieved = distorted_coefs.size();
+  const size_t times_retrieved = distorted_and_translation_coefs.first.size();
   CHECK(times_retrieved == times_to_retrieve);
+
+  const auto distorted_coefs = distorted_and_translation_coefs.first;
+  const auto translation_coefs = distorted_and_translation_coefs.second;
 
   // Check that the coefficients have the expected numerical values
   const auto& expected_coefs = expected_strahlkorper.coefficients();

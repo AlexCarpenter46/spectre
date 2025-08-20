@@ -9,19 +9,27 @@
 
 #include "DataStructures/Matrix.hpp"
 #include "Domain/CoordinateMaps/Distribution.hpp"
+#include "Domain/CoordsToDifferentFrame.hpp"
 #include "Domain/Creators/Sphere.hpp"
 #include "Domain/Creators/TimeDependentOptions/ExpansionMap.hpp"
+#include "Domain/Creators/TimeDependentOptions/FromVolumeFile.hpp"
 #include "Domain/Creators/TimeDependentOptions/RotationMap.hpp"
 #include "Domain/Creators/TimeDependentOptions/Sphere.hpp"
+#include "Domain/Creators/TimeDependentOptions/TranslationMap.hpp"
 #include "Domain/StrahlkorperTransformations.hpp"
 #include "IO/H5/Dat.hpp"
 #include "IO/H5/File.hpp"
+#include "IO/H5/VolumeData.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/IO/ReadSurfaceYlm.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "Utilities/Gsl.hpp"
+#include "Utilities/Serialization/Serialize.hpp"
 
 namespace evolution::Ringdown {
-std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
+std::pair<std::vector<DataVector>, std::vector<std::array<double, 3>>>
+strahlkorper_coefs_in_ringdown_distorted_frame(
+    const std::string& path_to_volume_data,
+    const std::string& volume_subfile_name,
     const std::string& path_to_horizons_h5,
     const std::string& surface_subfile_name,
     const size_t requested_number_of_times_from_end, const double match_time,
@@ -50,38 +58,64 @@ std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
       ahc_times.push_back(coefs_for_times(i, 0));
     }
   }
+  // Getting the translation fot from inspiral volume data
+  const h5::H5File<h5::AccessType::ReadOnly> volume_file{path_to_volume_data};
+  const auto& volume_data =
+      volume_file.get<h5::VolumeData>(volume_subfile_name);
+  const auto obs_ids = volume_data.list_observation_ids();
+  size_t obs_id_at_match_time = 0;
+  for (const auto obs_id : obs_ids) {
+    if (volume_data.get_observation_value(obs_id) == match_time) {
+      obs_id_at_match_time = obs_id;
+    }
+  }
+
+  const auto serialized_inspiral_domain =
+      volume_data.get_domain(obs_id_at_match_time);
+  if (not serialized_inspiral_domain.has_value()) {
+    ERROR("No domain in volume files. Goodnight");
+  }
+  const auto inspiral_domain =
+      deserialize<Domain<3>>(serialized_inspiral_domain->data());
+
+  const auto serialized_inspiral_functions_of_time =
+      volume_data.get_functions_of_time(obs_id_at_match_time);
+  if (not serialized_inspiral_functions_of_time.has_value()) {
+    ERROR("No functions of time in volume files. Goodnight");
+  }
+  const auto inspiral_functions_of_time = deserialize<std::unordered_map<
+      std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>>(
+      serialized_inspiral_functions_of_time->data());
+
   // Create a time-dependent domain; only the the time-dependent map options
   // matter; the domain is just a spherical shell with inner and outer
   // radii chosen so any conceivable common horizon will fit between them.
   const auto expansion_map_options =
       exp_func_and_2_derivs.has_value()
-          ? domain::creators::time_dependent_options::
-                ExpansionMapOptions<true>{exp_func_and_2_derivs.value(),
-                                    settling_timescale,
-                                    exp_outer_bdry_func_and_2_derivs.value(),
-                                    settling_timescale}
+          ? domain::creators::time_dependent_options::ExpansionMapOptions<
+                true>{exp_func_and_2_derivs.value(), settling_timescale,
+                      exp_outer_bdry_func_and_2_derivs.value(),
+                      settling_timescale}
           : std::optional<domain::creators::time_dependent_options::
                               ExpansionMapOptions<true>>{};
   const auto rotation_map_options =
       rot_func_and_2_derivs.has_value()
-          ? domain::creators::time_dependent_options::
-                RotationMapOptions<true>{rot_func_and_2_derivs.value(),
-                                   settling_timescale}
+          ? domain::creators::time_dependent_options::RotationMapOptions<
+                true>{rot_func_and_2_derivs.value(), settling_timescale}
           : std::optional<domain::creators::time_dependent_options::
                               RotationMapOptions<true>>{};
-  const auto translation_map_options =
+
+  const auto& fots =
       trans_func_and_2_derivs.has_value()
-          ? domain::creators::sphere::TimeDependentMapOptions::
-                TranslationMapOptions{trans_func_and_2_derivs.value()}
-          : std::optional<domain::creators::sphere::TimeDependentMapOptions::
-                              TranslationMapOptions>{};
+          ? domain::creators::time_dependent_options::FromVolumeFile(
+                path_to_volume_data, volume_subfile_name, true)
+          : std::optional<
+                domain::creators::time_dependent_options::FromVolumeFile>{};
+
   const domain::creators::sphere::TimeDependentMapOptions
-      time_dependent_map_options{match_time,
-                                 std::nullopt,
-                                 rotation_map_options,
-                                 expansion_map_options,
-                                 translation_map_options,
-                                 true};
+      time_dependent_map_options{
+          match_time, std::nullopt, rotation_map_options, expansion_map_options,
+          fots,       true};
   const domain::creators::Sphere domain_creator{
       0.01,
       200.0,
@@ -91,7 +125,7 @@ std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
       static_cast<size_t>(5),
       false,
       std::nullopt,
-      {100.0},
+      {50.0},
       domain::CoordinateMaps::Distribution::Linear,
       ShellWedges::All,
       time_dependent_map_options};
@@ -102,6 +136,7 @@ std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
   // Loop over the selected horizons, transforming each to the
   // ringdown distorted frame
   std::vector<DataVector> ahc_ringdown_distorted_coefs{};
+  std::vector<std::array<double, 3>> ahc_inertial_centers{};
   // Here we transform the inertial strahlkorper into the ringdown distorted
   // frame. In order to do this, the inertial coords of the strahlkorper are
   // mapped to the logical frame to determine which block map to use, and then
@@ -114,14 +149,28 @@ std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
   // true ringdown distorted frame we are after. This is why we map the
   // strahlkorper into the "grid" frame instead of the "distorted" frame. It is
   // a simplification to avoid an unnecessary identity shape map.
-  ylm::Strahlkorper<Frame::Grid> current_ahc;
+  ylm::Strahlkorper<Frame::Grid> distorted_ahc;
+  ylm::Strahlkorper<Frame::Inertial> inertial_ahc;
   for (size_t i = 0; i < requested_number_of_times_from_end; ++i) {
-    strahlkorper_in_different_frame(
-        make_not_null(&current_ahc), gsl::at(ahc_inertial_h5, i),
-        temporary_domain, functions_of_time, gsl::at(ahc_times, i));
-    ahc_ringdown_distorted_coefs.push_back(current_ahc.coefficients());
+    if (gsl::at(ahc_times, i) <= match_time) {
+      strahlkorper_in_different_frame(
+          make_not_null(&distorted_ahc), gsl::at(ahc_inertial_h5, i),
+          temporary_domain, functions_of_time, gsl::at(ahc_times, i), true);
+      ahc_ringdown_distorted_coefs.push_back(distorted_ahc.coefficients());
+      tnsr::I<DataVector, 3, ::Frame::Inertial> inertial_center_point{
+          DataVector{1, 0.0}};
+      coords_to_different_frame(make_not_null(&inertial_center_point),
+                                tnsr::I<DataVector, 3, ::Frame::Grid>{
+                                    distorted_ahc.expansion_center()},
+                                inspiral_domain, inspiral_functions_of_time,
+                                match_time);
+      ahc_inertial_centers.push_back(
+          std::array<double, 3>{-1.0 * get<0>(inertial_center_point)[0],
+                                -1.0 * get<1>(inertial_center_point)[0],
+                                -1.0 * get<2>(inertial_center_point)[0]});
+    }
   }
 
-  return ahc_ringdown_distorted_coefs;
+  return std::pair{ahc_ringdown_distorted_coefs, ahc_inertial_centers};
 }
 }  // namespace evolution::Ringdown
