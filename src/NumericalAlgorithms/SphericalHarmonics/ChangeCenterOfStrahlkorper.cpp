@@ -115,7 +115,7 @@ void change_expansion_center_of_strahlkorper(
 
 template <typename Frame>
 void change_expansion_center_of_strahlkorper_to_physical(
-    const gsl::not_null<Strahlkorper<Frame>*> strahlkorper) {
+    const gsl::not_null<Strahlkorper<Frame>*> strahlkorper, double error_tol) {
   const auto r_hat = get_rhat(*strahlkorper);
 
   // Zeroth iteration.
@@ -133,7 +133,7 @@ void change_expansion_center_of_strahlkorper_to_physical(
                                        square(exp_center[1] - phys_center[1]) +
                                        square(exp_center[2] - phys_center[2])) /
                                   average_radius;
-    if (relative_error <= 2.0 * std::numeric_limits<double>::epsilon()) {
+    if (relative_error <= error_tol) {
       return;
     }
     change_expansion_center(strahlkorper, phys_center, r_hat);
@@ -147,9 +147,11 @@ void change_expansion_center_of_strahlkorper_to_physical(
       const gsl::not_null<Strahlkorper<FRAME(data)>*> strahlkorper,  \
       const std::array<double, 3>& new_center);                      \
   template void change_expansion_center_of_strahlkorper_to_physical( \
-      const gsl::not_null<Strahlkorper<FRAME(data)>*> strahlkorper);
+      const gsl::not_null<Strahlkorper<FRAME(data)>*> strahlkorper,  \
+      double error_tol);
 
-GENERATE_INSTANTIATIONS(INSTANTIATE, (::Frame::Inertial))
+GENERATE_INSTANTIATIONS(INSTANTIATE,
+                        (::Frame::Inertial, ::Frame::Distorted, ::Frame::Grid))
 
 #undef INSTANTIATE
 #undef FRAME
