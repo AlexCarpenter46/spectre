@@ -20,6 +20,7 @@ target_link_libraries(
   H5
   Ringdown
   Spectral
+  Serialization
   SphericalHarmonics
   SphericalHarmonicsIO
   Utilities

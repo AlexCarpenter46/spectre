@@ -20,6 +20,7 @@
 #include "IO/H5/Dat.hpp"
 #include "IO/H5/File.hpp"
 #include "IO/H5/VolumeData.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/ChangeCenterOfStrahlkorper.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/IO/ReadSurfaceYlm.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "Utilities/Gsl.hpp"
@@ -155,7 +156,9 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
     if (gsl::at(ahc_times, i) <= match_time) {
       strahlkorper_in_different_frame(
           make_not_null(&distorted_ahc), gsl::at(ahc_inertial_h5, i),
-          temporary_domain, functions_of_time, gsl::at(ahc_times, i), true);
+          temporary_domain, functions_of_time, gsl::at(ahc_times, i));
+      ylm::change_expansion_center_of_strahlkorper_to_physical(
+          make_not_null(&distorted_ahc), 1e-8);
       ahc_ringdown_distorted_coefs.push_back(distorted_ahc.coefficients());
       tnsr::I<DataVector, 3, ::Frame::Inertial> inertial_center_point{
           DataVector{1, 0.0}};
