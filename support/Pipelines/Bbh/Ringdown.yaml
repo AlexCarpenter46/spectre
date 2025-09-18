@@ -109,7 +109,7 @@ EvolutionSystem:
     GaugeCondition:
       DampedHarmonic:
         SpatialDecayWidth: 17.0152695482514
-        Amplitudes: [1.0, 1.0, 1.0]
+        Amplitudes: [1.0, 0.0, 1.0]
         Exponents: [2, 2, 2]
     # The parameter choices here come from our experience with the Spectral
     # Einstein Code (SpEC). They should be suitable for evolutions of a
@@ -121,13 +121,13 @@ EvolutionSystem:
       # The Gaussian amplitudes, widths, and centers are set according to what
       # SpEC does ringdown for an equal-mass, zero-spin, circular inspiral.
       TimeDependentTripleGaussian:
-        Constant: 0.001
+        Constant: 0.01
         Gaussian1:
           Amplitude: 7.0
           Width: 2.5
           Center: [0.0, 0.0, 0.0]
         Gaussian2:
-          Amplitude: 0.1
+          Amplitude: 1.0
           Width: 100.
           Center: [0.0, 0.0, 0.0]
         Gaussian3:
@@ -191,7 +191,7 @@ PhaseChangeAndTriggers:
       Slabs:
        EvenlySpaced:
          # Current implementation checks wallclock at these global syncs
-         Interval: 100
+         Interval: 1
          Offset: 0
     PhaseChanges:
       - CheckpointAndExitAfterWallclock:
@@ -238,10 +238,10 @@ EventsAndTriggersAtSlabs:
       - ApparentHorizon
       - ExcisionBoundary
   - Trigger:
-      Times:
+      Slabs:
         EvenlySpaced:
-          Interval: 10.0
-          Offset: 0.0
+          Interval: 50
+          Offset: 0
     Events:
       # SpatialRicciScalar and Psi4Real output for visualizations scripts.
       - ObserveFields:
