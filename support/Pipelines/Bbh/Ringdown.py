@@ -134,9 +134,8 @@ def start_ringdown(
     logger.warning(
         "The BBH pipeline is still experimental. Please review the"
         " generated input files. In particular, the ringdown BBH pipline has"
-        " been tested for a q=1, spin=0 quasicircular inspiral but does not"
-        " yet support accounting for a nonzero translation map in the inspiral"
-        " (necessary for unequal-mass mergers.)"
+        " been tested for q=1, q=2, spin=0 inspirals but does not"
+        " yet support choosing an excision radius automatically."
     )
     # Determine ringdown parameters from inspiral
     # Resolve and set correct files/paths.
@@ -208,22 +207,23 @@ def start_ringdown(
             [0.0, 0.0, 0.0, 0.0],
         ]
     evaluated_fot_dict["Expansion"] = [1.0, 0.0, 0.0]
-    evaluated_fot_dict["Translation"] = [
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-    ]
+    if "Translation" not in evaluated_fot_dict:
+        evaluated_fot_dict["Translation"] = None
 
-    ringdown_ylm_coefs, ringdown_ylm_legend = (
-        compute_ahc_coefs_in_ringdown_distorted_frame(
-            str(ahc_reductions_path),
-            ahc_subfile,
-            evaluated_fot_dict,
-            number_of_ahc_finds_for_fit,
-            match_time,
-            settling_timescale,
-            zero_coefs_eps,
-        )
+    (
+        ringdown_ylm_coefs,
+        ringdown_ylm_legend,
+        ahc_translation_fot,
+    ) = compute_ahc_coefs_in_ringdown_distorted_frame(
+        fot_vol_h5_path,
+        fot_vol_subfile,
+        str(ahc_reductions_path),
+        ahc_subfile,
+        evaluated_fot_dict,
+        number_of_ahc_finds_for_fit,
+        match_time,
+        settling_timescale,
+        zero_coefs_eps,
     )
 
     # Setting up and writing the distorted coefficients output file.
@@ -279,7 +279,7 @@ def start_ringdown(
         width=float("inf"),
     ).strip()
     ringdown_params["Translation"] = yaml.safe_dump(
-        evaluated_fot_dict["Translation"],
+        ahc_translation_fot,
         default_flow_style=True,
         width=float("inf"),
     ).strip()
