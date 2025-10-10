@@ -25,4 +25,11 @@ target_link_libraries(
   Utilities
   )
 
+spectre_python_add_dependencies(
+  ${LIBRARY}
+  PyCoordinateMaps
+  PyDomain
+  PyDomainTimeDependentOptions
+  )
+
 add_subdirectory(Python)
