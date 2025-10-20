@@ -10,6 +10,7 @@ import numpy as np
 import yaml
 from rich.pretty import pretty_repr
 
+import spectre.Evolution.Ringdown as Ringdown
 import spectre.IO.H5 as spectre_h5
 from spectre.Evolution.Ringdown.ComputeAhCCoefsInRingdownDistortedFrame import (
     compute_ahc_coefs_in_ringdown_distorted_frame,
@@ -252,6 +253,61 @@ def start_ringdown(
             version=0,
         )
         ahc_dt2_datfile.append(ringdown_ylm_coefs[2])
+
+        # Section for finding rminfac :)
+    excision_radius_A = inspiral_input_file["DomainCreator"][
+        "BinaryCompactObject"
+    ]["ObjectA"]["InnerRadius"]
+    excision_A_x_coord = inspiral_input_file["DomainCreator"][
+        "BinaryCompactObject"
+    ]["ObjectA"]["XCoord"]
+    excision_radius_B = inspiral_input_file["DomainCreator"][
+        "BinaryCompactObject"
+    ]["ObjectB"]["InnerRadius"]
+    excision_B_x_coord = inspiral_input_file["DomainCreator"][
+        "BinaryCompactObject"
+    ]["ObjectB"]["XCoord"]
+
+    center_of_mass_offset_y = inspiral_input_file["DomainCreator"][
+        "BinaryCompactObject"
+    ]["CenterOfMassOffset"][0]
+    center_of_mass_offset_z = inspiral_input_file["DomainCreator"][
+        "BinaryCompactObject"
+    ]["CenterOfMassOffset"][1]
+
+    excision_center_A = [
+        excision_A_x_coord,
+        center_of_mass_offset_y,
+        center_of_mass_offset_z,
+    ]
+    excision_center_B = [
+        excision_B_x_coord,
+        center_of_mass_offset_y,
+        center_of_mass_offset_z,
+    ]
+
+    ringdown_excision_radius = Ringdown.minimum_ahc_excision_radius(
+        str(fot_vol_h5_path),
+        fot_vol_subfile,
+        str(ahc_reductions_path),
+        ahc_subfile,
+        str(path_to_output_h5),
+        [output_subfile_ahc, output_subfile_dt_ahc, output_subfile_dt2_ahc],
+        number_of_ahc_finds_for_fit,
+        match_time,
+        settling_timescale,
+        excision_radius_A,
+        excision_radius_B,
+        excision_center_A,
+        excision_center_B,
+        evaluated_fot_dict["Expansion"],
+        evaluated_fot_dict["ExpansionOuterBoundary"],
+        evaluated_fot_dict["Rotation"],
+        # This needs to be changed to ahc_translation_fot once the translation
+        # PR is merged.
+        evaluated_fot_dict["Translation"],
+    )
+
     logger.debug("Obtained ringdown coefs")
     # Print out coefficients for insertion into BBH domain
     logger.debug("Expansion: " + str(evaluated_fot_dict["Expansion"]))
@@ -283,6 +339,8 @@ def start_ringdown(
         default_flow_style=True,
         width=float("inf"),
     ).strip()
+
+    ringdown_params["ExcisionRadius"] = ringdown_excision_radius
 
     # To avoid interpolation errors, put outer boundary of ringdown domain
     # slightly inside the outer boundary of the inspiral domain
