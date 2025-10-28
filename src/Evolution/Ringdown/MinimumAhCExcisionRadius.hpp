@@ -26,7 +26,7 @@
  */
 namespace evolution::Ringdown {
 
-double minimum_ahc_excision_radius(
+std::pair<double, double> minimum_ahc_excision_radius(
     const std::string& path_to_volume_data,
     const std::string& volume_subfile_name,
     const std::string& path_to_horizons_h5,

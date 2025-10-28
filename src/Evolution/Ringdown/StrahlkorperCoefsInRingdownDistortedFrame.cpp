@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstddef>
+#include <iostream>
 #include <optional>
 #include <vector>
 
@@ -163,6 +164,11 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
 
       tnsr::I<DataVector, 3, ::Frame::Inertial> inertial_center_point{
           DataVector{3, 0.0}};
+      //   std::cout << "ahc inertial h5 center before stuff: " <<
+      //   ahc_inertial_h5[i].physical_center() << '\n'; std::cout << "ahc
+      //   distorted h5 center: " << distorted_ahc.physical_center() << '\n';
+      //   std::cout << "ahc distorted h5 expansion center: " <<
+      //   distorted_ahc.expansion_center() << '\n';
       // The center point is mapped back to the inspiral inertial frame so that
       // the center of mass is the same at the match time.
       coords_to_different_frame(make_not_null(&inertial_center_point),
@@ -171,10 +177,12 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
                                 inspiral_domain, inspiral_functions_of_time,
                                 gsl::at(ahc_times, i));
       // This minus sign was found by trial and error.
+      //   std::cout << "inertial center point" << inertial_center_point <<
+      //   '\n';
       ahc_inertial_centers.push_back(
           std::array<double, 3>{-1.0 * get<0>(inertial_center_point)[0],
-                                -1.0 * get<1>(inertial_center_point)[0],
-                                -1.0 * get<2>(inertial_center_point)[0]});
+                                -1.0 * get<1>(inertial_center_point)[1],
+                                -1.0 * get<2>(inertial_center_point)[2]});
     }
   }
 

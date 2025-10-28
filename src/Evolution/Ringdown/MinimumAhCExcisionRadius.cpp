@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstddef>
+#include <iostream>
 #include <optional>
 #include <vector>
 
@@ -32,7 +33,7 @@
 #include "Utilities/Serialization/Serialize.hpp"
 
 namespace evolution::Ringdown {
-double minimum_ahc_excision_radius(
+std::pair<double, double> minimum_ahc_excision_radius(
     const std::string& path_to_volume_data,
     const std::string& volume_subfile_name,
     const std::string& path_to_horizons_h5,
@@ -77,14 +78,20 @@ double minimum_ahc_excision_radius(
       trans_func_and_2_derivs.has_value()
           ? trans_func_and_2_derivs.value()[0]
           : std::array<double, 3>{0.0, 0.0, 0.0};
-  // Make sure to change l_max at some point :) WhY 20??? Maybe make parameter
-  // but check pl script first.
+
   const auto shape_map_options =
       domain::creators::time_dependent_options::ShapeMapOptions<
           false, domain::ObjectLabel::None>{
           33, domain::creators::time_dependent_options::YlmsFromFile{
                   path_to_AhC_distorted_h5, AhC_distorted_subfile_names,
                   match_time, 1.e-10, true, true}};
+
+  // const auto shape_initial_values = shape_map_options.initial_values;
+  // auto scaled_shape_map_options =
+  // domain::creators::time_dependent_options::ShapeMapOptions<false,
+  // domain::ObjectLabel::None> {
+  //   33, shape_initial_values,
+  // }
 
   const auto expansion_map_options =
       exp_func_and_2_derivs.has_value()
@@ -175,6 +182,14 @@ double minimum_ahc_excision_radius(
         make_not_null(&excision_b_inspiral_inertial_points),
         ylm::cartesian_coords(excision_b_inspiral_grid), inspiral_domain,
         inspiral_functions_of_time, match_time);
+
+    // domain::creators::sphere::TimeDependentMapOptions
+    // ringdown_time_dependent_map_options{match_time,
+    //                                     scaled_shape_map_options,
+    //                                     rotation_map_options,
+    //                                     expansion_map_options,
+    //                                     translation_map_options,
+    //                                     true};
 
     // Loop section finding the correct rmin_fac
     double old_rminfac = rminfac;
@@ -349,9 +364,13 @@ double minimum_ahc_excision_radius(
   if (safe_rminfac - rminfac < 0.5 * eps) {
     safe_rminfac += eps;
   }
-  const double excision_radius =
-      rminfac > safe_rminfac ? rAH * rminfac : rAH * safe_rminfac;
-
-  return excision_radius;
+  const double excision_factor =
+      rminfac > safe_rminfac ? rminfac : safe_rminfac;
+  const double excision_radius = rAH * excision_factor;
+  std::cout << "rminfac: " << rminfac << '\n';
+  std::cout << "safe rminfac: " << safe_rminfac << '\n';
+  std::cout << "rAh: " << rAH << '\n';
+  std::cout << "Excision radius: " << excision_radius << '\n';
+  return {excision_radius, excision_factor};
 }
 }  // namespace evolution::Ringdown

@@ -253,6 +253,7 @@ def start_ringdown(
             version=0,
         )
         ahc_dt2_datfile.append(ringdown_ylm_coefs[2])
+        h5file.close_current_object()
 
         # Section for finding rminfac :)
     excision_radius_A = inspiral_input_file["DomainCreator"][
@@ -286,27 +287,44 @@ def start_ringdown(
         center_of_mass_offset_z,
     ]
 
-    ringdown_excision_radius = Ringdown.minimum_ahc_excision_radius(
-        str(fot_vol_h5_path),
-        fot_vol_subfile,
-        str(ahc_reductions_path),
-        ahc_subfile,
-        str(path_to_output_h5),
-        [output_subfile_ahc, output_subfile_dt_ahc, output_subfile_dt2_ahc],
-        number_of_ahc_finds_for_fit,
-        match_time,
-        settling_timescale,
-        excision_radius_A,
-        excision_radius_B,
-        excision_center_A,
-        excision_center_B,
-        evaluated_fot_dict["Expansion"],
-        evaluated_fot_dict["ExpansionOuterBoundary"],
-        evaluated_fot_dict["Rotation"],
-        # This needs to be changed to ahc_translation_fot once the translation
-        # PR is merged.
-        evaluated_fot_dict["Translation"],
+    ringdown_excision_radius, ringdown_excision_factor = (
+        Ringdown.minimum_ahc_excision_radius(
+            str(fot_vol_h5_path),
+            fot_vol_subfile,
+            str(ahc_reductions_path),
+            ahc_subfile,
+            str(path_to_output_h5),
+            [output_subfile_ahc, output_subfile_dt_ahc, output_subfile_dt2_ahc],
+            number_of_ahc_finds_for_fit,
+            match_time,
+            settling_timescale,
+            excision_radius_A,
+            excision_radius_B,
+            excision_center_A,
+            excision_center_B,
+            evaluated_fot_dict["Expansion"],
+            evaluated_fot_dict["ExpansionOuterBoundary"],
+            evaluated_fot_dict["Rotation"],
+            evaluated_fot_dict["Translation"],
+        )
     )
+
+    # Need to scale the shape coefficients by the excision factor so that the
+    # shape matches the apparent horizon
+    with spectre_h5.H5File(file_name=path_to_output_h5, mode="r+") as h5file:
+        scaled_ylm0 = ringdown_excision_factor * np.array(ringdown_ylm_coefs[0])
+        scaled_ylm1 = ringdown_excision_factor * np.array(ringdown_ylm_coefs[1])
+        scaled_ylm2 = ringdown_excision_factor * np.array(ringdown_ylm_coefs[2])
+        h5file["/" + output_subfile_ahc] = (
+            ringdown_excision_factor * scaled_ylm0
+        )
+        h5file["/" + output_subfile_dt_ahc] = (
+            ringdown_excision_factor * scaled_ylm1
+        )
+        h5file["/" + output_subfile_dt2_ahc] = (
+            ringdown_excision_factor * scaled_ylm2
+        )
+        h5file.close_current_object()
 
     logger.debug("Obtained ringdown coefs")
     # Print out coefficients for insertion into BBH domain
