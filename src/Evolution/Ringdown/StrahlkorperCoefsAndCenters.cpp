@@ -1,6 +1,6 @@
 // Distributed under the MIT License.
 // See LICENSE.txt for details.
-#include "Evolution/Ringdown/StrahlkorperCoefsInRingdownDistortedFrame.hpp"
+#include "Evolution/Ringdown/StrahlkorperCoefsAndCenters.hpp"
 
 #include <array>
 #include <cstddef>
@@ -28,7 +28,7 @@
 
 namespace evolution::Ringdown {
 std::pair<std::vector<DataVector>, std::vector<std::array<double, 3>>>
-strahlkorper_coefs_in_ringdown_distorted_frame(
+strahlkorper_coefs_and_centers(
     const std::string& path_to_volume_data,
     const std::string& volume_subfile_name,
     const std::string& path_to_horizons_h5,
@@ -63,13 +63,8 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
   const h5::H5File<h5::AccessType::ReadOnly> volume_file{path_to_volume_data};
   const auto& volume_data =
       volume_file.get<h5::VolumeData>(volume_subfile_name);
-  const auto obs_ids = volume_data.list_observation_ids();
-  size_t obs_id_at_match_time = 0;
-  for (const auto obs_id : obs_ids) {
-    if (volume_data.get_observation_value(obs_id) == match_time) {
-      obs_id_at_match_time = obs_id;
-    }
-  }
+  const size_t obs_id_at_match_time =
+      volume_data.find_observation_id(match_time, 1e-12);
 
   const auto serialized_inspiral_domain =
       volume_data.get_domain(obs_id_at_match_time);
@@ -105,7 +100,6 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
                 true>{rot_func_and_2_derivs.value(), settling_timescale}
           : std::optional<domain::creators::time_dependent_options::
                               RotationMapOptions<true>>{};
-
   const auto& translation_fot_from_volume =
       trans_func_and_2_derivs.has_value()
           ? domain::creators::time_dependent_options::FromVolumeFile(
@@ -120,14 +114,18 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
                                  translation_fot_from_volume,
                                  true};
   const domain::creators::Sphere domain_creator{
+      // Inner radius and outer radius chosen so that every point on a
+      // strahlkorper transformed to this domain will be mapped to a block.
       0.01,
       200.0,
       // nullptr because no boundary condition
       domain::creators::Sphere::Excision{nullptr},
+      // H/P refinement doesn't matter on this domain.
       static_cast<size_t>(0),
       static_cast<size_t>(5),
       false,
       std::nullopt,
+      // Radial partition used in current ringdowns
       {50.0},
       domain::CoordinateMaps::Distribution::Linear,
       ShellWedges::All,
@@ -161,15 +159,18 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
           make_not_null(&distorted_ahc), 1e-7);
       ahc_ringdown_distorted_coefs.push_back(distorted_ahc.coefficients());
 
+      tnsr::I<DataVector, 3, ::Frame::Grid> grid_center_point{
+          DataVector{1, 0.0}};
+      grid_center_point[0] = distorted_ahc.expansion_center()[0];
+      grid_center_point[1] = distorted_ahc.expansion_center()[1];
+      grid_center_point[2] = distorted_ahc.expansion_center()[2];
       tnsr::I<DataVector, 3, ::Frame::Inertial> inertial_center_point{
-          DataVector{3, 0.0}};
+          DataVector{1, 0.0}};
       // The center point is mapped back to the inspiral inertial frame so that
-      // the center of mass is the same at the match time.
-      coords_to_different_frame(make_not_null(&inertial_center_point),
-                                tnsr::I<DataVector, 3, ::Frame::Grid>{
-                                    distorted_ahc.expansion_center()},
-                                inspiral_domain, inspiral_functions_of_time,
-                                gsl::at(ahc_times, i));
+      // the center of AhC is the same at the match time.
+      coords_to_different_frame(
+          make_not_null(&inertial_center_point), grid_center_point,
+          inspiral_domain, inspiral_functions_of_time, gsl::at(ahc_times, i));
       // This minus sign was found by trial and error.
       ahc_inertial_centers.push_back(
           std::array<double, 3>{-1.0 * get<0>(inertial_center_point)[0],

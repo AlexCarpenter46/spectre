@@ -12,12 +12,10 @@ import numpy as np
 import spectre.IO.H5 as spectre_h5
 from spectre import Spectral
 from spectre.DataStructures import DataVector, ModalVector
-from spectre.Domain import (  # strahlkorper_in_inertial_frame,
+from spectre.Domain import (
     PiecewisePolynomial2,
     PiecewisePolynomial3,
     QuaternionFunctionOfTime,
-    deserialize_domain,
-    deserialize_functions_of_time,
     serialize_domain,
     serialize_functions_of_time,
 )

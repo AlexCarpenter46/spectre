@@ -76,7 +76,6 @@ void bind_strahlkorper_transformations(py::module& m) {  // NOLINT
   // Only instantiating for Grid->Inertial because the Py functions are
   // currently named like that
   bind_strahlkorper_transformations_impl<Frame::Grid, Frame::Inertial>(m);
-  bind_strahlkorper_transformations_impl<Frame::Inertial, Frame::Grid>(m);
 }
 
 }  // namespace domain::py_bindings

@@ -4,7 +4,7 @@
 set(LIBRARY "Test_Ringdown")
 
 set(LIBRARY_SOURCES
-  Test_StrahlkorperCoefsInRingdownDistortedFrame.cpp
+  Test_StrahlkorperCoefsAndCenters.cpp
   )
 
 add_test_library(${LIBRARY} "${LIBRARY_SOURCES}")

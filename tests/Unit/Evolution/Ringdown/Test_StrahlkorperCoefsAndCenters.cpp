@@ -26,7 +26,7 @@
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Domain/StrahlkorperTransformations.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
-#include "Evolution/Ringdown/StrahlkorperCoefsInRingdownDistortedFrame.hpp"
+#include "Evolution/Ringdown/StrahlkorperCoefsAndCenters.hpp"
 #include "Framework/TestHelpers.hpp"
 #include "Helpers/DataStructures/MakeWithRandomValues.hpp"
 #include "IO/H5/AccessType.hpp"
@@ -46,12 +46,11 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/Serialization/Serialize.hpp"
 
-// [[TimeOut, 20]]
-SPECTRE_TEST_CASE(
-    "Unit.Evolution.Ringdown.StrahlkorperCoefsInRingdownDistortedFrame",
-    "[Unit][Evolution]") {
+// [[TimeOut, 10]]
+SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.StrahlkorperCoefsAndCenters",
+                  "[Unit][Evolution]") {
   // Write a temporary H5 file with Strahlkorpers at different times, then
-  // pass that file's path to strahlkorper_coefs_in_ringdown_distorted_frame().
+  // pass that file's path to strahlkorper_coefs_and_centers.
   // First, if the temporary file exists, remove it
   const std::string horizons_file_name{"Unit.Evolution.Ringdown.SCoefsRDis.h5"};
   const std::string horizons_subfile_name{"/ObservationAhC__Ylm.dat"};
@@ -233,11 +232,11 @@ SPECTRE_TEST_CASE(
   }
   h5_file.close_current_object();
 
-  // Call strahlkorper_coefs_in_ringdown_distorted_frame()
+  // Call strahlkorper_coefs_and_centers()
   constexpr size_t times_to_retrieve{number_of_times - 2};
   const std::pair<std::vector<DataVector>, std::vector<std::array<double, 3>>>
       distorted_and_translation_coefs =
-          evolution::Ringdown::strahlkorper_coefs_in_ringdown_distorted_frame(
+          evolution::Ringdown::strahlkorper_coefs_and_centers(
               "BbhVolume0.h5", "ForContinuation", horizons_file_name,
               horizons_subfile_name, times_to_retrieve, match_time,
               settling_timescale, exp_func_and_2_derivs,

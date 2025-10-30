@@ -137,19 +137,25 @@ class TestInitialData(unittest.TestCase):
 
         # Making volume data for functions of time to be extracted
         rotation_fot = QuaternionFunctionOfTime(
-            0.0,
+            times[0],
             [DataVector(size=4, fill=1.0)],
             4 * [DataVector(size=3, fill=0.0)],
             math.inf,
         )
         expansion_fot = PiecewisePolynomial3(
-            0.0, 4 * [DataVector(size=1, fill=1.0)], math.inf
+            times[0], 4 * [DataVector(size=1, fill=1.0)], math.inf
         )
         expansion_outer_fot = PiecewisePolynomial3(
-            0.0, 4 * [DataVector(size=1, fill=1.0)], math.inf
+            times[0], 4 * [DataVector(size=1, fill=1.0)], math.inf
         )
         translation_fot = PiecewisePolynomial2(
-            0.0, 3 * [DataVector(size=3, fill=0.0)], math.inf
+            times[0],
+            [
+                DataVector([1.0, -1.0, 0.5]),
+                DataVector([0.1, -0.4, -0.3]),
+                DataVector([0.0, 0.0, 0.0]),
+            ],
+            math.inf,
         )
         serialized_fots = serialize_functions_of_time(
             {
@@ -163,7 +169,7 @@ class TestInitialData(unittest.TestCase):
         expansion_map = ExpansionMapOptions([1.0, 1e-4, 0.0], 100.0, 1e-6)
         rotation_map = RotationMapOptions([[0.0, 0.0, 0.0, 1.0]], 100.0)
         translation_map = TranslationMapOptions(
-            [[1.0, -1.0, 0.5], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+            [[1.0, -1.0, 0.5], [0.1, -0.4, -0.3], [0.0, 0.0, 0.0]]
         )
         bco_time_dependent_options = BinaryCompactObjectTimeDependentOptions(
             4990.0,
@@ -178,13 +184,13 @@ class TestInitialData(unittest.TestCase):
 
         bco_domain = BinaryCompactObject(
             inner_radius_a=0.5,
-            outer_radius_a=2.0,
-            x_coord_a=5.0,
+            outer_radius_a=1.0,
+            x_coord_a=2.0,
             excise_a=True,
             use_logarithmic_map_a=True,
             inner_radius_b=0.5,
-            outer_radius_b=2.0,
-            x_coord_b=-5.0,
+            outer_radius_b=1.0,
+            x_coord_b=-2.0,
             excise_b=True,
             use_logarithmic_map_b=True,
             center_of_mass_offset=[0.1, 0.2],

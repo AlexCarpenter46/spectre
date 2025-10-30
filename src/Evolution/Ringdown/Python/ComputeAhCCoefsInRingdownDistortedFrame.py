@@ -118,20 +118,18 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
 
     # Transform AhC coefs to ringdown distorted frame and get other data
     # needed to start a ringdown, such as initial values for functions of time
-    shape_and_translation_coefs = (
-        Ringdown.strahlkorper_coefs_in_ringdown_distorted_frame(
-            str(path_to_volume_data),
-            volume_subfile_name,
-            ahc_reductions_path,
-            ahc_subfile,
-            number_of_ahc_finds_for_fit,
-            match_time,
-            settling_timescale,
-            evaluated_fot_dict["Expansion"],
-            evaluated_fot_dict["ExpansionOuterBoundary"],
-            evaluated_fot_dict["Rotation"],
-            evaluated_fot_dict["Translation"],
-        )
+    shape_and_translation_coefs = Ringdown.strahlkorper_coefs_and_centers(
+        str(path_to_volume_data),
+        volume_subfile_name,
+        ahc_reductions_path,
+        ahc_subfile,
+        number_of_ahc_finds_for_fit,
+        match_time,
+        settling_timescale,
+        evaluated_fot_dict["Expansion"],
+        evaluated_fot_dict["ExpansionOuterBoundary"],
+        evaluated_fot_dict["Rotation"],
+        evaluated_fot_dict["Translation"],
     )
 
     shape_coefs_at_different_times_for_fit = np.array(

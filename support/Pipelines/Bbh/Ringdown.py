@@ -236,6 +236,8 @@ def start_ringdown(
             [0.0, 0.0, 0.0, 0.0],
         ]
     evaluated_fot_dict["Expansion"] = [1.0, 0.0, 0.0]
+    # This was added so we don't try to read in translation function of time
+    # history if there was no translation map in the inspiral.
     if "Translation" not in evaluated_fot_dict:
         evaluated_fot_dict["Translation"] = None
 
