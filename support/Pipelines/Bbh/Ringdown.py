@@ -2,6 +2,7 @@
 # See LICENSE.txt for details.
 
 import logging
+import os
 from pathlib import Path
 from typing import Optional, Union
 
@@ -12,6 +13,7 @@ from rich.pretty import pretty_repr
 
 import spectre.Evolution.Ringdown as Ringdown
 import spectre.IO.H5 as spectre_h5
+from spectre.DataStructures import ModalVector
 from spectre.Evolution.Ringdown.ComputeAhCCoefsInRingdownDistortedFrame import (
     compute_ahc_coefs_in_ringdown_distorted_frame,
 )
@@ -19,6 +21,12 @@ from spectre.Evolution.Ringdown.ComputeAhCCoefsInRingdownDistortedFrame import (
 # next import out of order to avoid Unrecognized PUP::able::PUP_ID error
 from spectre.IO.H5.FunctionsOfTimeFromVolume import (
     functions_of_time_from_volume,
+)
+from spectre.SphericalHarmonics import (
+    Frame,
+    Strahlkorper,
+    read_surface_ylm,
+    ylm_legend_and_data,
 )
 from spectre.support.DirectoryStructure import PipelineStep, list_pipeline_steps
 from spectre.support.Schedule import schedule, scheduler_options
@@ -311,20 +319,36 @@ def start_ringdown(
 
     # Need to scale the shape coefficients by the excision factor so that the
     # shape matches the apparent horizon
-    with spectre_h5.H5File(file_name=path_to_output_h5, mode="r+") as h5file:
-        scaled_ylm0 = ringdown_excision_factor * np.array(ringdown_ylm_coefs[0])
-        scaled_ylm1 = ringdown_excision_factor * np.array(ringdown_ylm_coefs[1])
-        scaled_ylm2 = ringdown_excision_factor * np.array(ringdown_ylm_coefs[2])
-        h5file["/" + output_subfile_ahc] = (
-            ringdown_excision_factor * scaled_ylm0
-        )
-        h5file["/" + output_subfile_dt_ahc] = (
-            ringdown_excision_factor * scaled_ylm1
-        )
-        h5file["/" + output_subfile_dt2_ahc] = (
-            ringdown_excision_factor * scaled_ylm2
-        )
-        h5file.close_current_object()
+    # os.remove(path_to_output_h5)
+    # # We don't want to scale the match time
+    # scaled_ylm0 = np.array(ringdown_ylm_coefs[0])
+    # scaled_ylm1 = np.array(ringdown_ylm_coefs[1])
+    # scaled_ylm2 = np.array(ringdown_ylm_coefs[2])
+    # scaled_ylm0[5:] = ringdown_excision_factor * scaled_ylm0[5:]
+    # scaled_ylm1[5:] = ringdown_excision_factor * scaled_ylm1[5:]
+    # scaled_ylm2[5:] = ringdown_excision_factor * scaled_ylm2[5:]
+    # with spectre_h5.H5File(file_name=path_to_output_h5, mode="a") as h5file:
+    #     ahc_datfile = h5file.insert_dat(
+    #         path="/" + output_subfile_ahc,
+    #         legend=ringdown_ylm_legend[0],
+    #         version=0,
+    #     )
+    #     ahc_datfile.append(scaled_ylm0)
+    #     h5file.close_current_object()
+    #     ahc_dt_datfile = h5file.insert_dat(
+    #         path="/" + output_subfile_dt_ahc,
+    #         legend=ringdown_ylm_legend[1],
+    #         version=0,
+    #     )
+    #     ahc_dt_datfile.append(scaled_ylm1)
+    #     h5file.close_current_object()
+    #     ahc_dt2_datfile = h5file.insert_dat(
+    #         path="/" + output_subfile_dt2_ahc,
+    #         legend=ringdown_ylm_legend[2],
+    #         version=0,
+    #     )
+    #     ahc_dt2_datfile.append(scaled_ylm2)
+    #     h5file.close_current_object()
 
     logger.debug("Obtained ringdown coefs")
     # Print out coefficients for insertion into BBH domain

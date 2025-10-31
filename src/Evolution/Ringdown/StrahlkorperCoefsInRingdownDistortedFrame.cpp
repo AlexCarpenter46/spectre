@@ -152,8 +152,10 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
   // strahlkorper into the "grid" frame instead of the "distorted" frame. It is
   // a simplification to avoid an unnecessary identity shape map.
   ylm::Strahlkorper<Frame::Grid> distorted_ahc;
+  ylm::Strahlkorper<Frame::Inertial> inertial_ahc;
   for (size_t i = 0; i < requested_number_of_times_from_end; ++i) {
     if (gsl::at(ahc_times, i) <= match_time) {
+      std::cout << "Time: " << ahc_times[i] << '\n';
       strahlkorper_in_different_frame(
           make_not_null(&distorted_ahc), gsl::at(ahc_inertial_h5, i),
           temporary_domain, functions_of_time, gsl::at(ahc_times, i));
@@ -161,28 +163,37 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
       ylm::change_expansion_center_of_strahlkorper_to_physical(
           make_not_null(&distorted_ahc), 1e-7);
       ahc_ringdown_distorted_coefs.push_back(distorted_ahc.coefficients());
-
+      strahlkorper_in_different_frame(
+          make_not_null(&inertial_ahc), distorted_ahc, inspiral_domain,
+          inspiral_functions_of_time, gsl::at(ahc_times, i));
+      std::cout
+          << "Inertial center point from strahl in diff frame phys center: "
+          << inertial_ahc.physical_center() << '\n';
+      std::cout
+          << "Inertial center point from strahl in diff frame exp center: "
+          << inertial_ahc.expansion_center() << '\n';
+      tnsr::I<DataVector, 3, ::Frame::Grid> grid_center_point{
+          DataVector{1, 0.0}};
+      grid_center_point[0] = distorted_ahc.expansion_center()[0];
+      grid_center_point[1] = distorted_ahc.expansion_center()[1];
+      grid_center_point[2] = distorted_ahc.expansion_center()[2];
+      std::cout << "Inspiral inertial center point: "
+                << gsl::at(ahc_inertial_h5, i).physical_center() << '\n';
+      std::cout << "grid center point: " << grid_center_point << '\n';
       tnsr::I<DataVector, 3, ::Frame::Inertial> inertial_center_point{
-          DataVector{3, 0.0}};
-      //   std::cout << "ahc inertial h5 center before stuff: " <<
-      //   ahc_inertial_h5[i].physical_center() << '\n'; std::cout << "ahc
-      //   distorted h5 center: " << distorted_ahc.physical_center() << '\n';
-      //   std::cout << "ahc distorted h5 expansion center: " <<
-      //   distorted_ahc.expansion_center() << '\n';
+          DataVector{1, 0.0}};
       // The center point is mapped back to the inspiral inertial frame so that
-      // the center of mass is the same at the match time.
-      coords_to_different_frame(make_not_null(&inertial_center_point),
-                                tnsr::I<DataVector, 3, ::Frame::Grid>{
-                                    distorted_ahc.expansion_center()},
-                                inspiral_domain, inspiral_functions_of_time,
-                                gsl::at(ahc_times, i));
+      // the center of AhC is the same at the match time.
+      coords_to_different_frame(
+          make_not_null(&inertial_center_point), grid_center_point,
+          inspiral_domain, inspiral_functions_of_time, gsl::at(ahc_times, i));
+      std::cout << "Inspiral inertial center point from coords to diff frame: "
+                << inertial_center_point << '\n';
       // This minus sign was found by trial and error.
-      //   std::cout << "inertial center point" << inertial_center_point <<
-      //   '\n';
       ahc_inertial_centers.push_back(
           std::array<double, 3>{-1.0 * get<0>(inertial_center_point)[0],
-                                -1.0 * get<1>(inertial_center_point)[1],
-                                -1.0 * get<2>(inertial_center_point)[2]});
+                                -1.0 * get<1>(inertial_center_point)[0],
+                                -1.0 * get<2>(inertial_center_point)[0]});
     }
   }
 

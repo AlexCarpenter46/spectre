@@ -184,11 +184,14 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
         fit_ahc_dt_translation_coefs,
         fit_ahc_dt2_translation_coefs,
     ]
+    scaled_fit_ahc_coefs = 0.964103 * np.array(fit_ahc_coefs)
+    scaled_fit_ahc_dt_coefs = 0.964103 * np.array(fit_ahc_dt_coefs)
+    scaled_fit_ahc_dt2_coefs = 0.964103 * np.array(fit_ahc_dt2_coefs)
 
     # Sets the AhC Strahlkorper center to the center point at the match time.
-    fit_ahc_coef_mv = ModalVector(fit_ahc_coefs)
-    fit_ahc_dt_coef_mv = ModalVector(fit_ahc_dt_coefs)
-    fit_ahc_dt2_coef_mv = ModalVector(fit_ahc_dt2_coefs)
+    fit_ahc_coef_mv = ModalVector(scaled_fit_ahc_coefs)
+    fit_ahc_dt_coef_mv = ModalVector(scaled_fit_ahc_dt_coefs)
+    fit_ahc_dt2_coef_mv = ModalVector(scaled_fit_ahc_dt2_coefs)
     fit_ahc_strahlkorper = Strahlkorper[Frame.Inertial](
         ahc_lmax, ahc_lmax, fit_ahc_coef_mv, ahc_inertial_centers_for_fit[-1]
     )
