@@ -156,6 +156,10 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
   for (size_t i = 0; i < requested_number_of_times_from_end; ++i) {
     if (gsl::at(ahc_times, i) <= match_time) {
       std::cout << "Time: " << ahc_times[i] << '\n';
+      std::cout << "Original inertial frame strahlkorper physical center from file: " <<
+      gsl::at(ahc_inertial_h5, i).physical_center() << '\n';
+      std::cout << "Original inertial frame strahlkorper expansion center from file: " <<
+      gsl::at(ahc_inertial_h5, i).expansion_center() << '\n';
       strahlkorper_in_different_frame(
           make_not_null(&distorted_ahc), gsl::at(ahc_inertial_h5, i),
           temporary_domain, functions_of_time, gsl::at(ahc_times, i));
@@ -190,10 +194,11 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
       std::cout << "Inspiral inertial center point from coords to diff frame: "
                 << inertial_center_point << '\n';
       // This minus sign was found by trial and error.
-      ahc_inertial_centers.push_back(
-          std::array<double, 3>{-1.0 * get<0>(inertial_center_point)[0],
-                                -1.0 * get<1>(inertial_center_point)[0],
-                                -1.0 * get<2>(inertial_center_point)[0]});
+    //   ahc_inertial_centers.push_back(
+    //       std::array<double, 3>{-1.0 * get<0>(inertial_center_point)[0],
+    //                             -1.0 * get<1>(inertial_center_point)[0],
+    //                             -1.0 * get<2>(inertial_center_point)[0]});
+      ahc_inertial_centers.push_back(gsl::at(ahc_inertial_h5, i).physical_center());
     }
   }
 
