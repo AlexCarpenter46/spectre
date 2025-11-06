@@ -122,7 +122,13 @@ class TestComputeAhCCoefs(unittest.TestCase):
             times[0], 4 * [DataVector(size=1, fill=1.0)], math.inf
         )
         translation_fot = PiecewisePolynomial2(
-            0.0, 3 * [DataVector(size=3, fill=0.0)], math.inf
+            times[0],
+            [
+                DataVector([1.0, -1.0, 0.5]),
+                DataVector([0.2, 0.1, 0.0]),
+                DataVector([0.0, 0.0, 0.0]),
+            ],
+            math.inf,
         )
         serialized_fots = serialize_functions_of_time(
             {
@@ -136,7 +142,7 @@ class TestComputeAhCCoefs(unittest.TestCase):
         expansion_map = ExpansionMapOptions([1.0, 1e-4, 0.0], 100.0, 1e-6)
         rotation_map = RotationMapOptions([[0.0, 0.0, 0.0, 1.0]], 100.0)
         translation_map = TranslationMapOptions(
-            [[1.0, -1.0, 0.5], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+            [[1.0, -1.0, 0.5], [0.2, 0.1, 0.0], [0.0, 0.0, 0.0]]
         )
         bco_time_dependent_options = BinaryCompactObjectTimeDependentOptions(
             times[0],

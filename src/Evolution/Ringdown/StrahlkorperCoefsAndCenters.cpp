@@ -60,29 +60,6 @@ strahlkorper_coefs_and_centers(
     }
   }
 
-  const h5::H5File<h5::AccessType::ReadOnly> volume_file{path_to_volume_data};
-  const auto& volume_data =
-      volume_file.get<h5::VolumeData>(volume_subfile_name);
-  const size_t obs_id_at_match_time =
-      volume_data.find_observation_id(match_time, 1e-12);
-
-  const auto serialized_inspiral_domain =
-      volume_data.get_domain(obs_id_at_match_time);
-  if (not serialized_inspiral_domain.has_value()) {
-    ERROR("No domain found in volume files at the specified match time.");
-  }
-  const auto inspiral_domain =
-      deserialize<Domain<3>>(serialized_inspiral_domain->data());
-
-  const auto serialized_inspiral_functions_of_time =
-      volume_data.get_functions_of_time(obs_id_at_match_time);
-  if (not serialized_inspiral_functions_of_time.has_value()) {
-    ERROR("No functions of time found in volume files at the match time.");
-  }
-  const auto inspiral_functions_of_time = deserialize<std::unordered_map<
-      std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>>(
-      serialized_inspiral_functions_of_time->data());
-
   // Create a time-dependent domain; only the the time-dependent map options
   // matter; the domain is just a spherical shell with inner and outer
   // radii chosen so any conceivable common horizon will fit between them.
@@ -130,8 +107,8 @@ strahlkorper_coefs_and_centers(
       domain::CoordinateMaps::Distribution::Linear,
       ShellWedges::All,
       time_dependent_map_options};
-  const auto temporary_domain = domain_creator.create_domain();
-  const auto functions_of_time = domain_creator.functions_of_time();
+  const auto ringdown_domain = domain_creator.create_domain();
+  const auto ringdown_functions_of_time = domain_creator.functions_of_time();
   // Loop over the selected horizons, transforming each to the
   // ringdown distorted frame
   std::vector<DataVector> ahc_ringdown_distorted_coefs{};
@@ -153,7 +130,7 @@ strahlkorper_coefs_and_centers(
     if (gsl::at(ahc_times, i) <= match_time) {
       strahlkorper_in_different_frame(
           make_not_null(&distorted_ahc), gsl::at(ahc_inertial_h5, i),
-          temporary_domain, functions_of_time, gsl::at(ahc_times, i));
+          ringdown_domain, ringdown_functions_of_time, gsl::at(ahc_times, i));
       // Relative tolerance is set to the value used in SpEC
       ylm::change_expansion_center_of_strahlkorper_to_physical(
           make_not_null(&distorted_ahc), 1e-7);
@@ -166,16 +143,15 @@ strahlkorper_coefs_and_centers(
       grid_center_point[2] = distorted_ahc.expansion_center()[2];
       tnsr::I<DataVector, 3, ::Frame::Inertial> inertial_center_point{
           DataVector{1, 0.0}};
-      // The center point is mapped back to the inspiral inertial frame so that
+      // The center point is mapped to the ringdown inertial frame so that
       // the center of AhC is the same at the match time.
       coords_to_different_frame(
           make_not_null(&inertial_center_point), grid_center_point,
-          inspiral_domain, inspiral_functions_of_time, gsl::at(ahc_times, i));
-      // This minus sign was found by trial and error.
-      ahc_inertial_centers.push_back(
-          std::array<double, 3>{-1.0 * get<0>(inertial_center_point)[0],
-                                -1.0 * get<1>(inertial_center_point)[0],
-                                -1.0 * get<2>(inertial_center_point)[0]});
+          ringdown_domain, ringdown_functions_of_time, gsl::at(ahc_times, i));
+
+      ahc_inertial_centers.push_back(std::array<double, 3>{
+          get<0>(inertial_center_point)[0], get<1>(inertial_center_point)[0],
+          get<2>(inertial_center_point)[0]});
     }
   }
 
