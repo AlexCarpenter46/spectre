@@ -163,6 +163,7 @@ class TestInitialData(unittest.TestCase):
                 "ExpansionOuterBoundary": expansion_outer_fot,
                 "Rotation": rotation_fot,
                 "Translation": translation_fot,
+                "Translation": translation_fot,
             }
         )
 
