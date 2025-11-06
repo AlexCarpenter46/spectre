@@ -190,15 +190,15 @@ strahlkorper_coefs_in_ringdown_distorted_frame(
       // the center of AhC is the same at the match time.
       coords_to_different_frame(
           make_not_null(&inertial_center_point), grid_center_point,
-          inspiral_domain, inspiral_functions_of_time, gsl::at(ahc_times, i));
+          temporary_domain, functions_of_time, gsl::at(ahc_times, i));
       std::cout << "Inspiral inertial center point from coords to diff frame: "
                 << inertial_center_point << '\n';
       // This minus sign was found by trial and error.
-    //   ahc_inertial_centers.push_back(
-    //       std::array<double, 3>{-1.0 * get<0>(inertial_center_point)[0],
-    //                             -1.0 * get<1>(inertial_center_point)[0],
-    //                             -1.0 * get<2>(inertial_center_point)[0]});
-      ahc_inertial_centers.push_back(gsl::at(ahc_inertial_h5, i).physical_center());
+      ahc_inertial_centers.push_back(
+          std::array<double, 3>{get<0>(inertial_center_point)[0],
+                                get<1>(inertial_center_point)[0],
+                                get<2>(inertial_center_point)[0]});
+    //   ahc_inertial_centers.push_back(gsl::at(ahc_inertial_h5, i).physical_center());
     }
   }
 
