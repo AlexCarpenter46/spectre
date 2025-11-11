@@ -143,8 +143,10 @@ strahlkorper_coefs_and_centers(
       grid_center_point[2] = distorted_ahc.expansion_center()[2];
       tnsr::I<DataVector, 3, ::Frame::Inertial> inertial_center_point{
           DataVector{1, 0.0}};
-      // The center point is mapped to the ringdown inertial frame so that
-      // the center of AhC is the same at the match time.
+      // The center point is mapped to the ringdown-inertial-frame so that the
+      // geometric center of AhC accounts for the inspiral's rotation, scaling
+      // and translation. This ensures that the center of the excision is at the
+      // correct location at the match time
       coords_to_different_frame(
           make_not_null(&inertial_center_point), grid_center_point,
           ringdown_domain, ringdown_functions_of_time, gsl::at(ahc_times, i));

@@ -32,17 +32,18 @@ namespace evolution::Ringdown {
  * translation function of time, but it is used to correctly map the common
  * horizon's geometric center. The ringdown's translation function of time needs
  * to be built by tracking the position of the geometric center of the
- * Strahlkorper at multiple times. This is done by taking the
- * ringdown-distorted-frame Strahlkorper after it has been recentered and
- * transforming it back to the inspiral inertial frame, the geometric center
- * point of the strahlkorper has now been corrected to account for the
- * inspiral's expansion, rotation, and translation functions of time.
- * Only distorted frame coefs and geometric center points within
- * `requested_number_of_times_from_end` times from the final time are returned.
- * This function is used to transition from inspiral to ringdown; in this case,
- * the inertial-frame Strahlkorper is the common apparent horizon from a
- * binary-black-hole inspiral; the ringdown-distorted-frame coefficients are
- * used to initialize the shape map for the ringdown domain. The geometric
+ * Strahlkorper at multiple times in the ringdown-inertial-frame. This is done
+ * by taking the ringdown-distorted-frame Strahlkorper after it has been
+ * recentered and transforming it to the ringdown-inertial-frame. This is done
+ * so that the geometric center is placed correctly and takes into account the
+ * rotation, scaling and translation applied during the inspiral. These
+ * ringdown-inertial-frame geometric center points are then saved. Only
+ * ringdown-distorted-frame coefs and ringdown-inertial-frame geometric center
+ * points within `requested_number_of_times_from_end` times from the final time
+ * are returned. This function is used to transition from inspiral to ringdown;
+ * in this case, the inertial-frame Strahlkorper is the common apparent horizon
+ * from a binary-black-hole inspiral; the ringdown-distorted-frame coefficients
+ * are used to initialize the shape map for the ringdown domain. The geometric
  * center points are used to initialize the translation map for the ringdown
  * domain.
  */
