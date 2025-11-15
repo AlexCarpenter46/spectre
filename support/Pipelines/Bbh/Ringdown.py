@@ -289,25 +289,17 @@ def start_ringdown(
         ahc_dt2_datfile.append(ringdown_ylm_coefs[2])
 
     # Section for finding the excision radius
-    excision_radius_A = inspiral_input_file["DomainCreator"][
+    inspiral_domain = inspiral_input_file["DomainCreator"][
         "BinaryCompactObject"
-    ]["ObjectA"]["InnerRadius"]
-    excision_A_x_coord = inspiral_input_file["DomainCreator"][
-        "BinaryCompactObject"
-    ]["ObjectA"]["XCoord"]
-    excision_radius_B = inspiral_input_file["DomainCreator"][
-        "BinaryCompactObject"
-    ]["ObjectB"]["InnerRadius"]
-    excision_B_x_coord = inspiral_input_file["DomainCreator"][
-        "BinaryCompactObject"
-    ]["ObjectB"]["XCoord"]
-
-    center_of_mass_offset_y = inspiral_input_file["DomainCreator"][
-        "BinaryCompactObject"
-    ]["CenterOfMassOffset"][0]
-    center_of_mass_offset_z = inspiral_input_file["DomainCreator"][
-        "BinaryCompactObject"
-    ]["CenterOfMassOffset"][1]
+    ]
+    object_a = inspiral_domain["ObjectA"]
+    object_b = inspiral_domain["ObjectB"]
+    excision_radius_A = object_a["InnerRadius"]
+    excision_A_x_coord = object_a["XCoord"]
+    excision_radius_B = object_b["InnerRadius"]
+    excision_B_x_coord = object_b["XCoord"]
+    center_of_mass_offset_y = inspiral_domain["CenterOfMassOffset"][0]
+    center_of_mass_offset_z = inspiral_domain["CenterOfMassOffset"][1]
 
     excision_center_A = [
         excision_A_x_coord,
@@ -321,23 +313,29 @@ def start_ringdown(
     ]
 
     ringdown_excision_radius = Ringdown.minimum_ahc_excision_radius(
-        str(fot_vol_h5_path),
-        fot_vol_subfile,
-        str(ahc_reductions_path),
-        ahc_subfile,
-        str(path_to_output_h5),
-        [output_subfile_ahc, output_subfile_dt_ahc, output_subfile_dt2_ahc],
-        number_of_ahc_finds_for_fit,
-        match_time,
-        settling_timescale,
-        excision_radius_A,
-        excision_radius_B,
-        excision_center_A,
-        excision_center_B,
-        evaluated_fot_dict["Expansion"],
-        evaluated_fot_dict["ExpansionOuterBoundary"],
-        evaluated_fot_dict["Rotation"],
-        evaluated_fot_dict["Translation"],
+        path_to_volume_data=str(fot_vol_h5_path),
+        volume_subfile_name=fot_vol_subfile,
+        path_to_horizons_h5=str(ahc_reductions_path),
+        surface_subfile_name=ahc_subfile,
+        path_to_ahc_distorted_h5=str(path_to_output_h5),
+        ahc_distorted_subfile_names=[
+            output_subfile_ahc,
+            output_subfile_dt_ahc,
+            output_subfile_dt2_ahc,
+        ],
+        match_time=match_time,
+        settling_timescale=settling_timescale,
+        excision_a_radius=excision_radius_A,
+        excision_b_radius=excision_radius_B,
+        excision_a_center=excision_center_A,
+        excision_b_center=excision_center_B,
+        exp_func_and_2_derivs=evaluated_fot_dict["Expansion"],
+        exp_outer_bdry_func_and_2_derivs=evaluated_fot_dict[
+            "ExpansionOuterBoundary"
+        ],
+        rot_func_and_2_derivs=evaluated_fot_dict["Rotation"],
+        trans_func_and_2_derivs=evaluated_fot_dict["Translation"],
+        match_time_tol=1e-12,
     )
 
     logger.debug("Obtained ringdown coefs")

@@ -28,8 +28,6 @@ InitialData:
 
 DomainCreator:
   Sphere:
-    # InnerRadius is not yet set automatically. The value of 1.45 works
-    # for equal-mass, zero spin, quasicircular.
     InnerRadius: &InnerRadius {{ ExcisionRadius }}
     OuterRadius: "{{ OuterBdryRadius }}"
     Interior:
