@@ -97,7 +97,7 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
   // Next, set up a temporary domain (just to hold functions of time)
   // and some functions of time defining the ringdown Distorted->Inertial map.
   std::uniform_real_distribution<double> fot_dist{0.1, 0.5};
-  std::uniform_real_distribution<double> exp_dist{0.6, 0.8};
+  std::uniform_real_distribution<double> exp_dist{0.8, 1.};
   const auto exp_func_and_2_derivs =
       make_with_random_values<std::array<double, 3>>(make_not_null(&generator),
                                                      make_not_null(&exp_dist));
@@ -213,8 +213,8 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
 
   using Object = domain::creators::BinaryCompactObject<false>::Object;
   const domain::creators::BinaryCompactObject<false> domain_creator_bco{
-      Object{0.1, 3., 6., true, true},
-      Object{0.2, 3., -4., true, true},
+      Object{0.1, 3., 4., true, true},
+      Object{0.2, 3., -6., true, true},
       std::array<double, 2>{{0., 0.}},
       60.,
       300.,
@@ -251,17 +251,14 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
   }
   h5_file.close_current_object();
 
-  // Call strahlkorper_coefs_in_ringdown_distorted_frame()
-  constexpr size_t times_to_retrieve{number_of_times - 2};
   const double ringdown_radius =
       evolution::Ringdown::minimum_ahc_excision_radius(
           "BbhVolume0.h5", "ForContinuation", inertial_horizons_file_name,
           inertial_horizons_subfile_name, distorted_horizons_file_name,
-          std::vector<std::string>{distorted_horizons_subfile_name},
-          times_to_retrieve, match_time, settling_timescale, 0.4, 0.8,
-          {0.8, 0.0, 0.0}, {-0.4, 0.0, 0.0}, exp_func_and_2_derivs,
-          exp_outer_bdry_func_and_2_derivs, rot_func_and_2_derivs,
-          std::nullopt);
+          std::vector<std::string>{distorted_horizons_subfile_name}, match_time,
+          settling_timescale, 0.4, 0.8, {0.8, 0.0, 0.0}, {-0.4, 0.0, 0.0},
+          exp_func_and_2_derivs, exp_outer_bdry_func_and_2_derivs,
+          rot_func_and_2_derivs, std::nullopt);
 
   // Checks
   CHECK(ringdown_radius > 1.0);
