@@ -46,13 +46,13 @@ void bind_minimum_ahc_excision_radius(py::module& m) {
         py::arg("path_to_volume_data"), py::arg("volume_subfile_name"),
         py::arg("path_to_horizons_h5"), py::arg("surface_subfile_name"),
         py::arg("path_to_ahc_distorted_h5"),
-        py::arg("ahc_distorted_subfile_names"),
-        py::arg("requested_number_of_times_from_end"), py::arg("match_time"),
+        py::arg("ahc_distorted_subfile_names"), py::arg("match_time"),
         py::arg("settling_timescale"), py::arg("excision_a_radius"),
         py::arg("excision_b_radius"), py::arg("excision_a_center"),
         py::arg("excision_b_center"), py::arg("exp_func_and_2_derivs"),
         py::arg("exp_outer_bdry_func_and_2_derivs"),
-        py::arg("rot_func_and_2_derivs"), py::arg("trans_func_and_2_derivs"));
+        py::arg("rot_func_and_2_derivs"), py::arg("trans_func_and_2_derivs"),
+        py::arg("match_time_tol"));
 }
 
 }  // namespace evolution::Ringdown::py_bindings

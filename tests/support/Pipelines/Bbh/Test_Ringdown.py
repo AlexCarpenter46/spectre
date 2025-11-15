@@ -143,7 +143,7 @@ class TestInitialData(unittest.TestCase):
             math.inf,
         )
         expansion_fot = PiecewisePolynomial3(
-            times[0], 4 * [DataVector(size=1, fill=1.0)], math.inf
+            times[0], 4 * [DataVector(size=1, fill=0.0)], math.inf
         )
         expansion_outer_fot = PiecewisePolynomial3(
             times[0], 4 * [DataVector(size=1, fill=1.0)], math.inf
