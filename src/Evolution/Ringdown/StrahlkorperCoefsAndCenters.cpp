@@ -93,7 +93,7 @@ strahlkorper_coefs_and_centers(
   const domain::creators::Sphere domain_creator{
       // Inner radius and outer radius chosen so that every point on a
       // strahlkorper transformed to this domain will be mapped to a block.
-      0.01,
+      1e-16,
       200.0,
       // nullptr because no boundary condition
       domain::creators::Sphere::Excision{nullptr},
