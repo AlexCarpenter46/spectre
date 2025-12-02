@@ -201,7 +201,7 @@ class TestComputeAhCCoefs(unittest.TestCase):
                         )
                     ],
                     serialized_domain=serialized_binary_domain,
-                    serialized_functions_of_time=serialized_fots,
+                    serialized_observation_functions_of_time=serialized_fots,
                 )
         volume_file.close_current_object()
 
