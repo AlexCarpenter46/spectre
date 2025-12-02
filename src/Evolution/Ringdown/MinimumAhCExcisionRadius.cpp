@@ -103,7 +103,7 @@ double minimum_ahc_excision_radius(
       volume_data.find_observation_id(match_time, match_time_tol);
 
   const auto serialized_inspiral_domain =
-      volume_data.get_domain(obs_id_at_match_time);
+      volume_data.get_domain();
   if (not serialized_inspiral_domain.has_value()) {
     ERROR("No domain found in volume files at the specified match time.");
   }
