@@ -90,6 +90,19 @@ strahlkorper_coefs_and_centers(
                                  expansion_map_options,
                                  translation_fot_from_volume,
                                  true};
+  // We construct a temporary ringdown domain that will be used to transform the
+  // common horizon from the inspiral-inertial-frame to the
+  // ringdown-distorted-frame (ringdown-intermediate-frame in SpEC) for shape
+  // coefficients and ringdown-inertial-frame for geometric center positions for
+  // the ringdown translation map. We choose an inner radius at machine
+  // precision so that every point on any Strahlkorper transformed to this
+  // domain will be mapped to a block. It's assumed that the Strahlkorper has
+  // not translated beyond 200M and has a radius < 200M in the inertial frame.
+  // The resolution on this domain does not matter because we're only after how
+  // the shape coefficients and center changes as you transform the Strahlkorper
+  // to this temporary domain. The shape coefficients and centers will be used
+  // to make the correct shape and translation maps that will be used in the
+  // actual ringdown.
   const domain::creators::Sphere domain_creator{
       // Inner radius and outer radius chosen so that every point on a
       // strahlkorper transformed to this domain will be mapped to a block.
@@ -97,17 +110,17 @@ strahlkorper_coefs_and_centers(
       200.0,
       // nullptr because no boundary condition
       domain::creators::Sphere::Excision{nullptr},
-      // H/P refinement doesn't matter on this domain.
       static_cast<size_t>(0),
       static_cast<size_t>(5),
       false,
       std::nullopt,
-      // Radial partition used in current ringdowns
+      // Radial partition used to separate Shell0/1 in the ringdown domain.
+      // This value is what is currently used in the Bbh pipeline
       {50.0},
       domain::CoordinateMaps::Distribution::Linear,
       ShellWedges::All,
       time_dependent_map_options};
-  const auto ringdown_domain = domain_creator.create_domain();
+  const auto temporary_ringdown_domain = domain_creator.create_domain();
   const auto ringdown_functions_of_time = domain_creator.functions_of_time();
   // Loop over the selected horizons, transforming each to the
   // ringdown distorted frame
@@ -130,7 +143,8 @@ strahlkorper_coefs_and_centers(
     if (gsl::at(ahc_times, i) <= match_time) {
       strahlkorper_in_different_frame(
           make_not_null(&distorted_ahc), gsl::at(ahc_inertial_h5, i),
-          ringdown_domain, ringdown_functions_of_time, gsl::at(ahc_times, i));
+          temporary_ringdown_domain, ringdown_functions_of_time,
+          gsl::at(ahc_times, i));
       // Relative tolerance is set to the value used in SpEC
       ylm::change_expansion_center_of_strahlkorper_to_physical(
           make_not_null(&distorted_ahc), 1e-7);
@@ -147,9 +161,10 @@ strahlkorper_coefs_and_centers(
       // geometric center of AhC accounts for the inspiral's rotation, scaling
       // and translation. This ensures that the center of the excision is at the
       // correct location at the match time
-      coords_to_different_frame(
-          make_not_null(&inertial_center_point), grid_center_point,
-          ringdown_domain, ringdown_functions_of_time, gsl::at(ahc_times, i));
+      coords_to_different_frame(make_not_null(&inertial_center_point),
+                                grid_center_point, temporary_ringdown_domain,
+                                ringdown_functions_of_time,
+                                gsl::at(ahc_times, i));
 
       ahc_inertial_centers.push_back(std::array<double, 3>{
           get<0>(inertial_center_point)[0], get<1>(inertial_center_point)[0],

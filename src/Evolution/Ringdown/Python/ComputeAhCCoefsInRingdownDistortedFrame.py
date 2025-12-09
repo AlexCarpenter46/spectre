@@ -167,21 +167,12 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
         match_time,
         zero_coefs_eps,
     )
-    (
-        fit_ahc_translation_coefs,
-        fit_ahc_dt_translation_coefs,
-        fit_ahc_dt2_translation_coefs,
-    ) = fit_to_a_cubic(
+    ahc_translation_fot = fit_to_a_cubic(
         ahc_times_for_fit,
         ahc_inertial_centers_for_fit,
         match_time,
         zero_coefs_eps,
     )
-    ahc_translation_fot = [
-        fit_ahc_translation_coefs,
-        fit_ahc_dt_translation_coefs,
-        fit_ahc_dt2_translation_coefs,
-    ]
 
     # Sets the AhC Strahlkorper center to the center point at the match time.
     fit_ahc_coef_mv = ModalVector(fit_ahc_coefs)
