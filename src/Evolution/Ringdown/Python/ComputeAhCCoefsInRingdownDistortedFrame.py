@@ -84,8 +84,8 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     zero_coefs_eps,
 ):
     """Computes the AhC Ylm Coefficients in the Ringdown distorted frame and
-    translation function of time for the ringdown using the functions of time
-    and the AhC coefficients in the Inspiral inertial frame.
+    translation function of time that will be used for the Ringdown using the
+    functions of time and the AhC strahlkorper from the Inspiral inertial frame.
 
     Arugments:
     path_to_volume_data: The full path to any volume data containing the
@@ -119,17 +119,19 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     # Transform AhC coefs to ringdown distorted frame and get other data
     # needed to start a ringdown, such as initial values for functions of time
     shape_and_translation_coefs = Ringdown.strahlkorper_coefs_and_centers(
-        str(path_to_volume_data),
-        volume_subfile_name,
-        ahc_reductions_path,
-        ahc_subfile,
-        number_of_ahc_finds_for_fit,
-        match_time,
-        settling_timescale,
-        evaluated_fot_dict["Expansion"],
-        evaluated_fot_dict["ExpansionOuterBoundary"],
-        evaluated_fot_dict["Rotation"],
-        evaluated_fot_dict["Translation"],
+        path_to_volume_data=str(path_to_volume_data),
+        volume_subfile_name=volume_subfile_name,
+        path_to_horizons_h5=ahc_reductions_path,
+        surface_subfile_name=ahc_subfile,
+        requested_number_of_times_from_end=number_of_ahc_finds_for_fit,
+        match_time=match_time,
+        settling_timescale=settling_timescale,
+        exp_func_and_2_derivs=evaluated_fot_dict["Expansion"],
+        exp_outer_bdry_func_and_2_derivs=evaluated_fot_dict[
+            "ExpansionOuterBoundary"
+        ],
+        rot_func_and_2_derivs=evaluated_fot_dict["Rotation"],
+        trans_func_and_2_derivs=evaluated_fot_dict["Translation"],
     )
 
     shape_coefs_at_different_times_for_fit = np.array(

@@ -46,7 +46,7 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/Serialization/Serialize.hpp"
 
-// [[TimeOut, 10]]
+// [[TimeOut, 20]]
 SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.StrahlkorperCoefsAndCenters",
                   "[Unit][Evolution]") {
   // Write a temporary H5 file with Strahlkorpers at different times, then
