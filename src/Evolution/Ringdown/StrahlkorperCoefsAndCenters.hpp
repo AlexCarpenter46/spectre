@@ -47,7 +47,7 @@ namespace evolution::Ringdown {
  * We choose 3).  The idea is that the horizon can be written as
  * x^ibar_AH = x^ibar_AHc + Sum(Slm Ylm) n^ibar(theta,phi) where n^ibar is
  * the direction unit vector in the (theta,phi) direction, and ibar is the
- * index corresponding to the intermediate frame.
+ * index corresponding to the ringdown-distorted-frame.
  * Now x^i = T0^i + M^i_ibar x^ibar
  * where T0^i is the current translation map, and M^i_ibar is
  * scaling+rotation.
