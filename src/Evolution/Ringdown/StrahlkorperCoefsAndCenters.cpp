@@ -91,18 +91,27 @@ strahlkorper_coefs_and_centers(
                                  translation_fot_from_volume,
                                  true};
   // We construct a temporary ringdown domain that will be used to transform the
-  // common horizon from the inspiral-inertial-frame to the
-  // ringdown-distorted-frame (ringdown-intermediate-frame in SpEC) for shape
-  // coefficients and ringdown-inertial-frame for geometric center positions for
-  // the ringdown translation map. We choose an inner radius at machine
-  // precision so that every point on any Strahlkorper transformed to this
-  // domain will be mapped to a block. It's assumed that the Strahlkorper has
-  // not translated beyond 200M and has a radius < 200M in the inertial frame.
-  // The resolution on this domain does not matter because we're only after how
-  // the shape coefficients and center changes as you transform the Strahlkorper
-  // to this temporary domain. The shape coefficients and centers will be used
-  // to make the correct shape and translation maps that will be used in the
-  // actual ringdown.
+  // common horizon from the inspiral inertial frame to the temporary
+  // ringdown grid frame (ringdown intermediate frame in SpEC) for shape
+  // coefficients and temporary ringdown inertial frame for geometric center
+  // positions for the ringdown translation map. We choose an inner radius at
+  // machine precision so that every point on any Strahlkorper transformed to
+  // this temporary ringdown domain will be mapped to a block. It's assumed that
+  // the Strahlkorper has not translated beyond 200M and has a radius < 200M in
+  // the inertial frame. The resolution on this domain does not matter because
+  // the actual grid points in the temporary ringdown domain are never used. We
+  // are only after how the shape coefficients and center changes as you
+  // transform the Strahlkorper to this temporary ringdown domain. The only
+  // member functions of the domain that are used are the coordinate maps
+  // (and associated functions of time) that map the "grid frame" of the
+  // temporary ringdown domain to the inertial frame of the temporary ringdown
+  // domain. The "grid frame" of the temporary ringdown domain is the inspiral
+  // inertial frame inverse-mapped by the inspiral's
+  // expansion-rotation-translation map. Thus the "grid frame" of the temporary
+  // domain is almost (except for an uncorrected translation map) the distorted
+  // frame of the ringdown. The "almost" is because in the "grid frame" of the
+  // temporary ringdown domain, the center of the excision boundary moves, and
+  // is not at the origin.
   const domain::creators::Sphere domain_creator{
       // Inner radius and outer radius chosen so that every point on a
       // strahlkorper transformed to this domain will be mapped to a block.
@@ -126,16 +135,17 @@ strahlkorper_coefs_and_centers(
   // ringdown distorted frame
   std::vector<DataVector> ahc_ringdown_distorted_coefs{};
   std::vector<std::array<double, 3>> ahc_inertial_centers{};
-  // Here we transform the inertial strahlkorper into the ringdown distorted
-  // frame. In order to do this, the inertial coords of the strahlkorper are
-  // mapped to the logical frame to determine which block map to use, and then
-  // into the ringdown distorted frame. This technically requires a shape map,
-  // however, at this time we do not yet know the shape map for the ringdown
-  // domain so we can use an identity instead because we are only concerned with
-  // the correct ringdown distorted frame, not the correct ringdown grid frame.
-  // To avoid an unnecessary identity shape map, we omit it in the domain above.
-  // This now makes the grid frame of this temporary domain equivalent to the
-  // true ringdown distorted frame we are after. This is why we map the
+  // Here we transform the inertial strahlkorper into the temporary ringdown
+  // distorted frame. In order to do this, the inertial coords of the
+  // strahlkorper are mapped to the logical frame to determine which block map
+  // to use, and then into the ringdown distorted frame. This technically
+  // requires a shape map, however, at this time we do not yet know the shape
+  // map for the ringdown domain so we can use an identity instead because we
+  // are only concerned with the correct temporary ringdown distorted frame,
+  // not the correct ringdown grid frame. To avoid an unnecessary identity shape
+  // map, we omit it in the domain above. This now makes the grid frame of this
+  // temporary domain equivalent to the true ringdown distorted frame (except
+  // for the uncorrected translation map) we are after. This is why we map the
   // strahlkorper into the "grid" frame instead of the "distorted" frame. It is
   // a simplification to avoid an unnecessary identity shape map.
   ylm::Strahlkorper<Frame::Grid> distorted_ahc;
@@ -157,10 +167,10 @@ strahlkorper_coefs_and_centers(
       grid_center_point[2] = distorted_ahc.expansion_center()[2];
       tnsr::I<DataVector, 3, ::Frame::Inertial> inertial_center_point{
           DataVector{1, 0.0}};
-      // The center point is mapped to the ringdown-inertial-frame so that the
-      // geometric center of AhC accounts for the inspiral's rotation, scaling
-      // and translation. This ensures that the center of the excision is at the
-      // correct location at the match time
+      // The center point is mapped to the temporary ringdown inertial frame so
+      // that the geometric center of AhC accounts for the inspiral's rotation,
+      // scaling and translation. This ensures that the center of the excision
+      // is at the correct location at the match time
       coords_to_different_frame(make_not_null(&inertial_center_point),
                                 grid_center_point, temporary_ringdown_domain,
                                 ringdown_functions_of_time,

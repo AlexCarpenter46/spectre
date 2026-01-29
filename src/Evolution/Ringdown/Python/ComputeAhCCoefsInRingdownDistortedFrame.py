@@ -87,7 +87,7 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     translation function of time that will be used for the Ringdown using the
     functions of time and the AhC strahlkorper from the Inspiral inertial frame.
 
-    Arugments:
+    Arguments:
     path_to_volume_data: The full path to any volume data containing the
     functions of time at the time of AhC finds.
     volume_subfile_name: Subfile containing volume data at times of AhC finds.
