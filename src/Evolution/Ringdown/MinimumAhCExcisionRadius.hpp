@@ -17,15 +17,16 @@ namespace evolution::Ringdown {
  * \brief This function finds a safe ringdown excision radius for starting
  * the ringdown of a common horizon from a binary inspiral. It does this by
  * finding a radius that will enclose every point on strahlkorpers that
- * represent excisions A/B from the inspiral-inertial-frame at the match time.
- * It does this by taking excisions A/B from the inspiral-inertial-frame and
- * transforming them to the ringdown-grid-frame. It iterates over all the points
- * from excisions A/B in the ringdown-grid-frame until it finds the point that's
- * the farthest from the geometric center of the ringdown excision. This is now
- * the minimum radius we can choose to enclose the excisions A/B from the
- * inspiral. This is not the ideal radius however, we then choose a radius
- * that's 3/4 of the way between the radius of the common horizon at the match
- * time and the minimum radius that encloses excisions A/B from the inspiral.
+ * represent excisions A/B from the inspiral at the match time. It does this by
+ * taking excisions A/B from the inertial frame and transforming them to the
+ * ringdown grid frame. It iterates over all the points from excisions A/B in
+ * the ringdown-grid-frame until it finds the point that's the farthest from the
+ * geometric center of the ringdown excision. This is now the minimum radius we
+ * can choose to enclose the excisions A/B from the inspiral. This is not the
+ * ideal radius however, we then choose a radius that's 3/4 of the way between
+ * the radius of the common horizon at the match time and the minimum radius
+ * that encloses excisions A/B from the inspiral and check for multiple l_max
+ * values of excisions A/B to ensure they fit and the ringdown can start.
 
  * \details It does this by constructing inspiral-grid-frame AhA/AhB excision
  * strahlkorpers from the radii and centers passed to this function. It then
@@ -41,25 +42,86 @@ namespace evolution::Ringdown {
  * \param exp_outer_bdry_func_and_2_derivs Outer boundary expansion FoT from the
  * inspiral
  * \param rot_func_and_2_derivs Rotation FoT from the inspiral
- * \param trans_func_and_2_derivs Translation FoT not from the inspiral, but
- * the corrected translation FoT from ComputeAhCCoefsInRingdownDistortedFrame.py
+ * \param trans_func_and_2_derivs The corrected translation FoT computed by
+ * ComputeAhCCoefsInRingdownDistortedFrame.py
  *
- * Using these FoTs, the inspiral-inertial-frame excisions A/B are then
- * transformed to the ringdown-grid-frame. The inner radius is iterated
- * upon, using 2 main loops, the outer loop that changes the L_max for the
+ * Using these FoTs, excisions A/B observed in the inspiral inertial frame are
+ * then transformed to the ringdown grid frame. The inner radius is iterated
+ * upon using 2 main loops, the outer loop which changes the L_max of the
  * excisions A/B being transformed from the inspiral and the inner loop that
- * changes the excision radius. The outer loop converges when multiple L_max
- * values for excisions A/B fit inside the proposed rindown domain and the
- * difference between the excision radius used in the previous outer loop
- * iteration and current outer loop iteration are within a tolerance set by
- * 1e-3 / q where q is the mass ratio. The inner loop converges when the
- * difference between the excision radius used in the previous inner loop
- * iteration and current inner loop iteration are within a tolerance set by
- * 1e-3 / q.
+ * changes the excision radius used in the ringdown. The general flow for these
+ * loops is as follows:
+ *
+ * Let $ahc\_average\_radius$ be the average radius of the common horizon and
+ * since we know the inertial frame AhC we set $ahc\_average\_radius$ so that
+ * lambda00=0 at the match time.
+ *
+ * Let $ringdown\_excision\_radius$ be the radius of (spherical) excision
+ * boundary in ringdown grid frame.
+ *
+ * Let $ringdown\_excision\_factor$ be the factor we multiply the
+ * $ahc\_average\_radius$ by to get the $ringdown\_excision\_radius$.
+ *
+ * The goal is to find a good $ringdown\_excision\_factor$
+ *
+ * 1) Choose an initial guess for the $ringdown\_excision\_factor$. We choose
+ * this to be 0.94 by default.
+ *
+ * 2) Construct Strahlkorpers in the Inspiral grid frame that correspond to
+ * excisions A/B, the excision regions (not the horizons) of the two individual
+ * holes. These are spherical, and have L=current_l_max, so they are easy to
+ * construct.
+ *
+ * 3) Map the Strahlkorper excisions A/B to the inertial frame. Now they are not
+ * spherical.
+ *
+ * 3a) Using the current $ringdown\_excision\_factor$, construct a test domain
+ * to map excisions A/B from the inertial frame to the ringdown grid frame. This
+ * domain's FoTs should contain the scaling and rotation functions of time from
+ * the inspiral that settle to const and the shape and corrected translation
+ * function of time output by ComputeAhCCoefsInRingdownDistortedFrame.py
+ *
+ * 3b) Map the Strahlkorper excisions A/B to the Ringdown grid frame. They are
+ * still not spherical.
+ *
+ * 3c) Loop through all the points on Ringdown grid excisions A/B, and find the
+ * point that is the maximum distance from the origin. Call that maximum
+ * distance $min\_excision\_radius$.
+ *
+ * 3d) A Ringdown grid sphere of radius $min\_excision\_radius$ centered at the
+ * origin will (barely) enclose both excisions A/B, so choose
+ * $minimum\_ringdown\_excision\_factor = \frac{min\_excision\_radius}
+ * {ahc\_average\_radius}$ as the minimum possible $ringdown\_excision\_factor$.
+ * And then choose the new value of $ringdown\_excision\_factor$ to be
+ * \f{equation}{
+ * ringdown\_excision\_factor=1-0.25*(1-minimum\_ringdown\_excision\_factor)
+ * \f}
+ * Which puts the excision radius 3/4 of the way between the
+ * $ahc\_average\_radius$ and the $min\_excision\_radius$
+ *
+ * 3e) If this is the first inner iteration, or if
+ * $|ringdown\_excision\_factor-previous\_ringdown\_excision\_factor|>eps$, then
+ * set $previous\_ringdown\_excision\_factor=ringdown\_excision\_factor$ and
+ * goto 3a, where 3a is repeated using the new $ringdown\_excision\_factor$. We
+ * choose $eps = \frac{10^{-3}}{q}$ where q is an approximation of the mass
+ * ratio. The reason this is iterative is because the new
+ * $ringdown\_excision\_factor$ in 3d depends on the ringdown_excision_factor
+ * used when constructing the test domain.
+ *
+ * 4) If we get here, then inner iteration has converged.  But that iteration
+ * depends on the $current\_l\_max$ used to construct excisions A/B in step 2.
+ * If this is the first outer iteration, or if
+ * $|ringdown\_excision\_factor-previous\_ringdown\_excision\_factor|>eps$, then
+ * set $previous\_ringdown\_excision\_factor=ringdown\_excision\_factor$, and
+ * increment $current\_l\_max$ by some increment (which we choose to be 6), and
+ * go back to 2.
+ *
+ * 5) If we get here, the outer iteration is converged and now we have a final
+ * $ringdown\_excision\_factor$.
  *
  * \note This implementation does not do everything SpEC does yet, it is
  * currently missing rescaling the shape coefficients held in
- * 'path_to_AhC_distorted_h5' by excision_radius / average_ahc_radius every
+ * 'path_to_AhC_distorted_h5' by $excision\_radius / average\_ahc\_radius$ every
  * time it constructs a test ringdown domain. This step helps the shape of the
  * excision match the shape of the apparent horizon.
  */
