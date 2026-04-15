@@ -34,16 +34,35 @@ namespace evolution::Ringdown {
  * and functions of time from the inspiral volume data and subfile supplied. We
  * then construct a test ringdown domain that has all the corrected functions of
  * time and an initial guess for the inner radius.
+ * \param path_to_volume_data The full path to the volume data containing the
+ * domain and functions of time
+ * \param volume_subfile_name Subfile containing volume data output from the
+ * inspiral
+ * \param path_to_horizons_h5 Path to h5 file containing horizon data for AhA/B
+ * \param surface_subfile_name Subfile containing horizon data for AhA/B
  * \param path_to_AhC_distorted_h5 Path to h5 file containing ringdown shape
- * coefficients computed using ComputeAhCCoefsInRingdownDistortedFrame.py
+ * coefficients computed using ComputeRingdownShapeAndTranslationFoT.py.py
  * \param AhC_distorted_subfile_names Subfiles in the h5 file containing
  * shape coefficients
+ * \param match_time The time to match the functions of time
+ * \param settling_timescale Timescale at which the functions of time settle to
+ * constant values
+ * \param excision_A_radius The radius of excision A from the inspiral grid
+ * frame
+ * \param excision_B_radius The radius of excision B from the inspiral grid
+ * frame
+ * \param excision_A_center The center of excision A from the inspiral grid
+ * frame
+ * \param excision_B_center The center of excision B from the inspiral grid
+ * frame
  * \param exp_func_and_2_derivs Expansion FoT from the inspiral
  * \param exp_outer_bdry_func_and_2_derivs Outer boundary expansion FoT from the
  * inspiral
  * \param rot_func_and_2_derivs Rotation FoT from the inspiral
  * \param trans_func_and_2_derivs The corrected translation FoT computed by
- * ComputeAhCCoefsInRingdownDistortedFrame.py
+ * ComputeRingdownShapeAndTranslationFoT.py.py
+ * \param match_time_tol The difference allowed between the match time requested
+ * and the time found in h5 files
  *
  * Using these FoTs, excisions A/B observed in the inspiral inertial frame are
  * then transformed to the ringdown grid frame. The inner radius is iterated
