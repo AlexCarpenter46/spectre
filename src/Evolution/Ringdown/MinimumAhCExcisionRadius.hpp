@@ -79,7 +79,7 @@ namespace evolution::Ringdown {
  * to map excisions A/B from the inertial frame to the ringdown grid frame. This
  * domain's FoTs should contain the scaling and rotation functions of time from
  * the inspiral that settle to const and the shape and corrected translation
- * function of time output by ComputeAhCCoefsInRingdownDistortedFrame.py
+ * function of time output by ComputeRingdownShapeAndTranslationFoT.py
  *
  * 3b) Map the Strahlkorper excisions A/B to the Ringdown grid frame. They are
  * still not spherical.

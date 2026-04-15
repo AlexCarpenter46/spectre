@@ -152,7 +152,7 @@ class TestInitialData(unittest.TestCase):
             times[0],
             [
                 DataVector([1.0, -1.0, 0.5]),
-                DataVector([0.1, -0.4, -0.3]),
+                DataVector([0.1, -0.1, -0.1]),
                 DataVector([0.0, 0.0, 0.0]),
             ],
             math.inf,
