@@ -315,9 +315,11 @@ double minimum_ahc_excision_radius(
           "Going to sleep.");
     }
   }
-  // This section rounds the safe excision factor down using the eps provided
-  // then adds a bit of safety to the excision factor and comapres to the
-  // original ringdown excision factor.
+  // This section makes a safe_ringdown_excision_factor by truncating any
+  // significant figures past eps and then adds a bit of safety to the
+  // safe_ringdown_excision_factor and compares to the original
+  // ringdown_excision_factor. If it's too close, add more safety padding, then,
+  // whichever is larger, choose that for the excision radius
   double safe_ringdown_excision_factor =
       static_cast<int>(ringdown_excision_factor / eps);
   safe_ringdown_excision_factor *= eps;
@@ -334,15 +336,11 @@ double minimum_ahc_excision_radius(
   if (ringdown_excision_radius > ahc_average_radius + eps) {
     ERROR("The excision radius chosen "
           << ringdown_excision_radius
-          << " is larger than "
-             "the radius of the common horizon "
+          << " is larger than the radius of the common horizon "
           << ahc_average_radius
-          << ". Either "
-             "the common horizon does not actually contain the excised "
-             "regions, or "
-             "there is a problem with the functions of time used, or an error "
-             "has "
-             "occured in this excision radius finding routine.");
+          << ". Either the common horizon does not actually contain the excised"
+             " regions, or there is a problem with the functions of time used, "
+             "or an error has occured in the excision radius finding routine.");
   } else if (ringdown_excision_radius > ahc_average_radius - 3 * eps) {
     ERROR(
         "The excision radius chosen is very close to the radius of the common "
