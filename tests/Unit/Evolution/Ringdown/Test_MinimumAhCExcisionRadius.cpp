@@ -251,7 +251,7 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
   }
   h5_file.close_current_object();
 
-  const double ringdown_radius =
+  const double ringdown_excision_radius =
       evolution::Ringdown::minimum_ahc_excision_radius(
           "BbhVolume0.h5", "ForContinuation", inertial_horizons_file_name,
           inertial_horizons_subfile_name, distorted_horizons_file_name,
@@ -261,7 +261,8 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
           rot_func_and_2_derivs, std::nullopt);
 
   // Checks
-  CHECK(ringdown_radius > 1.0);
+  CHECK(ringdown_excision_radius <
+        current_inertial_strahlkorper.average_radius());
 
   if (file_system::check_if_file_exists(inertial_horizons_file_name)) {
     file_system::rm(inertial_horizons_file_name, true);

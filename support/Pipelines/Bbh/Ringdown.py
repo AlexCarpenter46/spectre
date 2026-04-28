@@ -334,7 +334,7 @@ def start_ringdown(
             "ExpansionOuterBoundary"
         ],
         rot_func_and_2_derivs=evaluated_fot_dict["Rotation"],
-        trans_func_and_2_derivs=evaluated_fot_dict["Translation"],
+        trans_func_and_2_derivs=ahc_translation_fot,
         match_time_tol=1e-12,
     )
 

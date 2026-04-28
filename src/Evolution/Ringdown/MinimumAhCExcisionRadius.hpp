@@ -33,7 +33,8 @@ namespace evolution::Ringdown {
  * maps those excisions to the inspiral-inertial-frame using the inspiral domain
  * and functions of time from the inspiral volume data and subfile supplied. We
  * then construct a test ringdown domain that has all the corrected functions of
- * time and an initial guess for the inner radius.
+ * time from ComputeRingdownShapeAndTranslationFoT.py and an initial guess for
+ * the inner radius.
  * \param path_to_volume_data The full path to the volume data containing the
  * domain and functions of time
  * \param volume_subfile_name Subfile containing volume data output from the
@@ -41,7 +42,7 @@ namespace evolution::Ringdown {
  * \param path_to_horizons_h5 Path to h5 file containing horizon data for AhA/B
  * \param surface_subfile_name Subfile containing horizon data for AhA/B
  * \param path_to_AhC_distorted_h5 Path to h5 file containing ringdown shape
- * coefficients computed using ComputeRingdownShapeAndTranslationFoT.py.py
+ * coefficients computed using ComputeRingdownShapeAndTranslationFoT.py
  * \param AhC_distorted_subfile_names Subfiles in the h5 file containing
  * shape coefficients
  * \param match_time The time to match the functions of time
@@ -55,21 +56,22 @@ namespace evolution::Ringdown {
  * frame
  * \param excision_B_center The center of excision B from the inspiral grid
  * frame
- * \param exp_func_and_2_derivs Expansion FoT from the inspiral
- * \param exp_outer_bdry_func_and_2_derivs Outer boundary expansion FoT from the
- * inspiral
- * \param rot_func_and_2_derivs Rotation FoT from the inspiral
- * \param trans_func_and_2_derivs The corrected translation FoT computed by
- * ComputeRingdownShapeAndTranslationFoT.py.py
+ * \param exp_func_and_2_derivs Expansion function of time from the inspiral
+ * \param exp_outer_bdry_func_and_2_derivs Outer boundary expansion function of
+ * time from the inspiral
+ * \param rot_func_and_2_derivs Rotation function of time from the inspiral
+ * \param trans_func_and_2_derivs The corrected translation function of time
+ * computed by
+ * ComputeRingdownShapeAndTranslationFoT.py
  * \param match_time_tol The difference allowed between the match time requested
  * and the time found in h5 files
  *
- * Using these FoTs, excisions A/B observed in the inspiral inertial frame are
- * then transformed to the ringdown grid frame. The inner radius is iterated
- * upon using 2 main loops, the outer loop which changes the L_max of the
- * excisions A/B being transformed from the inspiral and the inner loop that
- * changes the excision radius used in the ringdown. The general flow for these
- * loops is as follows:
+ * Using these functions of time, excisions A/B observed in the inspiral
+ * inertial frame are then transformed to the ringdown grid frame. The inner
+ * radius is iterated upon using 2 main loops, the outer loop which changes the
+ * L_max of the excisions A/B being transformed from the inspiral and the inner
+ * loop that changes the excision radius used in the ringdown. The general flow
+ * for these loops is as follows:
  *
  * Let $ahc\_average\_radius$ be the average radius of the common horizon and
  * since we know the inertial frame AhC we set $ahc\_average\_radius$ so that
@@ -96,9 +98,10 @@ namespace evolution::Ringdown {
  *
  * 3a) Using the current $ringdown\_excision\_factor$, construct a test domain
  * to map excisions A/B from the inertial frame to the ringdown grid frame. This
- * domain's FoTs should contain the scaling and rotation functions of time from
- * the inspiral that settle to const and the shape and corrected translation
- * function of time output by ComputeRingdownShapeAndTranslationFoT.py
+ * domain's functions of time should contain the scaling and rotation functions
+ * of time from the inspiral that settle to const and the shape and corrected
+ * translation function of time output by
+ * ComputeRingdownShapeAndTranslationFoT.py
  *
  * 3b) Map the Strahlkorper excisions A/B to the Ringdown grid frame. They are
  * still not spherical.
