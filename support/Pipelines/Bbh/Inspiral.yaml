@@ -483,7 +483,10 @@ EventsAndTriggersAtSlabs:
       - Completion
 {% endif %}
   # Discard old data to reduce memory use
-  - Trigger: Always
+  - Trigger:
+      Not:
+        SeparationLessThan:
+          Value: *CommonHorizonActivationSeparation
     Events:
       - CleanFunctionsOfTime
 
