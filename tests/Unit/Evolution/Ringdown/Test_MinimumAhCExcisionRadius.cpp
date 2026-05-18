@@ -89,9 +89,6 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
   const std::array<double, number_of_times> times{0.0, 0.2, 0.4, 0.6, 0.8,
                                                   1.0, 1.2, 1.4, 1.6};
 
-  // Set match time to earliest time; must be earliest time, since
-  // the grid->inertial map used below will not be valid at times earlier
-  // than the match time
   const double match_time{0.6};
 
   // Next, set up a temporary domain (just to hold functions of time)
@@ -190,6 +187,8 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
     distorted_coefs_file.append(strahlkorper_ringdown_inertial_coefs);
   }
 
+  // Next, set up a binary domain and make fake volume data where the functions
+  // of time from the inspiral and domain can be extracted
   const domain::creators::time_dependent_options::RotationMapOptions<false>
       rotation_map_options_bco{std::array{0.0, 0.0, 0.0}};
   const domain::creators::time_dependent_options::ExpansionMapOptions<false>
@@ -213,11 +212,11 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
 
   using Object = domain::creators::BinaryCompactObject<false>::Object;
   const domain::creators::BinaryCompactObject<false> domain_creator_bco{
-      Object{0.1, 3., 4., true, true},
-      Object{0.2, 3., -6., true, true},
-      std::array<double, 2>{{0., 0.}},
-      60.,
-      300.,
+      Object{0.1, 3.0, 4.0, true, true},
+      Object{0.2, 3.0, -6.0, true, true},
+      std::array<double, 2>{{0.0, 0.0}},
+      60.0,
+      300.0,
       1.0,
       0_st,
       6_st,
@@ -238,6 +237,7 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
   h5::H5File<h5::AccessType::ReadWrite> h5_file{"BbhVolume0.h5", true};
   auto& vol_file = h5_file.insert<h5::VolumeData>("ForContinuation");
 
+  // Write fake volume data
   for (size_t i = 0; i < times.size(); i++) {
     vol_file.write_volume_data(
         i, times.at(i),
@@ -256,7 +256,7 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
           "BbhVolume0.h5", "ForContinuation", inertial_horizons_file_name,
           inertial_horizons_subfile_name, distorted_horizons_file_name,
           std::vector<std::string>{distorted_horizons_subfile_name}, match_time,
-          settling_timescale, 0.4, 0.8, {0.8, 0.0, 0.0}, {-0.4, 0.0, 0.0},
+          settling_timescale, 0.1, 0.2, {4.0, 0.0, 0.0}, {-6.0, 0.0, 0.0},
           exp_func_and_2_derivs, exp_outer_bdry_func_and_2_derivs,
           rot_func_and_2_derivs, std::nullopt);
 
