@@ -212,8 +212,8 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
 
   using Object = domain::creators::BinaryCompactObject<false>::Object;
   const domain::creators::BinaryCompactObject<false> domain_creator_bco{
-      Object{0.1, 3.0, 4.0, true, true},
-      Object{0.2, 3.0, -6.0, true, true},
+      Object{0.2, 0.5, 1.0, true, true},
+      Object{0.1, 0.5, -1.5, true, true},
       std::array<double, 2>{{0.0, 0.0}},
       60.0,
       300.0,
@@ -256,7 +256,7 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.MinimumAhCExcisionRadius",
           "BbhVolume0.h5", "ForContinuation", inertial_horizons_file_name,
           inertial_horizons_subfile_name, distorted_horizons_file_name,
           std::vector<std::string>{distorted_horizons_subfile_name}, match_time,
-          settling_timescale, 0.1, 0.2, {4.0, 0.0, 0.0}, {-6.0, 0.0, 0.0},
+          settling_timescale, 0.2, 0.1, {1.0, 0.0, 0.0}, {-1.5, 0.0, 0.0},
           exp_func_and_2_derivs, exp_outer_bdry_func_and_2_derivs,
           rot_func_and_2_derivs, std::nullopt);
 
