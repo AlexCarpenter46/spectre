@@ -176,7 +176,12 @@ double minimum_ahc_excision_radius(
   size_t current_l_max = 20;
 
   // The outer loop checks that multiple l_max values for the AhA/AhB excisions
-  // fit inside the ringdown domain excision
+  // fit inside the ringdown domain excision. The reason we iterate and check
+  // for multiple l_max values is because a single high l_max value might not
+  // sample the excision surfaces finely enough to yield an accurate
+  // ringdown_excision_factor, especially for extremely distorted grids. So we
+  // iterate over different l_max and demand convergence. This is more efficient
+  // and robust than simply choosing a large l_max without iterating
   while (not outer_converged and current_outer_iteration < max_iterations) {
     // Section for constructing strahlkorpers for AhA/AhB
     const ylm::Strahlkorper<Frame::Grid> excision_a_inspiral_grid(
@@ -215,7 +220,7 @@ double minimum_ahc_excision_radius(
       // which gives the shape map and corrected translation map that will be
       // used in the final ringdown. This domain is only used to transform the
       // excisions A/B from the inspiral to the ringdown grid frame to check if
-      // the current excision radius chosen encloses excsisions A/B, so the
+      // the current excision radius chosen encloses excisions A/B, so the
       // resolution and outer radius of this test domain does not matter as this
       // domain will not be used to evolve anything.
       const domain::creators::Sphere ringdown_rmin_domain_creator{
