@@ -4,7 +4,9 @@
 
 #include <array>
 #include <cstddef>
+#include <hdf5.h>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "DataStructures/Matrix.hpp"
@@ -22,9 +24,12 @@
 #include "Domain/Creators/TimeDependentOptions/ShapeMap.hpp"
 #include "Domain/Creators/TimeDependentOptions/Sphere.hpp"
 #include "Domain/StrahlkorperTransformations.hpp"
+#include "IO/H5/CheckH5.hpp"
 #include "IO/H5/Dat.hpp"
 #include "IO/H5/File.hpp"
+#include "IO/H5/Type.hpp"
 #include "IO/H5/VolumeData.hpp"
+#include "IO/H5/Wrappers.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/IO/ReadSurfaceYlm.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/StrahlkorperFunctions.hpp"
@@ -32,6 +37,63 @@
 #include "Utilities/Serialization/Serialize.hpp"
 
 namespace {
+std::string dat_dataset_path(std::string subfile_name) {
+  if (subfile_name.front() != '/') {
+    subfile_name = "/" + subfile_name;
+  }
+  if (subfile_name.size() < h5::Dat::extension().size() or
+      subfile_name.substr(subfile_name.size() - h5::Dat::extension().size()) !=
+          h5::Dat::extension()) {
+    subfile_name += h5::Dat::extension();
+  }
+  return subfile_name;
+}
+
+void rescale_ahc_distorted_coefficients(
+    const std::string& path_to_AhC_distorted_h5,
+    const std::vector<std::string>& AhC_distorted_subfile_names,
+    const double final_ringdown_excision_factor) {
+  const hid_t file_id = H5Fopen(path_to_AhC_distorted_h5.c_str(),
+                                h5::h5f_acc_rdwr(), h5::h5p_default());
+  CHECK_H5(file_id, "Failed to open " << path_to_AhC_distorted_h5);
+
+  for (const auto& subfile_name : AhC_distorted_subfile_names) {
+    const std::string dataset_path = dat_dataset_path(subfile_name);
+    const hid_t dataset_id =
+        H5Dopen2(file_id, dataset_path.c_str(), h5::h5p_default());
+    CHECK_H5(dataset_id, "Failed to open dataset " << dataset_path);
+
+    const hid_t space_id = H5Dget_space(dataset_id);
+    CHECK_H5(space_id, "Failed to get dataspace for " << dataset_path);
+    std::array<hsize_t, 2> dimensions{};
+    if (H5Sget_simple_extent_dims(space_id, dimensions.data(), nullptr) != 2) {
+      ERROR("Expected " << dataset_path << " to be a rank-2 h5::Dat dataset.");
+    }
+
+    std::vector<double> data(dimensions[0] * dimensions[1]);
+    CHECK_H5(H5Dread(dataset_id, h5::h5_type<double>(), h5::h5s_all(),
+                     h5::h5s_all(), h5::h5p_default(), data.data()),
+             "Failed to read dataset " << dataset_path);
+
+    // Ylm dat files store Time, expansion center, and Lmax in the first five
+    // columns. Only the remaining columns are shape coefficients.
+    for (size_t row = 0; row < dimensions[0]; ++row) {
+      for (size_t col = 5; col < dimensions[1]; ++col) {
+        data[col + row * dimensions[1]] *= final_ringdown_excision_factor;
+      }
+    }
+
+    CHECK_H5(H5Dwrite(dataset_id, h5::h5_type<double>(), h5::h5s_all(),
+                      h5::h5s_all(), h5::h5p_default(), data.data()),
+             "Failed to write rescaled coefficients to " << dataset_path);
+    CHECK_H5(H5Sclose(space_id),
+             "Failed to close dataspace for " << dataset_path);
+    CHECK_H5(H5Dclose(dataset_id), "Failed to close dataset " << dataset_path);
+  }
+
+  CHECK_H5(H5Fclose(file_id), "Failed to close " << path_to_AhC_distorted_h5);
+}
+
 void get_grid_point(
     const BlockLogicalCoords<3>& block_logical_coord,
     const Domain<3>& ringdown_domain,
@@ -333,10 +395,16 @@ double minimum_ahc_excision_radius(
   if (safe_ringdown_excision_factor - ringdown_excision_factor < 0.5 * eps) {
     safe_ringdown_excision_factor += eps;
   }
-  const double ringdown_excision_radius =
+  const double final_ringdown_excision_factor =
       ringdown_excision_factor > safe_ringdown_excision_factor
-          ? ahc_average_radius * ringdown_excision_factor
-          : ahc_average_radius * safe_ringdown_excision_factor;
+          ? ringdown_excision_factor
+          : safe_ringdown_excision_factor;
+  const double ringdown_excision_radius =
+      ahc_average_radius * final_ringdown_excision_factor;
+
+  //   rescale_ahc_distorted_coefficients(path_to_AhC_distorted_h5,
+  //                                      AhC_distorted_subfile_names,
+  //                                      final_ringdown_excision_factor);
 
   // Checks for valid excision radius and potential issues
   if (ringdown_excision_radius > ahc_average_radius + eps) {

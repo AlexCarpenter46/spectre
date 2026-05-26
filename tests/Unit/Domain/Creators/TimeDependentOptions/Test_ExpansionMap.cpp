@@ -199,6 +199,27 @@ void test_expansion_map_options() {
     CHECK(expansion_outer_boundary->time_bounds() == std::array{0.0, infinity});
     CHECK(expansion_outer_boundary->decay_timescale() == 50.0);
     CHECK(expansion_outer_boundary->velocity() == -1e-5);
+
+    const std::variant<ExpansionMapOptions<false>, FromVolumeFile>
+        replay_expansion_map_options{
+            FromVolumeFile{filename, subfile_name, true}};
+    const auto replay_expansion_fots =
+        get_expansion(replay_expansion_map_options, 0.3, 100.0);
+    CHECK(replay_expansion_fots.contains("Expansion"));
+    CHECK(replay_expansion_fots.contains("ExpansionOuterBoundary"));
+    const auto* replay_expansion =
+        dynamic_cast<domain::FunctionsOfTime::PiecewisePolynomial<2>*>(
+            replay_expansion_fots.at("Expansion").get());
+    const auto* replay_expansion_outer_boundary =
+        dynamic_cast<domain::FunctionsOfTime::FixedSpeedCubic*>(
+            replay_expansion_fots.at("ExpansionOuterBoundary").get());
+    REQUIRE(replay_expansion != nullptr);
+    REQUIRE(replay_expansion_outer_boundary != nullptr);
+    CHECK(replay_expansion->func_and_2_derivs(0.3) ==
+          functions_of_time.at("Expansion")->func_and_2_derivs(0.3));
+    CHECK(
+        replay_expansion_outer_boundary->func_and_2_derivs(0.3) ==
+        functions_of_time.at("ExpansionOuterBoundary")->func_and_2_derivs(0.3));
   }
   {
     INFO("FromVolumeFile Settle FoTs");

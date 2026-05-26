@@ -236,6 +236,7 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.StrahlkorperCoefsAndCenters",
   // Call strahlkorper_coefs_and_centers()
   constexpr size_t times_to_retrieve{number_of_times - 2};
   const std::pair<std::vector<DataVector>, std::vector<std::array<double, 3>>>
+      //   const std::pair<std::vector<DataVector>, std::vector<DataVector>>
       distorted_and_translation_coefs =
           evolution::Ringdown::strahlkorper_coefs_and_centers(
               "BbhVolume0.h5", "ForContinuation", horizons_file_name,
@@ -250,6 +251,9 @@ SPECTRE_TEST_CASE("Unit.Evolution.Ringdown.StrahlkorperCoefsAndCenters",
 
   const auto distorted_coefs = distorted_and_translation_coefs.first;
   const auto translation_coefs = distorted_and_translation_coefs.second;
+
+  //   CHECK(distorted_and_translation_coefs.first ==
+  //   distorted_and_translation_coefs.second);
 
   // Check that retrieved coefs are the expected size
   const auto& expected_coefs = expected_strahlkorper.coefficients();

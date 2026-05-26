@@ -126,7 +126,8 @@ FunctionsOfTimeMap get_expansion(
            "allowed.");
 
     if (from_vol_file.replay()) {
-      result[name] = std::move(volume_fot.at(name_outer_boundary));
+      result[name_outer_boundary] =
+          std::move(volume_fot.at(name_outer_boundary));
     } else {
       result[name_outer_boundary] =
           volume_fot.at(name_outer_boundary)->get_clone();
